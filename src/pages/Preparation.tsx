@@ -13,6 +13,8 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import { BookOpen, PlayCircle, FileText, Beaker, ClipboardList, PenTool, Files, TestTube, ChevronRight, GraduationCap, Loader2, ArrowLeft, Code, Atom, Users, Monitor, Download, ExternalLink, Library } from 'lucide-react';
+import ObjectivePaperSelector, { QuizConfig } from '@/components/objective/ObjectivePaperSelector';
+import ObjectiveQuiz from '@/components/objective/ObjectiveQuiz';
 interface KeyNote {
   id: string;
   title: string;
@@ -111,6 +113,7 @@ const Preparation = () => {
   const [pastPapers, setPastPapers] = useState<PastPaper[]>([]);
   const [loadingPapers, setLoadingPapers] = useState(false);
   const [selectedPaper, setSelectedPaper] = useState<PastPaper | null>(null);
+  const [quizConfig, setQuizConfig] = useState<QuizConfig | null>(null);
   useEffect(() => {
     if (!onboardingLoading && !needsOnboarding) {
       fetchSubjects();
@@ -225,6 +228,7 @@ const Preparation = () => {
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category);
     setSelectedTopics([]);
+    setQuizConfig(null); // Reset quiz when changing category
     if (category === 'pastpapers' && selectedSubject) {
       fetchPastPapers(selectedSubject.id);
     }
@@ -234,6 +238,15 @@ const Preparation = () => {
     setSelectedTopics([]);
     setExpandedUnits([]);
     setPastPapers([]);
+    setQuizConfig(null);
+  };
+
+  const handleStartQuiz = (config: QuizConfig) => {
+    setQuizConfig(config);
+  };
+
+  const handleBackFromQuiz = () => {
+    setQuizConfig(null);
   };
   const getSubjectIcon = (iconName: string | null) => {
     const Icon = iconName ? iconMap[iconName] : BookOpen;
@@ -336,6 +349,12 @@ const Preparation = () => {
 
             {/* Topics Content */}
             <div className="lg:col-span-9">
+              {/* Show Objective Quiz if config is set */}
+              {selectedCategory === 'objective' && quizConfig ? (
+                <ObjectiveQuiz config={quizConfig} onBack={handleBackFromQuiz} />
+              ) : selectedCategory === 'objective' ? (
+                <ObjectivePaperSelector subject={selectedSubject} onStartQuiz={handleStartQuiz} />
+              ) : (
               <Card className="bg-card border-border">
                 <CardHeader className="pb-4 border-b border-border">
                   <div className="flex items-center gap-3">
@@ -361,8 +380,8 @@ const Preparation = () => {
                         {pastPapers.map(paper => <Card key={paper.id} className="cursor-pointer hover:shadow-md transition-shadow bg-accent border-border" onClick={() => setSelectedPaper(paper)}>
                             <CardContent className="p-4">
                               <div className="flex items-start gap-3">
-                                <div className="h-10 w-10 rounded-lg bg-rose-500/10 flex items-center justify-center shrink-0">
-                                  <FileText className="h-5 w-5 text-rose-500" />
+                                <div className="h-10 w-10 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0">
+                                  <FileText className="h-5 w-5 text-destructive" />
                                 </div>
                                 <div className="min-w-0 flex-1">
                                   <h4 className="font-medium text-foreground text-sm truncate">{paper.title}</h4>
@@ -478,6 +497,7 @@ const Preparation = () => {
                     </div>}
                 </CardContent>
               </Card>
+              )}
             </div>
           </div>)}
       </div>
@@ -487,7 +507,7 @@ const Preparation = () => {
         <DialogContent className="max-w-4xl h-[80vh]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-rose-500" />
+              <FileText className="h-5 w-5 text-destructive" />
               {selectedPaper?.title}
             </DialogTitle>
           </DialogHeader>

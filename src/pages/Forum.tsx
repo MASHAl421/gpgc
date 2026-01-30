@@ -187,7 +187,7 @@ const Forum = () => {
         user_id: user.id,
         title: newPostTitle,
         content: newPostContent,
-        subject_id: newPostSubject || null,
+        subject_id: newPostSubject === 'general' ? null : newPostSubject || null,
       });
 
       if (error) throw error;
@@ -296,7 +296,7 @@ const Forum = () => {
                       <SelectValue placeholder="Select a subject" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">General</SelectItem>
+                      <SelectItem value="general">General</SelectItem>
                       {subjects.map((subject) => (
                         <SelectItem key={subject.id} value={subject.id}>
                           {subject.name}

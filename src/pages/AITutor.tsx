@@ -1,17 +1,15 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  Plus, Send, Loader2, Mic, AudioWaveform, 
+  Plus, Send, Loader2, 
   MessageSquare, Trash2, Search, ChevronDown, X
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useVoiceRecording } from '@/hooks/useVoiceRecording';
-import { useTextToSpeech } from '@/hooks/useTextToSpeech';
 import { useChatHistory } from '@/hooks/useChatHistory';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
@@ -31,29 +29,13 @@ const AITutor = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
-  const [isVoiceMode, setIsVoiceMode] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const pendingVoiceQuestionRef = useRef<string | null>(null);
   const { toast } = useToast();
   const { isAuthenticated, user } = useAuth();
   const isMobile = useIsMobile();
-  
-  const { speak, stop: stopSpeaking, isSpeaking, isSupported: ttsSupported } = useTextToSpeech();
-  
-  // Handle voice recording with auto-send on complete
-  const handleVoiceComplete = useCallback((transcript: string) => {
-    if (transcript.trim()) {
-      pendingVoiceQuestionRef.current = transcript.trim();
-      setQuestion(transcript.trim());
-    }
-  }, []);
-  
-  const { isRecording, transcript, interimTranscript, startRecording, stopRecording, isSupported: voiceSupported } = useVoiceRecording({
-    onComplete: handleVoiceComplete
-  });
   
   const { 
     chatSessions, 
@@ -72,25 +54,6 @@ const AITutor = () => {
       fetchChatHistory();
     }
   }, [isAuthenticated, fetchChatHistory]);
-
-  // Auto-send when voice recording completes
-  useEffect(() => {
-    if (pendingVoiceQuestionRef.current && question === pendingVoiceQuestionRef.current && !isRecording && !isLoading) {
-      const questionToSend = pendingVoiceQuestionRef.current;
-      pendingVoiceQuestionRef.current = null;
-      // Small delay to ensure state is updated
-      setTimeout(() => {
-        handleSend(true); // Pass true to indicate voice-triggered
-      }, 100);
-    }
-  }, [question, isRecording, isLoading]);
-
-  // Show interim transcript while recording
-  useEffect(() => {
-    if (isRecording) {
-      setQuestion(transcript + (interimTranscript ? interimTranscript : ''));
-    }
-  }, [isRecording, transcript, interimTranscript]);
 
   useEffect(() => {
     if (isMobile) setSidebarOpen(false);
@@ -122,17 +85,15 @@ const AITutor = () => {
     }
   }, [question]);
 
-  const handleSend = async (voiceTriggered = false) => {
+  const handleSend = async () => {
     if (!question.trim() || isLoading) return;
 
-    const wasVoiceMode = voiceTriggered || isVoiceMode;
     const userMsg: Message = { role: 'user', content: question };
     const questionText = question; // Store for title before clearing
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
     setQuestion('');
     setIsLoading(true);
-    if (voiceTriggered) setIsVoiceMode(false);
 
     let assistantContent = '';
 
@@ -208,11 +169,6 @@ const AITutor = () => {
           }
         }
       }
-      
-      // Auto-speak the response if triggered by voice
-      if (wasVoiceMode && ttsSupported && assistantContent) {
-        speak(assistantContent);
-      }
     } catch (error) {
       console.error('AI Tutor error:', error);
       toast({
@@ -235,15 +191,6 @@ const AITutor = () => {
     const sessionMessages = loadSession(sessionId);
     setMessages(sessionMessages);
     if (isMobile) setSidebarOpen(false);
-  };
-
-  const handleVoiceMode = () => {
-    if (isRecording) {
-      stopRecording();
-    } else {
-      setIsVoiceMode(true);
-      startRecording();
-    }
   };
 
   return (
@@ -481,35 +428,19 @@ const AITutor = () => {
                   disabled={isLoading}
                 />
 
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  {voiceSupported && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={`h-9 w-9 ${isRecording ? 'text-destructive animate-pulse' : ''}`}
-                      onClick={handleVoiceMode}
-                    >
-                      <Mic className="h-5 w-5" />
-                    </Button>
+                <Button
+                  variant="default"
+                  size="icon"
+                  className="h-9 w-9 rounded-full flex-shrink-0"
+                  onClick={() => handleSend()}
+                  disabled={isLoading || !question.trim()}
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
                   )}
-                  
-                  {/* Voice Mode Button */}
-                  <Button
-                    variant={isRecording ? "destructive" : "default"}
-                    size="icon"
-                    className="h-9 w-9 rounded-full"
-                    onClick={() => question.trim() ? handleSend() : handleVoiceMode()}
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : question.trim() ? (
-                      <Send className="h-4 w-4" />
-                    ) : (
-                      <AudioWaveform className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
+                </Button>
               </div>
               <p className="text-xs text-center text-muted-foreground mt-2">
                 AI Tutor can make mistakes. Verify important information.

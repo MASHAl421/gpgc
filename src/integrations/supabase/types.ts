@@ -576,6 +576,7 @@ export type Database = {
         Row: {
           correct_option: string
           created_at: string | null
+          difficulty: string | null
           explanation: string | null
           id: string
           option_a: string
@@ -584,11 +585,13 @@ export type Database = {
           option_d: string
           order_index: number | null
           question_text: string
+          question_type: string | null
           quiz_id: string
         }
         Insert: {
           correct_option: string
           created_at?: string | null
+          difficulty?: string | null
           explanation?: string | null
           id?: string
           option_a: string
@@ -597,11 +600,13 @@ export type Database = {
           option_d: string
           order_index?: number | null
           question_text: string
+          question_type?: string | null
           quiz_id: string
         }
         Update: {
           correct_option?: string
           created_at?: string | null
+          difficulty?: string | null
           explanation?: string | null
           id?: string
           option_a?: string
@@ -610,6 +615,7 @@ export type Database = {
           option_d?: string
           order_index?: number | null
           question_text?: string
+          question_type?: string | null
           quiz_id?: string
         }
         Relationships: [

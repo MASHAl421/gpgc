@@ -6,9 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSemesterOnboarding } from '@/hooks/useSemesterOnboarding';
@@ -22,7 +24,13 @@ import {
   Clock,
   Loader2,
   CheckCircle,
-  Send
+  Send,
+  MoreVertical,
+  Trash2,
+  Edit,
+  Flag,
+  Share2,
+  Check
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -72,6 +80,11 @@ const Forum = () => {
   const [submitting, setSubmitting] = useState(false);
   const [replyContent, setReplyContent] = useState('');
   const [submittingReply, setSubmittingReply] = useState(false);
+  const [editingPost, setEditingPost] = useState<ForumPost | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editContent, setEditContent] = useState('');
+  const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
+  const [deletingReplyId, setDeletingReplyId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -81,7 +94,6 @@ const Forum = () => {
     try {
       setIsLoading(true);
       
-      // Fetch subjects
       let subjectQuery = supabase.from('subjects').select('id, name');
       if (profileData?.semester) {
         subjectQuery = subjectQuery.eq('semester', profileData.semester);
@@ -89,7 +101,6 @@ const Forum = () => {
       const { data: subjectsData } = await subjectQuery;
       setSubjects(subjectsData || []);
 
-      // Fetch posts with user info
       const { data: postsData, error: postsError } = await supabase
         .from('forum_posts')
         .select('*')
@@ -97,10 +108,8 @@ const Forum = () => {
 
       if (postsError) throw postsError;
 
-      // Get unique user IDs
       const userIds = [...new Set((postsData || []).map((p) => p.user_id))];
       
-      // Fetch usernames
       let profiles: { id: string; username: string }[] = [];
       if (userIds.length > 0) {
         const { data: profilesData } = await supabase
@@ -110,7 +119,6 @@ const Forum = () => {
         profiles = profilesData || [];
       }
 
-      // Fetch reply counts
       const { data: replyCounts } = await supabase
         .from('forum_replies')
         .select('post_id');
@@ -120,7 +128,6 @@ const Forum = () => {
         replyCountMap[r.post_id] = (replyCountMap[r.post_id] || 0) + 1;
       });
 
-      // Combine data
       const enrichedPosts = (postsData || []).map((post) => ({
         ...post,
         username: profiles.find((p) => p.id === post.user_id)?.username || 'Unknown',
@@ -146,7 +153,6 @@ const Forum = () => {
 
       if (error) throw error;
 
-      // Get usernames
       const userIds = [...new Set((repliesData || []).map((r) => r.user_id))];
       let profiles: { id: string; username: string }[] = [];
       if (userIds.length > 0) {
@@ -234,6 +240,161 @@ const Forum = () => {
     }
   };
 
+  const handleDeletePost = async (postId: string) => {
+    try {
+      // First delete all replies
+      await supabase.from('forum_replies').delete().eq('post_id', postId);
+      
+      // Then delete the post
+      const { error } = await supabase.from('forum_posts').delete().eq('id', postId);
+      
+      if (error) throw error;
+      
+      toast.success('Discussion deleted');
+      setSelectedPost(null);
+      fetchData();
+    } catch (error: any) {
+      console.error('Error deleting post:', error);
+      toast.error(error.message || 'Failed to delete discussion');
+    }
+  };
+
+  const handleDeleteReply = async (replyId: string) => {
+    try {
+      const { error } = await supabase.from('forum_replies').delete().eq('id', replyId);
+      
+      if (error) throw error;
+      
+      toast.success('Reply deleted');
+      if (selectedPost) {
+        fetchReplies(selectedPost.id);
+      }
+      fetchData();
+    } catch (error: any) {
+      console.error('Error deleting reply:', error);
+      toast.error(error.message || 'Failed to delete reply');
+    }
+  };
+
+  const handleEditPost = async () => {
+    if (!editingPost || !editTitle.trim() || !editContent.trim()) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('forum_posts')
+        .update({ title: editTitle, content: editContent })
+        .eq('id', editingPost.id);
+
+      if (error) throw error;
+
+      toast.success('Post updated!');
+      setEditingPost(null);
+      fetchData();
+      if (selectedPost?.id === editingPost.id) {
+        setSelectedPost({ ...selectedPost, title: editTitle, content: editContent });
+      }
+    } catch (error: any) {
+      console.error('Error updating post:', error);
+      toast.error(error.message || 'Failed to update post');
+    }
+  };
+
+  const handleUpvotePost = async (postId: string, currentUpvotes: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) {
+      toast.error('Please login to upvote');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('forum_posts')
+        .update({ upvotes: currentUpvotes + 1 })
+        .eq('id', postId);
+
+      if (error) throw error;
+
+      setPosts(posts.map(p => p.id === postId ? { ...p, upvotes: p.upvotes + 1 } : p));
+      if (selectedPost?.id === postId) {
+        setSelectedPost({ ...selectedPost, upvotes: selectedPost.upvotes + 1 });
+      }
+    } catch (error: any) {
+      console.error('Error upvoting:', error);
+    }
+  };
+
+  const handleUpvoteReply = async (replyId: string, currentUpvotes: number) => {
+    if (!user) {
+      toast.error('Please login to upvote');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('forum_replies')
+        .update({ upvotes: currentUpvotes + 1 })
+        .eq('id', replyId);
+
+      if (error) throw error;
+
+      setReplies(replies.map(r => r.id === replyId ? { ...r, upvotes: r.upvotes + 1 } : r));
+    } catch (error: any) {
+      console.error('Error upvoting reply:', error);
+    }
+  };
+
+  const handleMarkAsAnswer = async (replyId: string) => {
+    if (!selectedPost || selectedPost.user_id !== user?.id) {
+      toast.error('Only the post author can mark answers');
+      return;
+    }
+
+    try {
+      // Unmark all other replies first
+      await supabase
+        .from('forum_replies')
+        .update({ is_accepted_answer: false })
+        .eq('post_id', selectedPost.id);
+
+      // Mark this reply as answer
+      const { error: replyError } = await supabase
+        .from('forum_replies')
+        .update({ is_accepted_answer: true })
+        .eq('id', replyId);
+
+      if (replyError) throw replyError;
+
+      // Mark post as answered
+      const { error: postError } = await supabase
+        .from('forum_posts')
+        .update({ is_answered: true })
+        .eq('id', selectedPost.id);
+
+      if (postError) throw postError;
+
+      toast.success('Marked as answer!');
+      setSelectedPost({ ...selectedPost, is_answered: true });
+      fetchReplies(selectedPost.id);
+      fetchData();
+    } catch (error: any) {
+      console.error('Error marking answer:', error);
+      toast.error(error.message || 'Failed to mark as answer');
+    }
+  };
+
+  const handleShare = async (post: ForumPost) => {
+    const url = `${window.location.origin}/forum?post=${post.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success('Link copied to clipboard!');
+    } catch {
+      toast.error('Failed to copy link');
+    }
+  };
+
   const filteredPosts = posts.filter(
     (post) =>
       post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -243,6 +404,13 @@ const Forum = () => {
   const getSubjectName = (subjectId: string | null) => {
     if (!subjectId) return 'General';
     return subjects.find((s) => s.id === subjectId)?.name || 'Unknown';
+  };
+
+  const openEditPost = (post: ForumPost, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingPost(post);
+    setEditTitle(post.title);
+    setEditContent(post.content);
   };
 
   if (isLoading) {
@@ -340,27 +508,71 @@ const Forum = () => {
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      <Badge variant="secondary">{getSubjectName(selectedPost.subject_id)}</Badge>
-                      {selectedPost.is_answered && (
-                        <Badge className="bg-green-500">
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Answered
-                        </Badge>
-                      )}
-                      <span className="text-sm text-muted-foreground flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {format(new Date(selectedPost.created_at), 'MMM d, yyyy')}
-                      </span>
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <Badge variant="secondary">{getSubjectName(selectedPost.subject_id)}</Badge>
+                        {selectedPost.is_answered && (
+                          <Badge className="bg-emerald-500 text-white">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Answered
+                          </Badge>
+                        )}
+                        <span className="text-sm text-muted-foreground flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {format(new Date(selectedPost.created_at), 'MMM d, yyyy')}
+                        </span>
+                      </div>
+                      
+                      {/* Post Actions Menu */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="bg-popover">
+                          <DropdownMenuItem onClick={() => handleShare(selectedPost)}>
+                            <Share2 className="h-4 w-4 mr-2" />
+                            Share
+                          </DropdownMenuItem>
+                          {user?.id === selectedPost.user_id && (
+                            <>
+                              <DropdownMenuItem onClick={(e) => openEditPost(selectedPost, e)}>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => setDeletingPostId(selectedPost.id)}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {user?.id !== selectedPost.user_id && (
+                            <DropdownMenuItem>
+                              <Flag className="h-4 w-4 mr-2" />
+                              Report
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
+                    
                     <h2 className="text-xl font-semibold text-foreground">{selectedPost.title}</h2>
                     <p className="text-sm text-muted-foreground mt-1">by {selectedPost.username}</p>
                     <p className="text-foreground mt-4 whitespace-pre-wrap">{selectedPost.content}</p>
                     <div className="flex items-center gap-4 mt-4">
-                      <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="gap-1 text-muted-foreground hover:text-primary"
+                        onClick={(e) => handleUpvotePost(selectedPost.id, selectedPost.upvotes, e)}
+                      >
                         <ThumbsUp className="h-4 w-4" />
                         {selectedPost.upvotes}
-                      </span>
+                      </Button>
                       <span className="flex items-center gap-1 text-sm text-muted-foreground">
                         <MessageCircle className="h-4 w-4" />
                         {replies.length} replies
@@ -387,48 +599,104 @@ const Forum = () => {
                   </p>
                 ) : (
                   replies.map((reply) => (
-                    <div key={reply.id} className="flex items-start gap-3 p-3 rounded-lg bg-muted">
+                    <div 
+                      key={reply.id} 
+                      className={`flex items-start gap-3 p-3 rounded-lg ${
+                        reply.is_accepted_answer ? 'bg-emerald-500/10 border border-emerald-500/30' : 'bg-muted'
+                      }`}
+                    >
                       <Avatar className="h-8 w-8">
                         <AvatarFallback className="bg-secondary text-secondary-foreground text-xs">
                           {reply.username?.charAt(0) || '?'}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-foreground text-sm">{reply.username}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {format(new Date(reply.created_at), 'MMM d, h:mm a')}
-                          </span>
-                          {reply.is_accepted_answer && (
-                            <Badge className="bg-green-500 text-xs">
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Answer
-                            </Badge>
-                          )}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-foreground text-sm">{reply.username}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {format(new Date(reply.created_at), 'MMM d, h:mm a')}
+                            </span>
+                            {reply.is_accepted_answer && (
+                              <Badge className="bg-emerald-500 text-white text-xs">
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Answer
+                              </Badge>
+                            )}
+                          </div>
+                          
+                          {/* Reply Actions */}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-6 w-6">
+                                <MoreVertical className="h-3 w-3" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="bg-popover">
+                              {user?.id === selectedPost.user_id && !reply.is_accepted_answer && (
+                                <DropdownMenuItem onClick={() => handleMarkAsAnswer(reply.id)}>
+                                  <Check className="h-4 w-4 mr-2" />
+                                  Mark as Answer
+                                </DropdownMenuItem>
+                              )}
+                              {user?.id === reply.user_id && (
+                                <DropdownMenuItem 
+                                  className="text-destructive focus:text-destructive"
+                                  onClick={() => setDeletingReplyId(reply.id)}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete
+                                </DropdownMenuItem>
+                              )}
+                              {user?.id !== reply.user_id && (
+                                <DropdownMenuItem>
+                                  <Flag className="h-4 w-4 mr-2" />
+                                  Report
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                         <p className="text-foreground text-sm mt-1 whitespace-pre-wrap">{reply.content}</p>
+                        <div className="mt-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 gap-1 text-xs text-muted-foreground hover:text-primary"
+                            onClick={() => handleUpvoteReply(reply.id, reply.upvotes)}
+                          >
+                            <ThumbsUp className="h-3 w-3" />
+                            {reply.upvotes}
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ))
                 )}
 
                 {/* Reply Input */}
-                <div className="flex gap-2 pt-4 border-t border-border">
-                  <Textarea
-                    placeholder="Write your reply..."
-                    value={replyContent}
-                    onChange={(e) => setReplyContent(e.target.value)}
-                    rows={2}
-                    className="flex-1"
-                  />
-                  <Button onClick={handleSubmitReply} disabled={submittingReply}>
-                    {submittingReply ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Send className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
+                {user ? (
+                  <div className="flex gap-2 pt-4 border-t border-border">
+                    <Textarea
+                      placeholder="Write your reply..."
+                      value={replyContent}
+                      onChange={(e) => setReplyContent(e.target.value)}
+                      rows={2}
+                      className="flex-1"
+                    />
+                    <Button onClick={handleSubmitReply} disabled={submittingReply}>
+                      {submittingReply ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Send className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-center text-muted-foreground py-4 border-t border-border">
+                    Please login to reply
+                  </p>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -472,28 +740,62 @@ const Forum = () => {
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <Badge variant="secondary">{getSubjectName(post.subject_id)}</Badge>
-                            {post.is_answered && (
-                              <Badge className="bg-green-500">
-                                <CheckCircle className="h-3 w-3 mr-1" />
-                                Answered
-                              </Badge>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <Badge variant="secondary">{getSubjectName(post.subject_id)}</Badge>
+                              {post.is_answered && (
+                                <Badge className="bg-emerald-500 text-white">
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  Answered
+                                </Badge>
+                              )}
+                              <span className="text-sm text-muted-foreground flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {format(new Date(post.created_at), 'MMM d')}
+                              </span>
+                            </div>
+                            
+                            {/* Quick Actions */}
+                            {user?.id === post.user_id && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="bg-popover">
+                                  <DropdownMenuItem onClick={(e) => openEditPost(post, e)}>
+                                    <Edit className="h-4 w-4 mr-2" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    className="text-destructive focus:text-destructive"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setDeletingPostId(post.id);
+                                    }}
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             )}
-                            <span className="text-sm text-muted-foreground flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {format(new Date(post.created_at), 'MMM d')}
-                            </span>
                           </div>
                           <h3 className="font-semibold text-foreground hover:text-primary transition-colors line-clamp-2">
                             {post.title}
                           </h3>
                           <p className="text-sm text-muted-foreground mt-1">by {post.username}</p>
                           <div className="flex items-center gap-4 mt-3">
-                            <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 gap-1 text-sm text-muted-foreground hover:text-primary p-0"
+                              onClick={(e) => handleUpvotePost(post.id, post.upvotes, e)}
+                            >
                               <ThumbsUp className="h-4 w-4" />
                               {post.upvotes}
-                            </span>
+                            </Button>
                             <span className="flex items-center gap-1 text-sm text-muted-foreground">
                               <MessageCircle className="h-4 w-4" />
                               {post.reply_count} replies
@@ -529,26 +831,112 @@ const Forum = () => {
 
               <Card className="bg-card border-border">
                 <CardHeader>
-                  <CardTitle className="text-foreground">Quick Question</CardTitle>
-                  <CardDescription>Ask a quick question</CardDescription>
+                  <CardTitle className="text-foreground">Forum Stats</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <Textarea
-                    placeholder="Type your question..."
-                    className="resize-none bg-background"
-                    rows={3}
-                    value={newPostContent}
-                    onChange={(e) => setNewPostContent(e.target.value)}
-                  />
-                  <Button className="w-full" onClick={() => setNewPostOpen(true)}>
-                    Submit
-                  </Button>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Total Discussions</span>
+                    <span className="font-semibold text-foreground">{posts.length}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Answered</span>
+                    <span className="font-semibold text-emerald-500">
+                      {posts.filter(p => p.is_answered).length}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Unanswered</span>
+                    <span className="font-semibold text-amber-500">
+                      {posts.filter(p => !p.is_answered).length}
+                    </span>
+                  </div>
                 </CardContent>
               </Card>
             </div>
           </div>
         )}
       </div>
+
+      {/* Edit Post Dialog */}
+      <Dialog open={!!editingPost} onOpenChange={() => setEditingPost(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Discussion</DialogTitle>
+            <DialogDescription>Make changes to your discussion post.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-title">Title</Label>
+              <Input
+                id="edit-title"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-content">Details</Label>
+              <Textarea
+                id="edit-content"
+                rows={4}
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingPost(null)}>Cancel</Button>
+            <Button onClick={handleEditPost}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Post Confirmation */}
+      <AlertDialog open={!!deletingPostId} onOpenChange={() => setDeletingPostId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Discussion?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete your discussion and all its replies. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (deletingPostId) handleDeletePost(deletingPostId);
+                setDeletingPostId(null);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Reply Confirmation */}
+      <AlertDialog open={!!deletingReplyId} onOpenChange={() => setDeletingReplyId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Reply?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete your reply. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (deletingReplyId) handleDeleteReply(deletingReplyId);
+                setDeletingReplyId(null);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 };

@@ -113,14 +113,18 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
     const isSelected = option === selected;
     
     if (isSelected && isCorrect) {
-      return 'bg-primary/10 border-primary text-primary';
+      // User selected the correct answer - show green
+      return 'bg-green-500/10 border-green-500 text-green-600 dark:text-green-400';
     }
     if (isSelected && !isCorrect) {
+      // User selected wrong answer - show red
       return 'bg-destructive/10 border-destructive text-destructive';
     }
     if (isCorrect) {
-      return 'bg-primary/10 border-primary/50 text-primary';
+      // This is the correct answer (show it after user selects wrong) - show green
+      return 'bg-green-500/10 border-green-500/50 text-green-600 dark:text-green-400';
     }
+    // Other wrong options - dim them
     return 'bg-card border-border opacity-60';
   };
 

@@ -96,6 +96,8 @@ export type Database = {
           created_at: string | null
           email: string | null
           id: string
+          is_bs_student: boolean | null
+          semester: number | null
           updated_at: string | null
           username: string
         }
@@ -104,6 +106,8 @@ export type Database = {
           created_at?: string | null
           email?: string | null
           id: string
+          is_bs_student?: boolean | null
+          semester?: number | null
           updated_at?: string | null
           username: string
         }
@@ -112,6 +116,8 @@ export type Database = {
           created_at?: string | null
           email?: string | null
           id?: string
+          is_bs_student?: boolean | null
+          semester?: number | null
           updated_at?: string | null
           username?: string
         }
@@ -251,6 +257,7 @@ export type Database = {
           icon: string | null
           id: string
           name: string
+          semester: number | null
           updated_at: string | null
         }
         Insert: {
@@ -260,6 +267,7 @@ export type Database = {
           icon?: string | null
           id?: string
           name: string
+          semester?: number | null
           updated_at?: string | null
         }
         Update: {
@@ -269,6 +277,7 @@ export type Database = {
           icon?: string | null
           id?: string
           name?: string
+          semester?: number | null
           updated_at?: string | null
         }
         Relationships: []

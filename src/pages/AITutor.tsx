@@ -6,6 +6,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Bot, Send, Sparkles, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 
 type Message = { role: 'user' | 'assistant'; content: string };
 
@@ -155,7 +158,7 @@ const AITutor = () => {
                   >
                     {message.role === 'assistant' ? (
                       <div className="prose prose-sm dark:prose-invert max-w-none">
-                        <ReactMarkdown>{message.content}</ReactMarkdown>
+                        <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{message.content}</ReactMarkdown>
                       </div>
                     ) : (
                       message.content

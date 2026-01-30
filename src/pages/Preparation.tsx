@@ -6,6 +6,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { supabase } from '@/integrations/supabase/client';
+import { useSemesterOnboarding } from '@/hooks/useSemesterOnboarding';
+import SemesterOnboarding from '@/components/SemesterOnboarding';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
@@ -22,6 +24,11 @@ import {
   ChevronRight,
   GraduationCap,
   Loader2,
+  ArrowLeft,
+  Code,
+  Atom,
+  Users,
+  Monitor,
 } from 'lucide-react';
 
 interface KeyNote {
@@ -48,6 +55,8 @@ interface Subject {
   id: string;
   name: string;
   grade: string;
+  icon: string | null;
+  semester: number | null;
   units: Unit[];
 }
 
@@ -71,9 +80,14 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   PenTool,
   Files,
   TestTube,
+  Code,
+  Atom,
+  Users,
+  Monitor,
 };
 
 const Preparation = () => {
+  const { needsOnboarding, profileData, isLoading: onboardingLoading, completeOnboarding } = useSemesterOnboarding();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('keynotes');
@@ -83,18 +97,23 @@ const Preparation = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetchSubjects();
-  }, []);
+    if (!onboardingLoading && !needsOnboarding) {
+      fetchSubjects();
+    }
+  }, [onboardingLoading, needsOnboarding, profileData?.semester]);
 
   const fetchSubjects = async () => {
     try {
       setIsLoading(true);
       
-      // Fetch subjects
-      const { data: subjectsData, error: subjectsError } = await supabase
-        .from('subjects')
-        .select('*')
-        .order('name');
+      // Build query - filter by semester if user has one
+      let query = supabase.from('subjects').select('*').order('name');
+      
+      if (profileData?.semester) {
+        query = query.eq('semester', profileData.semester);
+      }
+
+      const { data: subjectsData, error: subjectsError } = await query;
 
       if (subjectsError) throw subjectsError;
 
@@ -138,7 +157,6 @@ const Preparation = () => {
   };
 
   const fetchKeyNotesForTopic = async (topicId: string) => {
-    // Don't fetch if already loaded
     if (keyNotes[topicId]) return;
 
     setLoadingNotes((prev) => ({ ...prev, [topicId]: true }));
@@ -164,11 +182,9 @@ const Preparation = () => {
     const isSelected = selectedTopics.includes(topicId);
     
     if (!isSelected) {
-      // Adding topic - fetch key notes
       setSelectedTopics((prev) => [...prev, topicId]);
       await fetchKeyNotesForTopic(topicId);
     } else {
-      // Removing topic
       setSelectedTopics((prev) => prev.filter((id) => id !== topicId));
     }
   };
@@ -181,7 +197,6 @@ const Preparation = () => {
       setSelectedTopics((prev) => prev.filter((id) => !topicIds.includes(id)));
     } else {
       setSelectedTopics((prev) => [...new Set([...prev, ...topicIds])]);
-      // Fetch key notes for all newly selected topics
       for (const topicId of topicIds) {
         if (!keyNotes[topicId]) {
           fetchKeyNotesForTopic(topicId);
@@ -190,54 +205,75 @@ const Preparation = () => {
     }
   };
 
-  if (isLoading) {
+  const handleBackToSubjects = () => {
+    setSelectedSubject(null);
+    setSelectedTopics([]);
+  };
+
+  const getSubjectIcon = (iconName: string | null) => {
+    const Icon = iconName ? iconMap[iconName] : BookOpen;
+    return Icon || BookOpen;
+  };
+
+  if (onboardingLoading || isLoading) {
     return (
       <MainLayout>
         <div className="flex items-center justify-center h-64">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
+        {needsOnboarding && (
+          <SemesterOnboarding open={needsOnboarding} onComplete={completeOnboarding} />
+        )}
       </MainLayout>
     );
   }
 
   return (
     <MainLayout>
-      <div className="space-y-6">
+      <SemesterOnboarding open={needsOnboarding} onComplete={completeOnboarding} />
+      
+      <div className="space-y-4 md:space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
-              <GraduationCap className="h-8 w-8 text-primary" />
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-2">
+              <GraduationCap className="h-6 w-6 md:h-8 md:w-8 text-primary" />
               Preparation
             </h1>
-            <p className="text-muted-foreground mt-1">
-              Select subject and start your preparation
+            <p className="text-sm md:text-base text-muted-foreground mt-1">
+              {profileData?.semester 
+                ? `Semester ${profileData.semester} Subjects`
+                : 'Select subject and start your preparation'
+              }
             </p>
           </div>
           {selectedSubject && (
-            <Button variant="outline" onClick={() => setSelectedSubject(null)}>
-              Show All Books
+            <Button variant="outline" onClick={handleBackToSubjects} className="gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              Back to Subjects
             </Button>
           )}
         </div>
 
-        <div className="grid lg:grid-cols-4 gap-6">
-          {/* Categories Sidebar */}
-          <div className="space-y-2">
-            {preparationCategories.map((category) => {
-              const Icon = iconMap[category.icon] || BookOpen;
-              return (
-                <Button
-                  key={category.id}
-                  variant={selectedCategory === category.id ? 'default' : 'ghost'}
-                  className="w-full justify-start gap-3"
-                  onClick={() => setSelectedCategory(category.id)}
-                >
-                  <Icon className="h-5 w-5" />
-                  {category.name}
-                </Button>
-              );
-            })}
+        <div className="grid lg:grid-cols-4 gap-4 md:gap-6">
+          {/* Categories Sidebar - Hidden on mobile when subject selected */}
+          <div className={`space-y-2 ${selectedSubject ? 'hidden lg:block' : ''}`}>
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-1 gap-2">
+              {preparationCategories.map((category) => {
+                const Icon = iconMap[category.icon] || BookOpen;
+                return (
+                  <Button
+                    key={category.id}
+                    variant={selectedCategory === category.id ? 'default' : 'ghost'}
+                    className="w-full justify-start gap-2 md:gap-3 text-xs md:text-sm"
+                    onClick={() => setSelectedCategory(category.id)}
+                  >
+                    <Icon className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
+                    <span className="truncate">{category.name}</span>
+                  </Button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Main Content */}
@@ -245,8 +281,8 @@ const Preparation = () => {
             {!selectedSubject ? (
               /* Subject Selection */
               <Card className="bg-card border-border">
-                <CardHeader>
-                  <CardTitle className="text-foreground">Select a Subject</CardTitle>
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg md:text-xl text-foreground">Select a Subject</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {subjects.length === 0 ? (
@@ -254,31 +290,39 @@ const Preparation = () => {
                       <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                       <p className="text-muted-foreground">No subjects available yet.</p>
                       <p className="text-sm text-muted-foreground mt-2">
-                        Admin needs to add subjects first.
+                        {profileData?.semester 
+                          ? `No subjects found for Semester ${profileData.semester}`
+                          : 'Admin needs to add subjects first.'
+                        }
                       </p>
                     </div>
                   ) : (
-                    <div className="grid sm:grid-cols-2 gap-4">
-                      {subjects.map((subject) => (
-                        <Card
-                          key={subject.id}
-                          className="cursor-pointer hover:shadow-lg transition-shadow bg-accent border-border group"
-                          onClick={() => setSelectedSubject(subject)}
-                        >
-                          <CardContent className="p-4 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
-                                <BookOpen className="h-5 w-5 text-primary-foreground" />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+                      {subjects.map((subject) => {
+                        const SubjectIcon = getSubjectIcon(subject.icon);
+                        return (
+                          <Card
+                            key={subject.id}
+                            className="cursor-pointer hover:shadow-lg transition-shadow bg-accent border-border group"
+                            onClick={() => setSelectedSubject(subject)}
+                          >
+                            <CardContent className="p-3 md:p-4 flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="h-9 w-9 md:h-10 md:w-10 rounded-lg bg-primary flex items-center justify-center shrink-0">
+                                  <SubjectIcon className="h-4 w-4 md:h-5 md:w-5 text-primary-foreground" />
+                                </div>
+                                <div className="min-w-0">
+                                  <h3 className="font-semibold text-foreground text-sm md:text-base truncate">
+                                    {subject.name}
+                                  </h3>
+                                  <p className="text-xs md:text-sm text-muted-foreground">{subject.grade}</p>
+                                </div>
                               </div>
-                              <div>
-                                <h3 className="font-semibold text-foreground">{subject.name}</h3>
-                                <p className="text-sm text-muted-foreground">{subject.grade}</p>
-                              </div>
-                            </div>
-                            <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                          </CardContent>
-                        </Card>
-                      ))}
+                              <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
                     </div>
                   )}
                 </CardContent>
@@ -286,12 +330,14 @@ const Preparation = () => {
             ) : (
               /* Topic Selection with Key Notes */
               <Card className="bg-card border-border">
-                <CardHeader className="flex flex-row items-center justify-between">
+                <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4">
                   <div>
                     <Badge variant="secondary" className="mb-2">{selectedSubject.grade}</Badge>
-                    <CardTitle className="text-foreground flex items-center gap-2">
-                      <BookOpen className="h-5 w-5 text-primary" />
-                      {selectedCategory === 'keynotes' ? 'Key Notes' : preparationCategories.find((c) => c.id === selectedCategory)?.name} - {selectedSubject.name}
+                    <CardTitle className="text-base md:text-lg text-foreground flex items-center gap-2">
+                      <BookOpen className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                      <span className="truncate">
+                        {selectedCategory === 'keynotes' ? 'Key Notes' : preparationCategories.find((c) => c.id === selectedCategory)?.name} - {selectedSubject.name}
+                      </span>
                     </CardTitle>
                   </div>
                 </CardHeader>
@@ -303,7 +349,7 @@ const Preparation = () => {
                     </div>
                   ) : (
                     <>
-                      <p className="text-muted-foreground mb-4">
+                      <p className="text-sm text-muted-foreground mb-4">
                         Select topics of any unit to view{' '}
                         {selectedCategory === 'keynotes'
                           ? 'Key Notes'
@@ -315,10 +361,10 @@ const Preparation = () => {
                           <AccordionItem
                             key={unit.id}
                             value={unit.id}
-                            className="border border-border rounded-lg px-4"
+                            className="border border-border rounded-lg px-3 md:px-4"
                           >
-                            <AccordionTrigger className="hover:no-underline">
-                              <div className="flex items-center gap-3">
+                            <AccordionTrigger className="hover:no-underline py-3">
+                              <div className="flex items-center gap-2 md:gap-3">
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -330,7 +376,7 @@ const Preparation = () => {
                                 >
                                   All Units
                                 </Button>
-                                <span className="font-semibold text-primary">{unit.name}</span>
+                                <span className="font-semibold text-primary text-sm md:text-base">{unit.name}</span>
                               </div>
                             </AccordionTrigger>
                             <AccordionContent>
@@ -345,9 +391,8 @@ const Preparation = () => {
 
                                     return (
                                       <div key={topic.id} className="space-y-2">
-                                        {/* Topic Row */}
                                         <div
-                                          className="flex items-center gap-3 p-3 rounded-lg bg-accent hover:bg-muted transition-colors cursor-pointer"
+                                          className="flex items-center gap-3 p-2 md:p-3 rounded-lg bg-accent hover:bg-muted transition-colors cursor-pointer"
                                           onClick={() => handleTopicToggle(topic.id)}
                                         >
                                           <Checkbox
@@ -355,12 +400,11 @@ const Preparation = () => {
                                             onCheckedChange={() => handleTopicToggle(topic.id)}
                                             className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                                           />
-                                          <span className="text-foreground">{topic.name}</span>
+                                          <span className="text-sm md:text-base text-foreground">{topic.name}</span>
                                         </div>
 
-                                        {/* Key Notes Content - Shows when topic is selected */}
                                         {isSelected && selectedCategory === 'keynotes' && (
-                                          <div className="ml-6 p-4 bg-muted/50 border-l-4 border-primary rounded-r-lg">
+                                          <div className="ml-4 md:ml-6 p-3 md:p-4 bg-muted/50 border-l-4 border-primary rounded-r-lg">
                                             {isLoadingNotes ? (
                                               <div className="flex items-center gap-2 text-muted-foreground">
                                                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -374,7 +418,7 @@ const Preparation = () => {
                                               <div className="space-y-4">
                                                 {topicNotes.map((note) => (
                                                   <div key={note.id}>
-                                                    <h4 className="font-semibold text-foreground mb-2">
+                                                    <h4 className="font-semibold text-foreground mb-2 text-sm md:text-base">
                                                       {note.title}
                                                     </h4>
                                                     <div className="prose prose-sm dark:prose-invert max-w-none text-foreground">
@@ -402,11 +446,11 @@ const Preparation = () => {
                       </Accordion>
 
                       {selectedTopics.length > 0 && selectedCategory !== 'keynotes' && (
-                        <div className="mt-6 flex items-center justify-between p-4 bg-primary/10 rounded-lg">
-                          <span className="text-foreground font-medium">
+                        <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-primary/10 rounded-lg">
+                          <span className="text-foreground font-medium text-sm md:text-base">
                             {selectedTopics.length} topic(s) selected
                           </span>
-                          <Button>
+                          <Button className="w-full sm:w-auto">
                             Start Quiz
                           </Button>
                         </div>

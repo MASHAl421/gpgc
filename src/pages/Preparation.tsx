@@ -15,6 +15,8 @@ import 'katex/dist/katex.min.css';
 import { BookOpen, PlayCircle, FileText, Beaker, ClipboardList, PenTool, Files, TestTube, ChevronRight, GraduationCap, Loader2, ArrowLeft, Code, Atom, Users, Monitor, Download, ExternalLink, Library } from 'lucide-react';
 import ObjectivePaperSelector, { QuizConfig } from '@/components/objective/ObjectivePaperSelector';
 import ObjectiveQuiz from '@/components/objective/ObjectiveQuiz';
+import AcademicResources from '@/components/academic/AcademicResources';
+
 interface KeyNote {
   id: string;
   title: string;
@@ -349,8 +351,10 @@ const Preparation = () => {
 
             {/* Topics Content */}
             <div className="lg:col-span-9">
-              {/* Show Objective Quiz if config is set */}
-              {selectedCategory === 'objective' && quizConfig ? (
+              {/* Show Academic Resources */}
+              {selectedCategory === 'academic' ? (
+                <AcademicResources subjectId={selectedSubject.id} subjectName={selectedSubject.name} />
+              ) : selectedCategory === 'objective' && quizConfig ? (
                 <ObjectiveQuiz config={quizConfig} onBack={handleBackFromQuiz} />
               ) : selectedCategory === 'objective' ? (
                 <ObjectivePaperSelector subject={selectedSubject} onStartQuiz={handleStartQuiz} />

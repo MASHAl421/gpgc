@@ -72,15 +72,16 @@ interface PastPaper {
   subject_id: string;
 }
 
+type ViewMode = 'subjects' | 'categories' | 'content';
+
 const preparationCategories = [
-  { id: 'academic', name: 'Academic Resources', icon: 'BookOpen' },
-  { id: 'video', name: 'Video Lectures', icon: 'PlayCircle' },
-  { id: 'keynotes', name: 'Key Notes', icon: 'FileText' },
-  { id: 'simulations', name: 'Simulations', icon: 'Beaker' },
-  { id: 'objective', name: 'Objective Paper', icon: 'ClipboardList' },
-  { id: 'subjective', name: 'Subjective Paper', icon: 'PenTool' },
-  { id: 'pastpapers', name: 'Past & Model Papers', icon: 'Files' },
-  { id: 'experiments', name: 'Experiments', icon: 'TestTube' },
+  { id: 'keynotes', name: 'Key Notes', icon: 'FileText', description: 'Quick revision notes for each topic' },
+  { id: 'video', name: 'Video Lectures', icon: 'PlayCircle', description: 'Watch explained video lessons' },
+  { id: 'objective', name: 'Objective MCQs', icon: 'ClipboardList', description: 'Practice multiple choice questions' },
+  { id: 'subjective', name: 'Subjective Questions', icon: 'PenTool', description: 'Long answer practice questions' },
+  { id: 'pastpapers', name: 'Past & Model Papers', icon: 'Files', description: 'Previous exam papers' },
+  { id: 'simulations', name: 'Simulations', icon: 'Beaker', description: 'Interactive lab simulations' },
+  { id: 'experiments', name: 'Experiments', icon: 'TestTube', description: 'Step-by-step lab experiments' },
 ];
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -102,7 +103,7 @@ const Preparation = () => {
   const { needsOnboarding, profileData, isLoading: onboardingLoading, completeOnboarding } = useSemesterOnboarding();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string>('keynotes');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [keyNotes, setKeyNotes] = useState<Record<string, KeyNote[]>>({});
   const [loadingNotes, setLoadingNotes] = useState<Record<string, boolean>>({});
@@ -110,6 +111,7 @@ const Preparation = () => {
   const [pastPapers, setPastPapers] = useState<PastPaper[]>([]);
   const [loadingPapers, setLoadingPapers] = useState(false);
   const [selectedPaper, setSelectedPaper] = useState<PastPaper | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('subjects');
 
   useEffect(() => {
     if (!onboardingLoading && !needsOnboarding) {
@@ -121,7 +123,6 @@ const Preparation = () => {
     try {
       setIsLoading(true);
       
-      // Build query - filter by semester if user has one
       let query = supabase.from('subjects').select('*').order('name');
       
       if (profileData?.semester) {
@@ -132,7 +133,6 @@ const Preparation = () => {
 
       if (subjectsError) throw subjectsError;
 
-      // Fetch units for all subjects
       const { data: unitsData, error: unitsError } = await supabase
         .from('units')
         .select('*')
@@ -140,7 +140,6 @@ const Preparation = () => {
 
       if (unitsError) throw unitsError;
 
-      // Fetch topics for all units
       const { data: topicsData, error: topicsError } = await supabase
         .from('topics')
         .select('*')
@@ -148,7 +147,6 @@ const Preparation = () => {
 
       if (topicsError) throw topicsError;
 
-      // Organize data
       const organizedSubjects: Subject[] = (subjectsData || []).map((subject) => {
         const subjectUnits = (unitsData || [])
           .filter((unit) => unit.subject_id === subject.id)
@@ -238,29 +236,40 @@ const Preparation = () => {
     }
   };
 
-  const handleBackToSubjects = () => {
-    setSelectedSubject(null);
-    setSelectedTopics([]);
-    setPastPapers([]);
-  };
-
   const handleSubjectSelect = (subject: Subject) => {
     setSelectedSubject(subject);
-    if (selectedCategory === 'pastpapers') {
-      fetchPastPapers(subject.id);
+    setViewMode('categories');
+  };
+
+  const handleCategorySelect = (categoryId: string) => {
+    setSelectedCategory(categoryId);
+    setViewMode('content');
+    if (categoryId === 'pastpapers' && selectedSubject) {
+      fetchPastPapers(selectedSubject.id);
     }
   };
 
-  const handleCategoryChange = (category: string) => {
-    setSelectedCategory(category);
-    if (category === 'pastpapers' && selectedSubject) {
-      fetchPastPapers(selectedSubject.id);
+  const handleBack = () => {
+    if (viewMode === 'content') {
+      setViewMode('categories');
+      setSelectedCategory(null);
+      setSelectedTopics([]);
+      setPastPapers([]);
+    } else if (viewMode === 'categories') {
+      setViewMode('subjects');
+      setSelectedSubject(null);
     }
   };
 
   const getSubjectIcon = (iconName: string | null) => {
     const Icon = iconName ? iconMap[iconName] : BookOpen;
     return Icon || BookOpen;
+  };
+
+  const getBackButtonText = () => {
+    if (viewMode === 'content') return `Back to ${selectedSubject?.name}`;
+    if (viewMode === 'categories') return 'Back to Subjects';
+    return '';
   };
 
   if (onboardingLoading || isLoading) {
@@ -289,312 +298,335 @@ const Preparation = () => {
               Preparation
             </h1>
             <p className="text-sm md:text-base text-muted-foreground mt-1">
-              {profileData?.semester 
+              {viewMode === 'subjects' && (profileData?.semester 
                 ? `Semester ${profileData.semester} Subjects`
-                : 'Select subject and start your preparation'
+                : 'Select a subject to start'
+              )}
+              {viewMode === 'categories' && selectedSubject && `${selectedSubject.name} - Choose a resource type`}
+              {viewMode === 'content' && selectedSubject && selectedCategory && 
+                `${selectedSubject.name} - ${preparationCategories.find(c => c.id === selectedCategory)?.name}`
               }
             </p>
           </div>
-          {selectedSubject && (
-            <Button variant="outline" onClick={handleBackToSubjects} className="gap-2">
+          {viewMode !== 'subjects' && (
+            <Button variant="outline" onClick={handleBack} className="gap-2">
               <ArrowLeft className="h-4 w-4" />
-              Back to Subjects
+              {getBackButtonText()}
             </Button>
           )}
         </div>
 
-        <div className="grid lg:grid-cols-4 gap-4 md:gap-6">
-          {/* Categories Sidebar - Hidden on mobile when subject selected */}
-          <div className={`space-y-2 ${selectedSubject ? 'hidden lg:block' : ''}`}>
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-1 gap-2">
-              {preparationCategories.map((category) => {
-                const Icon = iconMap[category.icon] || BookOpen;
-                return (
-                  <Button
-                    key={category.id}
-                    variant={selectedCategory === category.id ? 'default' : 'ghost'}
-                    className="w-full justify-start gap-2 md:gap-3 text-xs md:text-sm"
-                    onClick={() => handleCategoryChange(category.id)}
-                  >
-                    <Icon className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
-                    <span className="truncate">{category.name}</span>
-                  </Button>
-                );
-              })}
-            </div>
-          </div>
+        {/* Subjects Grid */}
+        {viewMode === 'subjects' && (
+          <Card className="bg-card border-border">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg md:text-xl text-foreground">Select a Subject</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {subjects.length === 0 ? (
+                <div className="text-center py-8">
+                  <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">No subjects available yet.</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    {profileData?.semester 
+                      ? `No subjects found for Semester ${profileData.semester}`
+                      : 'Admin needs to add subjects first.'
+                    }
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+                  {subjects.map((subject) => {
+                    const SubjectIcon = getSubjectIcon(subject.icon);
+                    const totalTopics = subject.units.reduce((acc, u) => acc + u.topics.length, 0);
+                    return (
+                      <Card
+                        key={subject.id}
+                        className="cursor-pointer hover:shadow-lg transition-all bg-accent border-border group hover:border-primary"
+                        onClick={() => handleSubjectSelect(subject)}
+                      >
+                        <CardContent className="p-4 md:p-5">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="h-12 w-12 rounded-xl bg-primary flex items-center justify-center shrink-0">
+                              <SubjectIcon className="h-6 w-6 text-primary-foreground" />
+                            </div>
+                            <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                          </div>
+                          <h3 className="font-semibold text-foreground text-base md:text-lg mb-1">
+                            {subject.name}
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            {subject.units.length} Units • {totalTopics} Topics
+                          </p>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
-          {/* Main Content */}
-          <div className="lg:col-span-3">
-            {!selectedSubject ? (
-              /* Subject Selection */
-              <Card className="bg-card border-border">
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-lg md:text-xl text-foreground">Select a Subject</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {subjects.length === 0 ? (
-                    <div className="text-center py-8">
-                      <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <p className="text-muted-foreground">No subjects available yet.</p>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        {profileData?.semester 
-                          ? `No subjects found for Semester ${profileData.semester}`
-                          : 'Admin needs to add subjects first.'
-                        }
-                      </p>
+        {/* Category Selection */}
+        {viewMode === 'categories' && selectedSubject && (
+          <Card className="bg-card border-border">
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-3">
+                {(() => {
+                  const SubjectIcon = getSubjectIcon(selectedSubject.icon);
+                  return (
+                    <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
+                      <SubjectIcon className="h-5 w-5 text-primary-foreground" />
                     </div>
-                  ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
-                      {subjects.map((subject) => {
-                        const SubjectIcon = getSubjectIcon(subject.icon);
-                        return (
-                          <Card
-                            key={subject.id}
-                            className="cursor-pointer hover:shadow-lg transition-shadow bg-accent border-border group"
-                            onClick={() => handleSubjectSelect(subject)}
-                          >
-                            <CardContent className="p-3 md:p-4 flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <div className="h-9 w-9 md:h-10 md:w-10 rounded-lg bg-primary flex items-center justify-center shrink-0">
-                                  <SubjectIcon className="h-4 w-4 md:h-5 md:w-5 text-primary-foreground" />
-                                </div>
-                                <div className="min-w-0">
-                                  <h3 className="font-semibold text-foreground text-sm md:text-base truncate">
-                                    {subject.name}
-                                  </h3>
-                                  <p className="text-xs md:text-sm text-muted-foreground">{subject.grade}</p>
-                                </div>
-                              </div>
-                              <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
-                            </CardContent>
-                          </Card>
-                        );
-                      })}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ) : (
-              /* Topic Selection with Key Notes */
-              <Card className="bg-card border-border">
-                <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4">
-                  <div>
-                    <Badge variant="secondary" className="mb-2">{selectedSubject.grade}</Badge>
-                    <CardTitle className="text-base md:text-lg text-foreground flex items-center gap-2">
-                      <BookOpen className="h-4 w-4 md:h-5 md:w-5 text-primary" />
-                      <span className="truncate">
-                        {selectedCategory === 'keynotes' ? 'Key Notes' : preparationCategories.find((c) => c.id === selectedCategory)?.name} - {selectedSubject.name}
-                      </span>
-                    </CardTitle>
+                  );
+                })()}
+                <div>
+                  <CardTitle className="text-lg md:text-xl text-foreground">{selectedSubject.name}</CardTitle>
+                  <p className="text-sm text-muted-foreground">{selectedSubject.grade}</p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground mb-4">Choose a resource type to study from:</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+                {preparationCategories.map((category) => {
+                  const CategoryIcon = iconMap[category.icon] || BookOpen;
+                  return (
+                    <Card
+                      key={category.id}
+                      className="cursor-pointer hover:shadow-lg transition-all bg-accent border-border group hover:border-primary"
+                      onClick={() => handleCategorySelect(category.id)}
+                    >
+                      <CardContent className="p-4 md:p-5">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="h-11 w-11 rounded-xl bg-secondary flex items-center justify-center shrink-0">
+                            <CategoryIcon className="h-5 w-5 text-secondary-foreground" />
+                          </div>
+                          <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                        </div>
+                        <h3 className="font-semibold text-foreground text-sm md:text-base mb-1">
+                          {category.name}
+                        </h3>
+                        <p className="text-xs text-muted-foreground">
+                          {category.description}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Content View */}
+        {viewMode === 'content' && selectedSubject && selectedCategory && (
+          <Card className="bg-card border-border">
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4">
+              <div>
+                <Badge variant="secondary" className="mb-2">{selectedSubject.grade}</Badge>
+                <CardTitle className="text-base md:text-lg text-foreground flex items-center gap-2">
+                  {(() => {
+                    const CategoryIcon = iconMap[preparationCategories.find(c => c.id === selectedCategory)?.icon || 'BookOpen'] || BookOpen;
+                    return <CategoryIcon className="h-4 w-4 md:h-5 md:w-5 text-primary" />;
+                  })()}
+                  <span className="truncate">
+                    {preparationCategories.find((c) => c.id === selectedCategory)?.name} - {selectedSubject.name}
+                  </span>
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {selectedCategory === 'pastpapers' ? (
+                /* Past Papers View */
+                loadingPapers ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
                   </div>
-                </CardHeader>
-                <CardContent>
-                  {selectedSubject.units.length === 0 ? (
-                    <div className="text-center py-8">
-                      <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <p className="text-muted-foreground">No units available for this subject.</p>
-                    </div>
-                  ) : (
-                    <>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Select topics of any unit to view{' '}
-                        {selectedCategory === 'keynotes'
-                          ? 'Key Notes'
-                          : preparationCategories.find((c) => c.id === selectedCategory)?.name}
-                      </p>
-
-                      <Accordion type="multiple" defaultValue={selectedSubject.units.map(u => u.id)} className="space-y-2">
-                        {selectedSubject.units.map((unit) => (
-                          <AccordionItem
-                            key={unit.id}
-                            value={unit.id}
-                            className="border border-border rounded-lg px-3 md:px-4"
-                          >
-                            <AccordionTrigger className="hover:no-underline py-3">
-                              <div className="flex items-center gap-2 md:gap-3">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 px-2 text-xs"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleSelectAllTopics(unit.topics);
-                                  }}
-                                >
-                                  All Units
-                                </Button>
-                                <span className="font-semibold text-primary text-sm md:text-base">{unit.name}</span>
+                ) : pastPapers.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Files className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">No past papers available for this subject.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {pastPapers.map((paper) => (
+                      <Card
+                        key={paper.id}
+                        className="cursor-pointer hover:shadow-md transition-shadow bg-accent border-border"
+                        onClick={() => setSelectedPaper(paper)}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-start gap-3">
+                            <div className="h-10 w-10 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0">
+                              <FileText className="h-5 w-5 text-destructive" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <h4 className="font-medium text-foreground text-sm truncate">{paper.title}</h4>
+                              <div className="flex items-center gap-2 mt-1">
+                                {paper.year && (
+                                  <Badge variant="outline" className="text-xs">{paper.year}</Badge>
+                                )}
+                                <Badge variant="secondary" className="text-xs capitalize">
+                                  {paper.paper_type || 'Past'}
+                                </Badge>
                               </div>
-                            </AccordionTrigger>
-                            <AccordionContent>
-                              {unit.topics.length === 0 ? (
-                                <p className="text-sm text-muted-foreground py-2">No topics in this unit yet.</p>
-                              ) : (
-                                <div className="space-y-3 pt-2">
-                                  {unit.topics.map((topic) => {
-                                    const isSelected = selectedTopics.includes(topic.id);
-                                    const topicNotes = keyNotes[topic.id] || [];
-                                    const isLoadingNotes = loadingNotes[topic.id];
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )
+              ) : selectedSubject.units.length === 0 ? (
+                <div className="text-center py-8">
+                  <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">No units available for this subject.</p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Select topics to view {preparationCategories.find((c) => c.id === selectedCategory)?.name}
+                  </p>
 
-                                    return (
-                                      <div key={topic.id} className="space-y-2">
-                                        <div
-                                          className="flex items-center gap-3 p-2 md:p-3 rounded-lg bg-accent hover:bg-muted transition-colors cursor-pointer"
-                                          onClick={() => handleTopicToggle(topic.id)}
-                                        >
-                                          <Checkbox
-                                            checked={isSelected}
-                                            onCheckedChange={() => handleTopicToggle(topic.id)}
-                                            className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                                          />
-                                          <span className="text-sm md:text-base text-foreground">{topic.name}</span>
-                                        </div>
+                  <Accordion type="multiple" defaultValue={selectedSubject.units.map(u => u.id)} className="space-y-2">
+                    {selectedSubject.units.map((unit) => (
+                      <AccordionItem
+                        key={unit.id}
+                        value={unit.id}
+                        className="border border-border rounded-lg px-3 md:px-4"
+                      >
+                        <AccordionTrigger className="hover:no-underline py-3">
+                          <div className="flex items-center gap-2 md:gap-3">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-2 text-xs"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSelectAllTopics(unit.topics);
+                              }}
+                            >
+                              Select All
+                            </Button>
+                            <span className="font-semibold text-primary text-sm md:text-base">{unit.name}</span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          {unit.topics.length === 0 ? (
+                            <p className="text-sm text-muted-foreground py-2">No topics in this unit yet.</p>
+                          ) : (
+                            <div className="space-y-3 pt-2">
+                              {unit.topics.map((topic) => {
+                                const isSelected = selectedTopics.includes(topic.id);
+                                const topicNotes = keyNotes[topic.id] || [];
+                                const isLoadingNotes = loadingNotes[topic.id];
 
-                                        {isSelected && selectedCategory === 'keynotes' && (
-                                          <div className="ml-4 md:ml-6 p-3 md:p-4 bg-muted/50 border-l-4 border-primary rounded-r-lg">
-                                            {isLoadingNotes ? (
-                                              <div className="flex items-center gap-2 text-muted-foreground">
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                                Loading notes...
-                                              </div>
-                                            ) : topicNotes.length === 0 ? (
-                                              <p className="text-muted-foreground text-sm italic">
-                                                No key notes available for this topic yet.
-                                              </p>
-                                            ) : (
-                                              <div className="space-y-4">
-                                                {topicNotes.map((note) => (
-                                                  <div key={note.id}>
-                                                    <h4 className="font-semibold text-foreground mb-2 text-sm md:text-base">
-                                                      {note.title}
-                                                    </h4>
-                                                    <div className="prose prose-sm dark:prose-invert max-w-none text-foreground">
-                                                      <ReactMarkdown
-                                                        remarkPlugins={[remarkMath]}
-                                                        rehypePlugins={[rehypeKatex]}
-                                                      >
-                                                        {note.content}
-                                                      </ReactMarkdown>
-                                                    </div>
+                                return (
+                                  <div key={topic.id} className="space-y-2">
+                                    <div
+                                      className="flex items-center gap-3 p-2 md:p-3 rounded-lg bg-accent hover:bg-muted transition-colors cursor-pointer"
+                                      onClick={() => handleTopicToggle(topic.id)}
+                                    >
+                                      <Checkbox
+                                        checked={isSelected}
+                                        onCheckedChange={() => handleTopicToggle(topic.id)}
+                                        className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                      />
+                                      <span className="text-sm md:text-base text-foreground">{topic.name}</span>
+                                    </div>
+
+                                    {isSelected && selectedCategory === 'keynotes' && (
+                                      <div className="ml-6 md:ml-8 pl-3 md:pl-4 border-l-2 border-primary/30">
+                                        {isLoadingNotes ? (
+                                          <div className="flex items-center gap-2 py-2">
+                                            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                                            <span className="text-sm text-muted-foreground">Loading notes...</span>
+                                          </div>
+                                        ) : topicNotes.length === 0 ? (
+                                          <p className="text-sm text-muted-foreground py-2">
+                                            No key notes available for this topic.
+                                          </p>
+                                        ) : (
+                                          <div className="space-y-3">
+                                            {topicNotes.map((note) => (
+                                              <Card key={note.id} className="bg-background border-border">
+                                                <CardContent className="p-3 md:p-4">
+                                                  <h4 className="font-medium text-foreground mb-2 text-sm md:text-base">
+                                                    {note.title}
+                                                  </h4>
+                                                  <div className="prose prose-sm max-w-none text-muted-foreground dark:prose-invert prose-headings:text-foreground prose-p:text-muted-foreground prose-strong:text-foreground prose-li:text-muted-foreground">
+                                                    <ReactMarkdown
+                                                      remarkPlugins={[remarkMath]}
+                                                      rehypePlugins={[rehypeKatex]}
+                                                    >
+                                                      {note.content}
+                                                    </ReactMarkdown>
                                                   </div>
-                                                ))}
-                                              </div>
-                                            )}
+                                                </CardContent>
+                                              </Card>
+                                            ))}
                                           </div>
                                         )}
                                       </div>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                            </AccordionContent>
-                          </AccordionItem>
-                        ))}
-                      </Accordion>
+                                    )}
 
-                      {selectedTopics.length > 0 && selectedCategory !== 'keynotes' && selectedCategory !== 'pastpapers' && (
-                        <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-primary/10 rounded-lg">
-                          <span className="text-foreground font-medium text-sm md:text-base">
-                            {selectedTopics.length} topic(s) selected
-                          </span>
-                          <Button className="w-full sm:w-auto">
-                            Start Quiz
-                          </Button>
-                        </div>
-                      )}
-
-                      {/* Past Papers Section */}
-                      {selectedCategory === 'pastpapers' && (
-                        <div className="mt-6">
-                          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                            <Files className="h-5 w-5 text-primary" />
-                            Past & Model Papers
-                          </h3>
-                          {loadingPapers ? (
-                            <div className="flex items-center justify-center py-8">
-                              <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                            </div>
-                          ) : pastPapers.length === 0 ? (
-                            <div className="text-center py-8 bg-muted rounded-lg">
-                              <Files className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                              <p className="text-muted-foreground">No past papers available for this subject yet.</p>
-                            </div>
-                          ) : (
-                            <div className="grid gap-3 sm:grid-cols-2">
-                              {pastPapers.map((paper) => (
-                                <Card
-                                  key={paper.id}
-                                  className="bg-muted hover:shadow-md transition-shadow cursor-pointer"
-                                  onClick={() => setSelectedPaper(paper)}
-                                >
-                                  <CardContent className="p-4 flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                                        <FileText className="h-5 w-5 text-primary" />
+                                    {isSelected && selectedCategory !== 'keynotes' && selectedCategory !== 'pastpapers' && (
+                                      <div className="ml-6 md:ml-8 pl-3 md:pl-4 border-l-2 border-primary/30">
+                                        <p className="text-sm text-muted-foreground py-2 italic">
+                                          {preparationCategories.find(c => c.id === selectedCategory)?.name} coming soon for this topic.
+                                        </p>
                                       </div>
-                                      <div>
-                                        <h4 className="font-medium text-foreground">{paper.title}</h4>
-                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                          {paper.year && <span>{paper.year}</span>}
-                                          {paper.paper_type && (
-                                            <Badge variant="outline" className="text-xs">
-                                              {paper.paper_type}
-                                            </Badge>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-                                    <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                                  </CardContent>
-                                </Card>
-                              ))}
+                                    )}
+                                  </div>
+                                );
+                              })}
                             </div>
                           )}
-                        </div>
-                      )}
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
 
-      {/* Past Paper Viewer Dialog */}
+      {/* PDF Viewer Dialog */}
       <Dialog open={!!selectedPaper} onOpenChange={() => setSelectedPaper(null)}>
         <DialogContent className="max-w-4xl h-[80vh]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-primary" />
+              <FileText className="h-5 w-5 text-destructive" />
               {selectedPaper?.title}
             </DialogTitle>
           </DialogHeader>
           <div className="flex-1 overflow-hidden">
-            {selectedPaper?.file_url ? (
-              <iframe
-                src={selectedPaper.file_url}
-                className="w-full h-full rounded-lg border border-border"
-                title={selectedPaper.title}
-              />
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <p className="text-muted-foreground">No file available</p>
+            {selectedPaper && (
+              <div className="h-full flex flex-col gap-4">
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" asChild>
+                    <a href={selectedPaper.file_url} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Open in New Tab
+                    </a>
+                  </Button>
+                  <Button variant="outline" size="sm" asChild>
+                    <a href={selectedPaper.file_url} download>
+                      <Download className="h-4 w-4 mr-2" />
+                      Download
+                    </a>
+                  </Button>
+                </div>
+                <iframe
+                  src={`${selectedPaper.file_url}#toolbar=1`}
+                  className="flex-1 w-full rounded-lg border border-border"
+                  title={selectedPaper.title}
+                />
               </div>
-            )}
-          </div>
-          <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => setSelectedPaper(null)}>
-              Close
-            </Button>
-            {selectedPaper?.file_url && (
-              <Button asChild>
-                <a href={selectedPaper.file_url} target="_blank" rel="noopener noreferrer">
-                  <Download className="h-4 w-4 mr-2" />
-                  Download
-                </a>
-              </Button>
             )}
           </div>
         </DialogContent>

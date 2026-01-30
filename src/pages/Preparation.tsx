@@ -104,6 +104,7 @@ const Preparation = () => {
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('keynotes');
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
+  const [expandedUnits, setExpandedUnits] = useState<string[]>([]);
   const [keyNotes, setKeyNotes] = useState<Record<string, KeyNote[]>>({});
   const [loadingNotes, setLoadingNotes] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -208,9 +209,18 @@ const Preparation = () => {
   const handleSubjectSelect = (subject: Subject) => {
     setSelectedSubject(subject);
     setSelectedTopics([]);
+    setExpandedUnits([]);
     if (selectedCategory === 'pastpapers') {
       fetchPastPapers(subject.id);
     }
+  };
+
+  const handleUnitToggle = (unitId: string) => {
+    setExpandedUnits(prev => 
+      prev.includes(unitId) 
+        ? prev.filter(id => id !== unitId)
+        : [...prev, unitId]
+    );
   };
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category);
@@ -222,6 +232,7 @@ const Preparation = () => {
   const handleBackToSubjects = () => {
     setSelectedSubject(null);
     setSelectedTopics([]);
+    setExpandedUnits([]);
     setPastPapers([]);
   };
   const getSubjectIcon = (iconName: string | null) => {
@@ -373,54 +384,97 @@ const Preparation = () => {
                         Select topics of any unit to view {getCategoryTitle()}
                       </p>
 
-                      {selectedSubject.units.map(unit => <div key={unit.id} className="space-y-3">
-                          
-                          
-                          {unit.topics.length === 0 ? <p className="text-sm text-muted-foreground pl-4">
-                  </p> : <div className="space-y-2">
-                              {unit.topics.map(topic => {
-                      const isSelected = selectedTopics.includes(topic.id);
-                      const topicNotes = keyNotes[topic.id] || [];
-                      const isLoadingNotes = loadingNotes[topic.id];
-                      return <div key={topic.id} className="space-y-2">
-                                    <div className="flex items-center gap-3 py-2 cursor-pointer group" onClick={() => handleTopicToggle(topic.id)}>
-                                      <Checkbox checked={isSelected} onCheckedChange={() => handleTopicToggle(topic.id)} className="h-5 w-5 rounded-full border-2 data-[state=checked]:bg-primary data-[state=checked]:border-primary" />
-                                      <span className={`text-sm md:text-base transition-colors ${isSelected ? 'text-primary font-medium' : 'text-foreground group-hover:text-primary'}`}>
-                                        {topic.name}
-                                      </span>
-                                    </div>
+                      {selectedSubject.units.map(unit => {
+                        const isUnitExpanded = expandedUnits.includes(unit.id);
+                        return (
+                          <div key={unit.id} className="space-y-3">
+                            {/* Unit Header - Clickable */}
+                            <button
+                              onClick={() => handleUnitToggle(unit.id)}
+                              className="w-full flex items-center justify-between p-3 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
+                            >
+                              <span className="font-semibold text-foreground">
+                                {unit.name}
+                              </span>
+                              <ChevronRight className={`h-5 w-5 text-muted-foreground transition-transform ${isUnitExpanded ? 'rotate-90' : ''}`} />
+                            </button>
+                            
+                            {/* Topics - Show when unit is expanded */}
+                            {isUnitExpanded && (
+                              <div className="ml-4 space-y-2">
+                                {unit.topics.length === 0 ? (
+                                  <p className="text-sm text-muted-foreground pl-4">
+                                    No topics available for this unit.
+                                  </p>
+                                ) : (
+                                  unit.topics.map(topic => {
+                                    const isSelected = selectedTopics.includes(topic.id);
+                                    const topicNotes = keyNotes[topic.id] || [];
+                                    const isLoadingNotes = loadingNotes[topic.id];
+                                    return (
+                                      <div key={topic.id} className="space-y-2">
+                                        <div 
+                                          className="flex items-center gap-3 py-2 cursor-pointer group" 
+                                          onClick={() => handleTopicToggle(topic.id)}
+                                        >
+                                          <Checkbox 
+                                            checked={isSelected} 
+                                            onCheckedChange={() => handleTopicToggle(topic.id)} 
+                                            className="h-5 w-5 rounded-full border-2 data-[state=checked]:bg-primary data-[state=checked]:border-primary" 
+                                          />
+                                          <span className={`text-sm md:text-base transition-colors ${isSelected ? 'text-primary font-medium' : 'text-foreground group-hover:text-primary'}`}>
+                                            {topic.name}
+                                          </span>
+                                        </div>
 
-                                    {isSelected && selectedCategory === 'keynotes' && <div className="ml-8 pl-4 border-l-2 border-primary/30">
-                                        {isLoadingNotes ? <div className="flex items-center gap-2 py-2">
-                                            <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                                            <span className="text-sm text-muted-foreground">Loading notes...</span>
-                                          </div> : topicNotes.length === 0 ? <p className="text-sm text-muted-foreground py-2">
-                                            No key notes available for this topic.
-                                          </p> : <div className="space-y-3">
-                                            {topicNotes.map(note => <Card key={note.id} className="bg-background border-border">
-                                                <CardContent className="p-3 md:p-4">
-                                                  <h4 className="font-medium text-foreground mb-2 text-sm md:text-base">
-                                                    {note.title}
-                                                  </h4>
-                                                  <div className="prose prose-sm max-w-none text-muted-foreground dark:prose-invert prose-headings:text-foreground prose-p:text-muted-foreground prose-strong:text-foreground prose-li:text-muted-foreground">
-                                                    <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
-                                                      {note.content}
-                                                    </ReactMarkdown>
-                                                  </div>
-                                                </CardContent>
-                                              </Card>)}
-                                          </div>}
-                                      </div>}
+                                        {isSelected && selectedCategory === 'keynotes' && (
+                                          <div className="ml-8 pl-4 border-l-2 border-primary/30">
+                                            {isLoadingNotes ? (
+                                              <div className="flex items-center gap-2 py-2">
+                                                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                                                <span className="text-sm text-muted-foreground">Loading notes...</span>
+                                              </div>
+                                            ) : topicNotes.length === 0 ? (
+                                              <p className="text-sm text-muted-foreground py-2">
+                                                No key notes available for this topic.
+                                              </p>
+                                            ) : (
+                                              <div className="space-y-3">
+                                                {topicNotes.map(note => (
+                                                  <Card key={note.id} className="bg-background border-border">
+                                                    <CardContent className="p-3 md:p-4">
+                                                      <h4 className="font-medium text-foreground mb-2 text-sm md:text-base">
+                                                        {note.title}
+                                                      </h4>
+                                                      <div className="prose prose-sm max-w-none text-muted-foreground dark:prose-invert prose-headings:text-foreground prose-p:text-muted-foreground prose-strong:text-foreground prose-li:text-muted-foreground">
+                                                        <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+                                                          {note.content}
+                                                        </ReactMarkdown>
+                                                      </div>
+                                                    </CardContent>
+                                                  </Card>
+                                                ))}
+                                              </div>
+                                            )}
+                                          </div>
+                                        )}
 
-                                    {isSelected && selectedCategory !== 'keynotes' && selectedCategory !== 'pastpapers' && <div className="ml-8 pl-4 border-l-2 border-primary/30">
-                                        <p className="text-sm text-muted-foreground py-2 italic">
-                                          {getCategoryTitle()} coming soon for this topic.
-                                        </p>
-                                      </div>}
-                                  </div>;
-                    })}
-                            </div>}
-                        </div>)}
+                                        {isSelected && selectedCategory !== 'keynotes' && selectedCategory !== 'pastpapers' && (
+                                          <div className="ml-8 pl-4 border-l-2 border-primary/30">
+                                            <p className="text-sm text-muted-foreground py-2 italic">
+                                              {getCategoryTitle()} coming soon for this topic.
+                                            </p>
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>}
                 </CardContent>
               </Card>

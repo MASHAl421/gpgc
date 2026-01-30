@@ -29,20 +29,33 @@ declare global {
   }
 }
 
+interface UseVoiceRecordingOptions {
+  onComplete?: (transcript: string) => void;
+}
+
 interface UseVoiceRecordingReturn {
   isRecording: boolean;
   transcript: string;
+  interimTranscript: string;
   startRecording: () => void;
   stopRecording: () => void;
   isSupported: boolean;
   error: string | null;
 }
 
-export const useVoiceRecording = (): UseVoiceRecordingReturn => {
+export const useVoiceRecording = (options?: UseVoiceRecordingOptions): UseVoiceRecordingReturn => {
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState('');
+  const [interimTranscript, setInterimTranscript] = useState('');
   const [error, setError] = useState<string | null>(null);
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  const fullTranscriptRef = useRef('');
+  const onCompleteRef = useRef(options?.onComplete);
+
+  // Keep the callback ref updated
+  useEffect(() => {
+    onCompleteRef.current = options?.onComplete;
+  }, [options?.onComplete]);
 
   const isSupported = typeof window !== 'undefined' && 
     ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
@@ -58,15 +71,22 @@ export const useVoiceRecording = (): UseVoiceRecordingReturn => {
 
     recognitionRef.current.onresult = (event: SpeechRecognitionEvent) => {
       let finalTranscript = '';
+      let interim = '';
+      
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
         if (result.isFinal) {
           finalTranscript += result[0].transcript;
+        } else {
+          interim += result[0].transcript;
         }
       }
+      
       if (finalTranscript) {
-        setTranscript(prev => prev + finalTranscript);
+        fullTranscriptRef.current += finalTranscript;
+        setTranscript(fullTranscriptRef.current);
       }
+      setInterimTranscript(interim);
     };
 
     recognitionRef.current.onerror = (event: SpeechRecognitionErrorEvent) => {
@@ -76,6 +96,11 @@ export const useVoiceRecording = (): UseVoiceRecordingReturn => {
 
     recognitionRef.current.onend = () => {
       setIsRecording(false);
+      setInterimTranscript('');
+      // Call onComplete with the full transcript when recording ends
+      if (fullTranscriptRef.current.trim() && onCompleteRef.current) {
+        onCompleteRef.current(fullTranscriptRef.current.trim());
+      }
     };
 
     return () => {
@@ -87,7 +112,9 @@ export const useVoiceRecording = (): UseVoiceRecordingReturn => {
 
   const startRecording = useCallback(() => {
     if (!recognitionRef.current) return;
+    fullTranscriptRef.current = '';
     setTranscript('');
+    setInterimTranscript('');
     setError(null);
     try {
       recognitionRef.current.start();
@@ -106,6 +133,7 @@ export const useVoiceRecording = (): UseVoiceRecordingReturn => {
   return {
     isRecording,
     transcript,
+    interimTranscript,
     startRecording,
     stopRecording,
     isSupported,

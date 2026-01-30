@@ -1,12 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  Bot, Send, Sparkles, Loader2, Video, History, 
-  PanelRightClose, PanelRightOpen
+  Plus, Send, Loader2, Mic, AudioWaveform, 
+  MessageSquare, Trash2, Search, ChevronDown
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -14,44 +13,26 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useVoiceRecording } from '@/hooks/useVoiceRecording';
 import { useTextToSpeech } from '@/hooks/useTextToSpeech';
 import { useChatHistory } from '@/hooks/useChatHistory';
-import { ChatMessage } from '@/components/ai-tutor/ChatMessage';
-import { VoiceRecordButton } from '@/components/ai-tutor/VoiceRecordButton';
-import { VideoPlayer } from '@/components/ai-tutor/VideoPlayer';
-import { SubjectSelector } from '@/components/ai-tutor/SubjectSelector';
-import { ChatHistorySidebar } from '@/components/ai-tutor/ChatHistorySidebar';
-import { QuickTopicButtons } from '@/components/ai-tutor/QuickTopicButtons';
+import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { formatDistanceToNow } from 'date-fns';
 import 'katex/dist/katex.min.css';
 
 type Message = { role: 'user' | 'assistant'; content: string };
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-tutor`;
 
-interface Subject {
-  id: string;
-  name: string;
-}
-
-interface Topic {
-  id: string;
-  name: string;
-  unit_id: string;
-}
-
 const AITutor = () => {
   const [question, setQuestion] = useState('');
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: 'assistant',
-      content: "Hello! I'm your AI Tutor 🎓\n\nI can help you with:\n- **Programming Fundamentals** (C++, Arrays, Loops)\n- **Functional English** (Grammar, Writing, Reading)\n- **Any topic** from your syllabus\n\nAsk me anything, or use voice input! 🎤",
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [showVideo, setShowVideo] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
-  const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
-  const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
   const { isAuthenticated, user } = useAuth();
   const isMobile = useIsMobile();
@@ -66,22 +47,25 @@ const AITutor = () => {
     createNewSession, 
     updateSession, 
     deleteSession,
-    loadSession 
+    loadSession,
+    setCurrentSessionId
   } = useChatHistory();
 
-  // Load chat history on mount
   useEffect(() => {
     if (isAuthenticated) {
       fetchChatHistory();
     }
   }, [isAuthenticated, fetchChatHistory]);
 
-  // Update question when voice transcript changes
   useEffect(() => {
     if (transcript) {
       setQuestion(prev => prev + transcript);
     }
   }, [transcript]);
+
+  useEffect(() => {
+    if (isMobile) setSidebarOpen(false);
+  }, [isMobile]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -91,34 +75,33 @@ const AITutor = () => {
     scrollToBottom();
   }, [messages]);
 
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 200) + 'px';
+    }
+  }, [question]);
+
   const handleSend = async () => {
     if (!question.trim() || isLoading) return;
 
     const userMsg: Message = { role: 'user', content: question };
-    setMessages(prev => [...prev, userMsg]);
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages);
     setQuestion('');
     setIsLoading(true);
 
     let assistantContent = '';
 
     try {
-      // Build context-aware messages
-      const contextMessages = [...messages, userMsg];
-      if (selectedSubject || selectedTopic) {
-        const contextNote = `[Context: ${selectedSubject?.name || ''}${selectedTopic ? ' > ' + selectedTopic.name : ''}]`;
-        contextMessages[0] = { 
-          ...contextMessages[0], 
-          content: contextMessages[0].content + '\n\n' + contextNote 
-        };
-      }
-
       const resp = await fetch(CHAT_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ messages: contextMessages }),
+        body: JSON.stringify({ messages: newMessages }),
       });
 
       if (!resp.ok) {
@@ -157,7 +140,7 @@ const AITutor = () => {
               assistantContent += content;
               setMessages(prev => {
                 const last = prev[prev.length - 1];
-                if (last?.role === 'assistant' && prev.length > 1 && prev[prev.length - 2]?.role === 'user') {
+                if (last?.role === 'assistant') {
                   return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: assistantContent } : m));
                 }
                 return [...prev, { role: 'assistant', content: assistantContent }];
@@ -170,16 +153,16 @@ const AITutor = () => {
         }
       }
 
-      // Save to history if authenticated
+      // Save to history
       if (isAuthenticated && user) {
-        const updatedMessages = [...messages, userMsg, { role: 'assistant' as const, content: assistantContent }];
+        const finalMessages = [...newMessages, { role: 'assistant' as const, content: assistantContent }];
         if (currentSessionId) {
-          const title = messages.length <= 1 ? question.slice(0, 50) : undefined;
-          await updateSession(currentSessionId, updatedMessages, title);
+          await updateSession(currentSessionId, finalMessages);
         } else {
-          const newId = await createNewSession(selectedSubject?.id, selectedTopic?.id);
+          const title = question.slice(0, 40) + (question.length > 40 ? '...' : '');
+          const newId = await createNewSession();
           if (newId) {
-            await updateSession(newId, updatedMessages, question.slice(0, 50));
+            await updateSession(newId, finalMessages, title);
           }
         }
       }
@@ -196,214 +179,326 @@ const AITutor = () => {
   };
 
   const handleNewChat = async () => {
-    setMessages([{
-      role: 'assistant',
-      content: "Hello! I'm your AI Tutor 🎓\n\nStart a new conversation by asking any question!",
-    }]);
-    if (isAuthenticated) {
-      await createNewSession(selectedSubject?.id, selectedTopic?.id);
-    }
+    setMessages([]);
+    setCurrentSessionId(null);
+    if (isMobile) setSidebarOpen(false);
   };
 
   const handleLoadSession = (sessionId: string) => {
     const sessionMessages = loadSession(sessionId);
-    if (sessionMessages.length > 0) {
-      setMessages(sessionMessages);
+    setMessages(sessionMessages);
+    if (isMobile) setSidebarOpen(false);
+  };
+
+  const handleVoiceMode = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
     }
   };
 
-  const showSidebar = !isMobile && (showVideo || showHistory);
-
   return (
     <MainLayout>
-      <div className="h-[calc(100vh-8rem)] flex flex-col gap-4">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-lg">
-              <Bot className="h-6 w-6 text-primary-foreground" />
+      <div className="h-[calc(100vh-8rem)] flex overflow-hidden -mx-4 -mt-4 lg:-mx-6 lg:-mt-6">
+        {/* Sidebar */}
+        <div className={`${sidebarOpen ? 'w-64' : 'w-0'} flex-shrink-0 border-r border-border bg-muted/30 transition-all duration-300 overflow-hidden`}>
+          <div className="w-64 h-full flex flex-col">
+            {/* New Chat Button */}
+            <div className="p-3">
+              <Button 
+                variant="outline" 
+                className="w-full justify-start gap-2" 
+                onClick={handleNewChat}
+              >
+                <Plus className="h-4 w-4" />
+                New chat
+              </Button>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">AI Tutor</h1>
-              <p className="text-muted-foreground text-sm">Your personal learning assistant</p>
+
+            {/* Search */}
+            <div className="px-3 pb-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search chats"
+                  className="w-full pl-9 pr-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
             </div>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <Button
-              variant={showHistory ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => { setShowHistory(!showHistory); setShowVideo(false); }}
-              className="gap-2"
-            >
-              <History className="h-4 w-4" />
-              <span className="hidden sm:inline">History</span>
-            </Button>
-            <Button
-              variant={showVideo ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => { setShowVideo(!showVideo); setShowHistory(false); }}
-              className="gap-2"
-            >
-              <Video className="h-4 w-4" />
-              <span className="hidden sm:inline">Video</span>
-            </Button>
+
+            {/* Chat History */}
+            <div className="flex-1 overflow-hidden">
+              <div className="px-3 py-2">
+                <p className="text-xs font-medium text-muted-foreground">Your chats</p>
+              </div>
+              <ScrollArea className="h-[calc(100%-40px)]">
+                <div className="px-2 space-y-1">
+                  {historyLoading ? (
+                    <div className="p-4 text-center">
+                      <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
+                    </div>
+                  ) : chatSessions.length === 0 ? (
+                    <div className="p-4 text-center text-muted-foreground text-sm">
+                      No chats yet
+                    </div>
+                  ) : (
+                    chatSessions.map((session) => (
+                      <div
+                        key={session.id}
+                        className={`group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+                          currentSessionId === session.id
+                            ? 'bg-accent text-accent-foreground'
+                            : 'hover:bg-muted'
+                        }`}
+                        onClick={() => handleLoadSession(session.id)}
+                      >
+                        <MessageSquare className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                        <span className="flex-1 text-sm truncate">
+                          {session.title || 'New Chat'}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 opacity-0 group-hover:opacity-100"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteSession(session.id);
+                          }}
+                        >
+                          <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+                        </Button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
           </div>
         </div>
 
-        {/* Subject Selector */}
-        <SubjectSelector
-          selectedSubject={selectedSubject}
-          selectedTopic={selectedTopic}
-          onSelectSubject={setSelectedSubject}
-          onSelectTopic={setSelectedTopic}
-        />
+        {/* Main Chat Area */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+              >
+                <MessageSquare className="h-4 w-4" />
+              </Button>
+              <span className="font-medium">AI Tutor</span>
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            </div>
+          </div>
 
-        {/* Main Content */}
-        <div className="flex-1 flex gap-4 overflow-hidden">
-          {/* Chat Area */}
-          <Card className={`flex-1 flex flex-col bg-card/50 backdrop-blur-sm border-border overflow-hidden ${showSidebar ? 'lg:w-[70%]' : 'w-full'}`}>
-            <CardHeader className="border-b border-border flex-shrink-0 py-3">
-              <CardTitle className="text-base text-foreground flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-primary" />
-                Ask Me Anything
-                {isLoading && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
-              </CardTitle>
-            </CardHeader>
-            
-            <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
-              {/* Messages */}
-              <ScrollArea className="flex-1 p-4">
-                <div className="space-y-4">
+          {/* Messages Area */}
+          <ScrollArea className="flex-1">
+            <div className="max-w-3xl mx-auto px-4 py-6">
+              {messages.length === 0 ? (
+                /* Welcome Screen */
+                <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+                  <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+                    <MessageSquare className="h-8 w-8 text-primary" />
+                  </div>
+                  <h1 className="text-2xl font-semibold mb-2">How can I help you today?</h1>
+                  <p className="text-muted-foreground mb-8 max-w-md">
+                    Ask me anything about Programming Fundamentals, Functional English, or any topic from your syllabus.
+                  </p>
+                  
+                  {/* Quick Suggestions */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg">
+                    {[
+                      "Explain loops in C++",
+                      "What are parts of speech?",
+                      "Write a simple array program",
+                      "Explain tenses with examples"
+                    ].map((suggestion, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setQuestion(suggestion)}
+                        className="text-left p-4 rounded-xl border border-border hover:bg-muted/50 transition-colors"
+                      >
+                        <span className="text-sm">{suggestion}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                /* Messages */
+                <div className="space-y-6">
                   {messages.map((message, index) => (
-                    <div key={index} className="group">
-                      <ChatMessage
-                        role={message.role}
-                        content={message.content}
-                        onSpeak={speak}
-                        onStop={stopSpeaking}
-                        isSpeaking={isSpeaking}
-                        speakingSupported={ttsSupported}
-                      />
+                    <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-[85%] ${message.role === 'user' ? '' : ''}`}>
+                        {message.role === 'user' ? (
+                          <div className="bg-primary text-primary-foreground px-4 py-3 rounded-2xl rounded-br-md">
+                            <p className="whitespace-pre-wrap">{message.content}</p>
+                          </div>
+                        ) : (
+                          <div className="prose prose-sm dark:prose-invert max-w-none">
+                            <ReactMarkdown
+                              remarkPlugins={[remarkMath]}
+                              rehypePlugins={[rehypeKatex]}
+                              components={{
+                                code({ node, inline, className, children, ...props }: any) {
+                                  const match = /language-(\w+)/.exec(className || '');
+                                  return !inline && match ? (
+                                    <SyntaxHighlighter
+                                      style={oneDark}
+                                      language={match[1]}
+                                      PreTag="div"
+                                      customStyle={{ 
+                                        borderRadius: '12px', 
+                                        fontSize: '0.85em',
+                                        margin: '1em 0'
+                                      }}
+                                      {...props}
+                                    >
+                                      {String(children).replace(/\n$/, '')}
+                                    </SyntaxHighlighter>
+                                  ) : (
+                                    <code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono" {...props}>
+                                      {children}
+                                    </code>
+                                  );
+                                },
+                              }}
+                            >
+                              {message.content}
+                            </ReactMarkdown>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ))}
+                  
+                  {/* Typing Indicator */}
                   {isLoading && messages[messages.length - 1]?.role === 'user' && (
-                    <div className="flex gap-3">
-                      <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-                        <Bot className="h-4 w-4 text-primary-foreground" />
-                      </div>
-                      <div className="bg-muted/80 backdrop-blur-sm p-4 rounded-2xl rounded-bl-sm">
-                        <div className="flex gap-1">
-                          <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                          <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                          <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                        </div>
+                    <div className="flex justify-start">
+                      <div className="flex gap-1 px-4 py-3">
+                        <span className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <span className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <span className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                       </div>
                     </div>
                   )}
                   <div ref={messagesEndRef} />
                 </div>
-              </ScrollArea>
-
-              {/* Quick Topics */}
-              {messages.length < 3 && (
-                <div className="p-4 border-t border-border flex-shrink-0">
-                  <QuickTopicButtons
-                    onSelectQuestion={setQuestion}
-                    subjectName={selectedSubject?.name}
-                    topicName={selectedTopic?.name}
-                    disabled={isLoading}
-                  />
-                </div>
               )}
+            </div>
+          </ScrollArea>
 
-              {/* Input Area */}
-              <div className="p-4 border-t border-border flex-shrink-0 bg-background/50">
-                <div className="flex gap-2 items-end">
-                  <div className="flex-1 relative">
-                    <Textarea
-                      placeholder={isRecording ? "Listening... Speak now!" : "Type your question here..."}
-                      value={question}
-                      onChange={(e) => setQuestion(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          handleSend();
-                        }
-                      }}
-                      className={`resize-none bg-background pr-12 ${isRecording ? 'border-destructive animate-pulse' : ''}`}
-                      rows={2}
-                      disabled={isLoading}
-                    />
-                    <div className="absolute right-2 bottom-2">
-                      <VoiceRecordButton
-                        isRecording={isRecording}
-                        isSupported={voiceSupported}
-                        onStart={startRecording}
-                        onStop={stopRecording}
-                      />
-                    </div>
-                  </div>
-                  <Button 
-                    onClick={handleSend} 
-                    disabled={!question.trim() || isLoading}
-                    className="h-[68px] px-4"
+          {/* Input Area */}
+          <div className="border-t border-border p-4">
+            <div className="max-w-3xl mx-auto">
+              <div className="relative flex items-end gap-2 bg-muted/50 rounded-2xl border border-border p-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 flex-shrink-0"
+                  onClick={handleNewChat}
+                >
+                  <Plus className="h-5 w-5" />
+                </Button>
+                
+                <Textarea
+                  ref={textareaRef}
+                  placeholder="Ask anything"
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                  className="flex-1 min-h-[40px] max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 py-2.5 px-0"
+                  rows={1}
+                  disabled={isLoading}
+                />
+
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  {voiceSupported && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={`h-9 w-9 ${isRecording ? 'text-destructive animate-pulse' : ''}`}
+                      onClick={handleVoiceMode}
+                    >
+                      <Mic className="h-5 w-5" />
+                    </Button>
+                  )}
+                  
+                  {/* Voice Mode Button */}
+                  <Button
+                    variant={isRecording ? "destructive" : "default"}
+                    size="icon"
+                    className="h-9 w-9 rounded-full"
+                    onClick={question.trim() ? handleSend : handleVoiceMode}
+                    disabled={isLoading}
                   >
                     {isLoading ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : question.trim() ? (
+                      <Send className="h-4 w-4" />
                     ) : (
-                      <Send className="h-5 w-5" />
+                      <AudioWaveform className="h-4 w-4" />
                     )}
                   </Button>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Sidebar */}
-          {showSidebar && (
-            <div className="w-[30%] min-w-[280px] max-w-[400px] hidden lg:block">
-              {showVideo && <VideoPlayer onClose={() => setShowVideo(false)} />}
-              {showHistory && (
-                <Card className="h-full bg-card/80 backdrop-blur-sm">
-                  <ChatHistorySidebar
-                    sessions={chatSessions}
-                    currentSessionId={currentSessionId}
-                    onSelectSession={handleLoadSession}
-                    onNewChat={handleNewChat}
-                    onDeleteSession={deleteSession}
-                    isLoading={historyLoading}
-                  />
-                </Card>
-              )}
+              <p className="text-xs text-center text-muted-foreground mt-2">
+                AI Tutor can make mistakes. Verify important information.
+              </p>
             </div>
-          )}
+          </div>
         </div>
 
-        {/* Mobile Sidebar Toggle */}
-        {isMobile && (showVideo || showHistory) && (
-          <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm">
-            <div className="absolute right-0 top-0 h-full w-[85%] max-w-[350px] bg-card shadow-xl">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute left-2 top-2"
-                onClick={() => { setShowVideo(false); setShowHistory(false); }}
-              >
-                <PanelRightClose className="h-5 w-5" />
-              </Button>
-              <div className="pt-12 h-full">
-                {showVideo && <VideoPlayer onClose={() => setShowVideo(false)} />}
-                {showHistory && (
-                  <ChatHistorySidebar
-                    sessions={chatSessions}
-                    currentSessionId={currentSessionId}
-                    onSelectSession={(id) => { handleLoadSession(id); setShowHistory(false); }}
-                    onNewChat={() => { handleNewChat(); setShowHistory(false); }}
-                    onDeleteSession={deleteSession}
-                    isLoading={historyLoading}
-                  />
-                )}
+        {/* Mobile Sidebar Overlay */}
+        {isMobile && sidebarOpen && (
+          <div 
+            className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40"
+            onClick={() => setSidebarOpen(false)}
+          >
+            <div 
+              className="absolute left-0 top-0 h-full w-64 bg-card border-r border-border shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Same sidebar content */}
+              <div className="h-full flex flex-col">
+                <div className="p-3">
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start gap-2" 
+                    onClick={handleNewChat}
+                  >
+                    <Plus className="h-4 w-4" />
+                    New chat
+                  </Button>
+                </div>
+                <div className="px-3 py-2">
+                  <p className="text-xs font-medium text-muted-foreground">Your chats</p>
+                </div>
+                <ScrollArea className="flex-1">
+                  <div className="px-2 space-y-1">
+                    {chatSessions.map((session) => (
+                      <div
+                        key={session.id}
+                        className={`group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer ${
+                          currentSessionId === session.id ? 'bg-accent' : 'hover:bg-muted'
+                        }`}
+                        onClick={() => handleLoadSession(session.id)}
+                      >
+                        <MessageSquare className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                        <span className="flex-1 text-sm truncate">{session.title || 'New Chat'}</span>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
               </div>
             </div>
           </div>

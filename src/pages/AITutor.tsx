@@ -195,7 +195,7 @@ const AITutor = () => {
 
   return (
     <MainLayout>
-      <div className="h-[calc(100vh-8rem)] flex overflow-hidden -mx-4 -mt-4 lg:-mx-6 lg:-mt-6">
+      <div className="h-full min-h-0 flex overflow-hidden -m-6">
         {/* Sidebar */}
         <div className={`${sidebarOpen ? 'w-64' : 'w-0'} flex-shrink-0 border-r border-border bg-muted/30 transition-all duration-300 overflow-hidden`}>
           <div className="w-64 h-full flex flex-col">

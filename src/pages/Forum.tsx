@@ -85,10 +85,39 @@ const Forum = () => {
   const [editContent, setEditContent] = useState('');
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
   const [deletingReplyId, setDeletingReplyId] = useState<string | null>(null);
+  const [userPostUpvotes, setUserPostUpvotes] = useState<Set<string>>(new Set());
+  const [userReplyUpvotes, setUserReplyUpvotes] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchData();
   }, [profileData?.semester]);
+
+  useEffect(() => {
+    if (user) {
+      fetchUserUpvotes();
+    }
+  }, [user]);
+
+  const fetchUserUpvotes = async () => {
+    if (!user) return;
+    
+    try {
+      const { data: postUpvotes } = await supabase
+        .from('forum_post_upvotes')
+        .select('post_id')
+        .eq('user_id', user.id);
+      
+      const { data: replyUpvotes } = await supabase
+        .from('forum_reply_upvotes')
+        .select('reply_id')
+        .eq('user_id', user.id);
+      
+      setUserPostUpvotes(new Set((postUpvotes || []).map(u => u.post_id)));
+      setUserReplyUpvotes(new Set((replyUpvotes || []).map(u => u.reply_id)));
+    } catch (error) {
+      console.error('Error fetching user upvotes:', error);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -309,20 +338,36 @@ const Forum = () => {
       return;
     }
 
+    const hasUpvoted = userPostUpvotes.has(postId);
+
     try {
-      const { error } = await supabase
-        .from('forum_posts')
-        .update({ upvotes: currentUpvotes + 1 })
-        .eq('id', postId);
-
-      if (error) throw error;
-
-      setPosts(posts.map(p => p.id === postId ? { ...p, upvotes: p.upvotes + 1 } : p));
-      if (selectedPost?.id === postId) {
-        setSelectedPost({ ...selectedPost, upvotes: selectedPost.upvotes + 1 });
+      if (hasUpvoted) {
+        // Remove upvote
+        await supabase.from('forum_post_upvotes').delete().eq('post_id', postId).eq('user_id', user.id);
+        await supabase.from('forum_posts').update({ upvotes: Math.max(0, currentUpvotes - 1) }).eq('id', postId);
+        
+        setUserPostUpvotes(prev => {
+          const next = new Set(prev);
+          next.delete(postId);
+          return next;
+        });
+        setPosts(posts.map(p => p.id === postId ? { ...p, upvotes: Math.max(0, p.upvotes - 1) } : p));
+        if (selectedPost?.id === postId) {
+          setSelectedPost({ ...selectedPost, upvotes: Math.max(0, selectedPost.upvotes - 1) });
+        }
+      } else {
+        // Add upvote
+        await supabase.from('forum_post_upvotes').insert({ post_id: postId, user_id: user.id });
+        await supabase.from('forum_posts').update({ upvotes: currentUpvotes + 1 }).eq('id', postId);
+        
+        setUserPostUpvotes(prev => new Set(prev).add(postId));
+        setPosts(posts.map(p => p.id === postId ? { ...p, upvotes: p.upvotes + 1 } : p));
+        if (selectedPost?.id === postId) {
+          setSelectedPost({ ...selectedPost, upvotes: selectedPost.upvotes + 1 });
+        }
       }
     } catch (error: any) {
-      console.error('Error upvoting:', error);
+      console.error('Error toggling upvote:', error);
     }
   };
 
@@ -332,17 +377,30 @@ const Forum = () => {
       return;
     }
 
+    const hasUpvoted = userReplyUpvotes.has(replyId);
+
     try {
-      const { error } = await supabase
-        .from('forum_replies')
-        .update({ upvotes: currentUpvotes + 1 })
-        .eq('id', replyId);
-
-      if (error) throw error;
-
-      setReplies(replies.map(r => r.id === replyId ? { ...r, upvotes: r.upvotes + 1 } : r));
+      if (hasUpvoted) {
+        // Remove upvote
+        await supabase.from('forum_reply_upvotes').delete().eq('reply_id', replyId).eq('user_id', user.id);
+        await supabase.from('forum_replies').update({ upvotes: Math.max(0, currentUpvotes - 1) }).eq('id', replyId);
+        
+        setUserReplyUpvotes(prev => {
+          const next = new Set(prev);
+          next.delete(replyId);
+          return next;
+        });
+        setReplies(replies.map(r => r.id === replyId ? { ...r, upvotes: Math.max(0, r.upvotes - 1) } : r));
+      } else {
+        // Add upvote
+        await supabase.from('forum_reply_upvotes').insert({ reply_id: replyId, user_id: user.id });
+        await supabase.from('forum_replies').update({ upvotes: currentUpvotes + 1 }).eq('id', replyId);
+        
+        setUserReplyUpvotes(prev => new Set(prev).add(replyId));
+        setReplies(replies.map(r => r.id === replyId ? { ...r, upvotes: r.upvotes + 1 } : r));
+      }
     } catch (error: any) {
-      console.error('Error upvoting reply:', error);
+      console.error('Error toggling reply upvote:', error);
     }
   };
 
@@ -567,10 +625,10 @@ const Forum = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="gap-1 text-muted-foreground hover:text-primary"
+                        className={`gap-1 hover:text-primary ${userPostUpvotes.has(selectedPost.id) ? 'text-primary' : 'text-muted-foreground'}`}
                         onClick={(e) => handleUpvotePost(selectedPost.id, selectedPost.upvotes, e)}
                       >
-                        <ThumbsUp className="h-4 w-4" />
+                        <ThumbsUp className={`h-4 w-4 ${userPostUpvotes.has(selectedPost.id) ? 'fill-primary' : ''}`} />
                         {selectedPost.upvotes}
                       </Button>
                       <span className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -662,10 +720,10 @@ const Forum = () => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-7 gap-1 text-xs text-muted-foreground hover:text-primary"
+                            className={`h-7 gap-1 text-xs hover:text-primary ${userReplyUpvotes.has(reply.id) ? 'text-primary' : 'text-muted-foreground'}`}
                             onClick={() => handleUpvoteReply(reply.id, reply.upvotes)}
                           >
-                            <ThumbsUp className="h-3 w-3" />
+                            <ThumbsUp className={`h-3 w-3 ${userReplyUpvotes.has(reply.id) ? 'fill-primary' : ''}`} />
                             {reply.upvotes}
                           </Button>
                         </div>
@@ -790,10 +848,10 @@ const Forum = () => {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-7 gap-1 text-sm text-muted-foreground hover:text-primary p-0"
+                              className={`h-7 gap-1 text-sm p-0 hover:text-primary ${userPostUpvotes.has(post.id) ? 'text-primary' : 'text-muted-foreground'}`}
                               onClick={(e) => handleUpvotePost(post.id, post.upvotes, e)}
                             >
-                              <ThumbsUp className="h-4 w-4" />
+                              <ThumbsUp className={`h-4 w-4 ${userPostUpvotes.has(post.id) ? 'fill-primary' : ''}`} />
                               {post.upvotes}
                             </Button>
                             <span className="flex items-center gap-1 text-sm text-muted-foreground">

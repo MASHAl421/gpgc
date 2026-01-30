@@ -214,6 +214,35 @@ export type Database = {
         }
         Relationships: []
       }
+      forum_post_upvotes: {
+        Row: {
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forum_post_upvotes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "forum_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       forum_posts: {
         Row: {
           content: string
@@ -302,6 +331,35 @@ export type Database = {
             columns: ["post_id"]
             isOneToOne: false
             referencedRelation: "forum_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      forum_reply_upvotes: {
+        Row: {
+          created_at: string
+          id: string
+          reply_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reply_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reply_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forum_reply_upvotes_reply_id_fkey"
+            columns: ["reply_id"]
+            isOneToOne: false
+            referencedRelation: "forum_replies"
             referencedColumns: ["id"]
           },
         ]

@@ -5,7 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   Plus, Send, Loader2, Mic, AudioWaveform, 
-  MessageSquare, Trash2, Search, ChevronDown
+  MessageSquare, Trash2, Search, ChevronDown, X
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -30,8 +30,10 @@ const AITutor = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
   const { isAuthenticated, user } = useAuth();
@@ -68,12 +70,22 @@ const AITutor = () => {
   }, [isMobile]);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (shouldAutoScroll) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const handleScroll = () => {
+    if (scrollContainerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+      setShouldAutoScroll(isNearBottom);
+    }
   };
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, shouldAutoScroll]);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -204,15 +216,23 @@ const AITutor = () => {
         {/* Sidebar */}
         <div className={`${sidebarOpen ? 'w-64' : 'w-0'} flex-shrink-0 border-r border-border bg-muted/30 transition-all duration-300 overflow-hidden`}>
           <div className="w-64 h-full flex flex-col">
-            {/* New Chat Button */}
-            <div className="p-3">
+            {/* Sidebar Header with Close Button */}
+            <div className="p-3 flex items-center justify-between">
               <Button 
                 variant="outline" 
-                className="w-full justify-start gap-2" 
+                className="flex-1 justify-start gap-2" 
                 onClick={handleNewChat}
               >
                 <Plus className="h-4 w-4" />
                 New chat
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 ml-2"
+                onClick={() => setSidebarOpen(false)}
+              >
+                <X className="h-4 w-4" />
               </Button>
             </div>
 
@@ -297,7 +317,11 @@ const AITutor = () => {
           </div>
 
           {/* Messages Area */}
-          <ScrollArea className="flex-1">
+          <div 
+            ref={scrollContainerRef}
+            onScroll={handleScroll}
+            className="flex-1 overflow-y-auto"
+          >
             <div className="max-w-3xl mx-auto px-4 py-6">
               {messages.length === 0 ? (
                 /* Welcome Screen */
@@ -390,7 +414,7 @@ const AITutor = () => {
                 </div>
               )}
             </div>
-          </ScrollArea>
+          </div>
 
           {/* Input Area */}
           <div className="border-t border-border p-4">

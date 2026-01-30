@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -31,16 +31,30 @@ const AITutor = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+  const [isVoiceMode, setIsVoiceMode] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const pendingVoiceQuestionRef = useRef<string | null>(null);
   const { toast } = useToast();
   const { isAuthenticated, user } = useAuth();
   const isMobile = useIsMobile();
   
-  const { isRecording, transcript, startRecording, stopRecording, isSupported: voiceSupported } = useVoiceRecording();
   const { speak, stop: stopSpeaking, isSpeaking, isSupported: ttsSupported } = useTextToSpeech();
+  
+  // Handle voice recording with auto-send on complete
+  const handleVoiceComplete = useCallback((transcript: string) => {
+    if (transcript.trim()) {
+      pendingVoiceQuestionRef.current = transcript.trim();
+      setQuestion(transcript.trim());
+    }
+  }, []);
+  
+  const { isRecording, transcript, interimTranscript, startRecording, stopRecording, isSupported: voiceSupported } = useVoiceRecording({
+    onComplete: handleVoiceComplete
+  });
+  
   const { 
     chatSessions, 
     currentSessionId, 
@@ -59,11 +73,24 @@ const AITutor = () => {
     }
   }, [isAuthenticated, fetchChatHistory]);
 
+  // Auto-send when voice recording completes
   useEffect(() => {
-    if (transcript) {
-      setQuestion(prev => prev + transcript);
+    if (pendingVoiceQuestionRef.current && question === pendingVoiceQuestionRef.current && !isRecording && !isLoading) {
+      const questionToSend = pendingVoiceQuestionRef.current;
+      pendingVoiceQuestionRef.current = null;
+      // Small delay to ensure state is updated
+      setTimeout(() => {
+        handleSend(true); // Pass true to indicate voice-triggered
+      }, 100);
     }
-  }, [transcript]);
+  }, [question, isRecording, isLoading]);
+
+  // Show interim transcript while recording
+  useEffect(() => {
+    if (isRecording) {
+      setQuestion(transcript + (interimTranscript ? interimTranscript : ''));
+    }
+  }, [isRecording, transcript, interimTranscript]);
 
   useEffect(() => {
     if (isMobile) setSidebarOpen(false);
@@ -95,14 +122,17 @@ const AITutor = () => {
     }
   }, [question]);
 
-  const handleSend = async () => {
+  const handleSend = async (voiceTriggered = false) => {
     if (!question.trim() || isLoading) return;
 
+    const wasVoiceMode = voiceTriggered || isVoiceMode;
     const userMsg: Message = { role: 'user', content: question };
+    const questionText = question; // Store for title before clearing
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
     setQuestion('');
     setIsLoading(true);
+    if (voiceTriggered) setIsVoiceMode(false);
 
     let assistantContent = '';
 
@@ -171,12 +201,17 @@ const AITutor = () => {
         if (currentSessionId) {
           await updateSession(currentSessionId, finalMessages);
         } else {
-          const title = question.slice(0, 40) + (question.length > 40 ? '...' : '');
+          const title = questionText.slice(0, 40) + (questionText.length > 40 ? '...' : '');
           const newId = await createNewSession();
           if (newId) {
             await updateSession(newId, finalMessages, title);
           }
         }
+      }
+      
+      // Auto-speak the response if triggered by voice
+      if (wasVoiceMode && ttsSupported && assistantContent) {
+        speak(assistantContent);
       }
     } catch (error) {
       console.error('AI Tutor error:', error);
@@ -206,6 +241,7 @@ const AITutor = () => {
     if (isRecording) {
       stopRecording();
     } else {
+      setIsVoiceMode(true);
       startRecording();
     }
   };
@@ -462,7 +498,7 @@ const AITutor = () => {
                     variant={isRecording ? "destructive" : "default"}
                     size="icon"
                     className="h-9 w-9 rounded-full"
-                    onClick={question.trim() ? handleSend : handleVoiceMode}
+                    onClick={() => question.trim() ? handleSend() : handleVoiceMode()}
                     disabled={isLoading}
                   >
                     {isLoading ? (

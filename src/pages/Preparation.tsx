@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useSemesterOnboarding } from '@/hooks/useSemesterOnboarding';
@@ -32,6 +31,7 @@ import {
   Monitor,
   Download,
   ExternalLink,
+  Library,
 } from 'lucide-react';
 
 interface KeyNote {
@@ -72,16 +72,13 @@ interface PastPaper {
   subject_id: string;
 }
 
-type ViewMode = 'subjects' | 'categories' | 'content';
-
 const preparationCategories = [
-  { id: 'keynotes', name: 'Key Notes', icon: 'FileText', description: 'Quick revision notes for each topic' },
-  { id: 'video', name: 'Video Lectures', icon: 'PlayCircle', description: 'Watch explained video lessons' },
-  { id: 'objective', name: 'Objective MCQs', icon: 'ClipboardList', description: 'Practice multiple choice questions' },
-  { id: 'subjective', name: 'Subjective Questions', icon: 'PenTool', description: 'Long answer practice questions' },
-  { id: 'pastpapers', name: 'Past & Model Papers', icon: 'Files', description: 'Previous exam papers' },
-  { id: 'simulations', name: 'Simulations', icon: 'Beaker', description: 'Interactive lab simulations' },
-  { id: 'experiments', name: 'Experiments', icon: 'TestTube', description: 'Step-by-step lab experiments' },
+  { id: 'academic', name: 'Academic Resources', icon: BookOpen, color: 'bg-emerald-500' },
+  { id: 'video', name: 'Video Lectures', icon: PlayCircle, color: 'bg-sky-500' },
+  { id: 'keynotes', name: 'Key Notes', icon: FileText, color: 'bg-amber-500' },
+  { id: 'objective', name: 'Objective Paper', icon: ClipboardList, color: 'bg-violet-500' },
+  { id: 'subjective', name: 'Subjective Paper', icon: PenTool, color: 'bg-pink-500' },
+  { id: 'pastpapers', name: 'Past & Model Papers', icon: Files, color: 'bg-rose-500' },
 ];
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -103,7 +100,7 @@ const Preparation = () => {
   const { needsOnboarding, profileData, isLoading: onboardingLoading, completeOnboarding } = useSemesterOnboarding();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>('keynotes');
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [keyNotes, setKeyNotes] = useState<Record<string, KeyNote[]>>({});
   const [loadingNotes, setLoadingNotes] = useState<Record<string, boolean>>({});
@@ -111,7 +108,6 @@ const Preparation = () => {
   const [pastPapers, setPastPapers] = useState<PastPaper[]>([]);
   const [loadingPapers, setLoadingPapers] = useState(false);
   const [selectedPaper, setSelectedPaper] = useState<PastPaper | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>('subjects');
 
   useEffect(() => {
     if (!onboardingLoading && !needsOnboarding) {
@@ -220,45 +216,26 @@ const Preparation = () => {
     }
   };
 
-  const handleSelectAllTopics = async (topics: Topic[]) => {
-    const topicIds = topics.map((t) => t.id);
-    const allSelected = topicIds.every((id) => selectedTopics.includes(id));
-
-    if (allSelected) {
-      setSelectedTopics((prev) => prev.filter((id) => !topicIds.includes(id)));
-    } else {
-      setSelectedTopics((prev) => [...new Set([...prev, ...topicIds])]);
-      for (const topicId of topicIds) {
-        if (!keyNotes[topicId]) {
-          fetchKeyNotesForTopic(topicId);
-        }
-      }
+  const handleSubjectSelect = (subject: Subject) => {
+    setSelectedSubject(subject);
+    setSelectedTopics([]);
+    if (selectedCategory === 'pastpapers') {
+      fetchPastPapers(subject.id);
     }
   };
 
-  const handleSubjectSelect = (subject: Subject) => {
-    setSelectedSubject(subject);
-    setViewMode('categories');
-  };
-
-  const handleCategorySelect = (categoryId: string) => {
-    setSelectedCategory(categoryId);
-    setViewMode('content');
-    if (categoryId === 'pastpapers' && selectedSubject) {
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category);
+    setSelectedTopics([]);
+    if (category === 'pastpapers' && selectedSubject) {
       fetchPastPapers(selectedSubject.id);
     }
   };
 
-  const handleBack = () => {
-    if (viewMode === 'content') {
-      setViewMode('categories');
-      setSelectedCategory(null);
-      setSelectedTopics([]);
-      setPastPapers([]);
-    } else if (viewMode === 'categories') {
-      setViewMode('subjects');
-      setSelectedSubject(null);
-    }
+  const handleBackToSubjects = () => {
+    setSelectedSubject(null);
+    setSelectedTopics([]);
+    setPastPapers([]);
   };
 
   const getSubjectIcon = (iconName: string | null) => {
@@ -266,10 +243,9 @@ const Preparation = () => {
     return Icon || BookOpen;
   };
 
-  const getBackButtonText = () => {
-    if (viewMode === 'content') return `Back to ${selectedSubject?.name}`;
-    if (viewMode === 'categories') return 'Back to Subjects';
-    return '';
+  const getCategoryTitle = () => {
+    const category = preparationCategories.find(c => c.id === selectedCategory);
+    return category?.name || 'Key Notes';
   };
 
   if (onboardingLoading || isLoading) {
@@ -298,29 +274,28 @@ const Preparation = () => {
               Preparation
             </h1>
             <p className="text-sm md:text-base text-muted-foreground mt-1">
-              {viewMode === 'subjects' && (profileData?.semester 
-                ? `Semester ${profileData.semester} Subjects`
-                : 'Select a subject to start'
-              )}
-              {viewMode === 'categories' && selectedSubject && `${selectedSubject.name} - Choose a resource type`}
-              {viewMode === 'content' && selectedSubject && selectedCategory && 
-                `${selectedSubject.name} - ${preparationCategories.find(c => c.id === selectedCategory)?.name}`
+              {profileData?.semester 
+                ? `Semester ${profileData.semester} Resources`
+                : 'Select a subject to start learning'
               }
             </p>
           </div>
-          {viewMode !== 'subjects' && (
-            <Button variant="outline" onClick={handleBack} className="gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              {getBackButtonText()}
+          {selectedSubject && (
+            <Button variant="outline" onClick={handleBackToSubjects} className="gap-2">
+              <Library className="h-4 w-4" />
+              Show Books
             </Button>
           )}
         </div>
 
-        {/* Subjects Grid */}
-        {viewMode === 'subjects' && (
+        {!selectedSubject ? (
+          /* Subject Selection Grid */
           <Card className="bg-card border-border">
             <CardHeader className="pb-4">
-              <CardTitle className="text-lg md:text-xl text-foreground">Select a Subject</CardTitle>
+              <CardTitle className="text-lg md:text-xl text-foreground flex items-center gap-2">
+                <Library className="h-5 w-5 text-primary" />
+                Select a Subject
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {subjects.length === 0 ? (
@@ -366,158 +341,120 @@ const Preparation = () => {
               )}
             </CardContent>
           </Card>
-        )}
+        ) : (
+          /* Subject Detail View - Categories Sidebar + Topics */
+          <div className="grid lg:grid-cols-12 gap-4 md:gap-6">
+            {/* Categories Sidebar */}
+            <div className="lg:col-span-3">
+              <Card className="bg-card border-border sticky top-4">
+                <CardContent className="p-3 md:p-4">
+                  <div className="space-y-1">
+                    {preparationCategories.map((category) => {
+                      const CategoryIcon = category.icon;
+                      const isActive = selectedCategory === category.id;
+                      return (
+                        <button
+                          key={category.id}
+                          className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all text-left ${
+                            isActive 
+                              ? 'bg-primary/10 border-l-4 border-primary' 
+                              : 'hover:bg-muted border-l-4 border-transparent'
+                          }`}
+                          onClick={() => handleCategoryChange(category.id)}
+                        >
+                          <div className={`h-9 w-9 rounded-lg ${category.color} flex items-center justify-center shrink-0`}>
+                            <CategoryIcon className="h-5 w-5 text-white" />
+                          </div>
+                          <span className={`text-sm font-medium ${isActive ? 'text-primary' : 'text-foreground'}`}>
+                            {category.name}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
 
-        {/* Category Selection */}
-        {viewMode === 'categories' && selectedSubject && (
-          <Card className="bg-card border-border">
-            <CardHeader className="pb-4">
-              <div className="flex items-center gap-3">
-                {(() => {
-                  const SubjectIcon = getSubjectIcon(selectedSubject.icon);
-                  return (
+            {/* Topics Content */}
+            <div className="lg:col-span-9">
+              <Card className="bg-card border-border">
+                <CardHeader className="pb-4 border-b border-border">
+                  <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
-                      <SubjectIcon className="h-5 w-5 text-primary-foreground" />
+                      <FileText className="h-5 w-5 text-primary-foreground" />
                     </div>
-                  );
-                })()}
-                <div>
-                  <CardTitle className="text-lg md:text-xl text-foreground">{selectedSubject.name}</CardTitle>
-                  <p className="text-sm text-muted-foreground">{selectedSubject.grade}</p>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground mb-4">Choose a resource type to study from:</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-                {preparationCategories.map((category) => {
-                  const CategoryIcon = iconMap[category.icon] || BookOpen;
-                  return (
-                    <Card
-                      key={category.id}
-                      className="cursor-pointer hover:shadow-lg transition-all bg-accent border-border group hover:border-primary"
-                      onClick={() => handleCategorySelect(category.id)}
-                    >
-                      <CardContent className="p-4 md:p-5">
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="h-11 w-11 rounded-xl bg-secondary flex items-center justify-center shrink-0">
-                            <CategoryIcon className="h-5 w-5 text-secondary-foreground" />
-                          </div>
-                          <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                        </div>
-                        <h3 className="font-semibold text-foreground text-sm md:text-base mb-1">
-                          {category.name}
-                        </h3>
-                        <p className="text-xs text-muted-foreground">
-                          {category.description}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Content View */}
-        {viewMode === 'content' && selectedSubject && selectedCategory && (
-          <Card className="bg-card border-border">
-            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4">
-              <div>
-                <Badge variant="secondary" className="mb-2">{selectedSubject.grade}</Badge>
-                <CardTitle className="text-base md:text-lg text-foreground flex items-center gap-2">
-                  {(() => {
-                    const CategoryIcon = iconMap[preparationCategories.find(c => c.id === selectedCategory)?.icon || 'BookOpen'] || BookOpen;
-                    return <CategoryIcon className="h-4 w-4 md:h-5 md:w-5 text-primary" />;
-                  })()}
-                  <span className="truncate">
-                    {preparationCategories.find((c) => c.id === selectedCategory)?.name} - {selectedSubject.name}
-                  </span>
-                </CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {selectedCategory === 'pastpapers' ? (
-                /* Past Papers View */
-                loadingPapers ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    <div>
+                      <CardTitle className="text-lg text-foreground">
+                        {getCategoryTitle()} - {selectedSubject.name}
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground">{selectedSubject.grade}</p>
+                    </div>
                   </div>
-                ) : pastPapers.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Files className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground">No past papers available for this subject.</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {pastPapers.map((paper) => (
-                      <Card
-                        key={paper.id}
-                        className="cursor-pointer hover:shadow-md transition-shadow bg-accent border-border"
-                        onClick={() => setSelectedPaper(paper)}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-start gap-3">
-                            <div className="h-10 w-10 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0">
-                              <FileText className="h-5 w-5 text-destructive" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <h4 className="font-medium text-foreground text-sm truncate">{paper.title}</h4>
-                              <div className="flex items-center gap-2 mt-1">
-                                {paper.year && (
-                                  <Badge variant="outline" className="text-xs">{paper.year}</Badge>
-                                )}
-                                <Badge variant="secondary" className="text-xs capitalize">
-                                  {paper.paper_type || 'Past'}
-                                </Badge>
+                </CardHeader>
+                <CardContent className="p-4 md:p-6">
+                  {selectedCategory === 'pastpapers' ? (
+                    /* Past Papers View */
+                    loadingPapers ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                      </div>
+                    ) : pastPapers.length === 0 ? (
+                      <div className="text-center py-8">
+                        <Files className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                        <p className="text-muted-foreground">No past papers available for this subject.</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {pastPapers.map((paper) => (
+                          <Card
+                            key={paper.id}
+                            className="cursor-pointer hover:shadow-md transition-shadow bg-accent border-border"
+                            onClick={() => setSelectedPaper(paper)}
+                          >
+                            <CardContent className="p-4">
+                              <div className="flex items-start gap-3">
+                                <div className="h-10 w-10 rounded-lg bg-rose-500/10 flex items-center justify-center shrink-0">
+                                  <FileText className="h-5 w-5 text-rose-500" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <h4 className="font-medium text-foreground text-sm truncate">{paper.title}</h4>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    {paper.year && (
+                                      <Badge variant="outline" className="text-xs">{paper.year}</Badge>
+                                    )}
+                                    <Badge variant="secondary" className="text-xs capitalize">
+                                      {paper.paper_type || 'Past'}
+                                    </Badge>
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )
-              ) : selectedSubject.units.length === 0 ? (
-                <div className="text-center py-8">
-                  <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">No units available for this subject.</p>
-                </div>
-              ) : (
-                <>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Select topics to view {preparationCategories.find((c) => c.id === selectedCategory)?.name}
-                  </p>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )
+                  ) : selectedSubject.units.length === 0 ? (
+                    <div className="text-center py-8">
+                      <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground">No units available for this subject.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      <p className="text-muted-foreground">
+                        Select topics of any unit to view {getCategoryTitle()}
+                      </p>
 
-                  <Accordion type="multiple" defaultValue={selectedSubject.units.map(u => u.id)} className="space-y-2">
-                    {selectedSubject.units.map((unit) => (
-                      <AccordionItem
-                        key={unit.id}
-                        value={unit.id}
-                        className="border border-border rounded-lg px-3 md:px-4"
-                      >
-                        <AccordionTrigger className="hover:no-underline py-3">
-                          <div className="flex items-center gap-2 md:gap-3">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 px-2 text-xs"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleSelectAllTopics(unit.topics);
-                              }}
-                            >
-                              Select All
-                            </Button>
-                            <span className="font-semibold text-primary text-sm md:text-base">{unit.name}</span>
-                          </div>
-                        </AccordionTrigger>
-                        <AccordionContent>
+                      {selectedSubject.units.map((unit) => (
+                        <div key={unit.id} className="space-y-3">
+                          <h3 className="text-primary font-semibold text-base md:text-lg">
+                            {unit.name}
+                          </h3>
+                          
                           {unit.topics.length === 0 ? (
-                            <p className="text-sm text-muted-foreground py-2">No topics in this unit yet.</p>
+                            <p className="text-sm text-muted-foreground pl-4">No topics in this unit yet.</p>
                           ) : (
-                            <div className="space-y-3 pt-2">
+                            <div className="space-y-2">
                               {unit.topics.map((topic) => {
                                 const isSelected = selectedTopics.includes(topic.id);
                                 const topicNotes = keyNotes[topic.id] || [];
@@ -526,19 +463,23 @@ const Preparation = () => {
                                 return (
                                   <div key={topic.id} className="space-y-2">
                                     <div
-                                      className="flex items-center gap-3 p-2 md:p-3 rounded-lg bg-accent hover:bg-muted transition-colors cursor-pointer"
+                                      className="flex items-center gap-3 py-2 cursor-pointer group"
                                       onClick={() => handleTopicToggle(topic.id)}
                                     >
                                       <Checkbox
                                         checked={isSelected}
                                         onCheckedChange={() => handleTopicToggle(topic.id)}
-                                        className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                        className="h-5 w-5 rounded-full border-2 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                                       />
-                                      <span className="text-sm md:text-base text-foreground">{topic.name}</span>
+                                      <span className={`text-sm md:text-base transition-colors ${
+                                        isSelected ? 'text-primary font-medium' : 'text-foreground group-hover:text-primary'
+                                      }`}>
+                                        {topic.name}
+                                      </span>
                                     </div>
 
                                     {isSelected && selectedCategory === 'keynotes' && (
-                                      <div className="ml-6 md:ml-8 pl-3 md:pl-4 border-l-2 border-primary/30">
+                                      <div className="ml-8 pl-4 border-l-2 border-primary/30">
                                         {isLoadingNotes ? (
                                           <div className="flex items-center gap-2 py-2">
                                             <Loader2 className="h-4 w-4 animate-spin text-primary" />
@@ -573,9 +514,9 @@ const Preparation = () => {
                                     )}
 
                                     {isSelected && selectedCategory !== 'keynotes' && selectedCategory !== 'pastpapers' && (
-                                      <div className="ml-6 md:ml-8 pl-3 md:pl-4 border-l-2 border-primary/30">
+                                      <div className="ml-8 pl-4 border-l-2 border-primary/30">
                                         <p className="text-sm text-muted-foreground py-2 italic">
-                                          {preparationCategories.find(c => c.id === selectedCategory)?.name} coming soon for this topic.
+                                          {getCategoryTitle()} coming soon for this topic.
                                         </p>
                                       </div>
                                     )}
@@ -584,14 +525,14 @@ const Preparation = () => {
                               })}
                             </div>
                           )}
-                        </AccordionContent>
-                      </AccordionItem>
-                    ))}
-                  </Accordion>
-                </>
-              )}
-            </CardContent>
-          </Card>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         )}
       </div>
 
@@ -600,7 +541,7 @@ const Preparation = () => {
         <DialogContent className="max-w-4xl h-[80vh]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-destructive" />
+              <FileText className="h-5 w-5 text-rose-500" />
               {selectedPaper?.title}
             </DialogTitle>
           </DialogHeader>

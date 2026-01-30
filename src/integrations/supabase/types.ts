@@ -214,6 +214,66 @@ export type Database = {
         }
         Relationships: []
       }
+      forum_badges: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          name: string
+          required_answers: number
+          required_points: number
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+          required_answers?: number
+          required_points: number
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+          required_answers?: number
+          required_points?: number
+        }
+        Relationships: []
+      }
+      forum_point_transactions: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          points: number
+          reference_id: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          points: number
+          reference_id?: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          points?: number
+          reference_id?: string | null
+          transaction_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       forum_post_upvotes: {
         Row: {
           created_at: string
@@ -481,6 +541,7 @@ export type Database = {
           coins_earned: number | null
           created_at: string | null
           email: string | null
+          forum_points: number | null
           id: string
           is_bs_student: boolean | null
           semester: number | null
@@ -491,6 +552,7 @@ export type Database = {
           coins_earned?: number | null
           created_at?: string | null
           email?: string | null
+          forum_points?: number | null
           id: string
           is_bs_student?: boolean | null
           semester?: number | null
@@ -501,6 +563,7 @@ export type Database = {
           coins_earned?: number | null
           created_at?: string | null
           email?: string | null
+          forum_points?: number | null
           id?: string
           is_bs_student?: boolean | null
           semester?: number | null
@@ -787,6 +850,35 @@ export type Database = {
             columns: ["achievement_id"]
             isOneToOne: false
             referencedRelation: "achievements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_forum_badges: {
+        Row: {
+          badge_id: string
+          earned_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          badge_id: string
+          earned_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          badge_id?: string
+          earned_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_forum_badges_badge_id_fkey"
+            columns: ["badge_id"]
+            isOneToOne: false
+            referencedRelation: "forum_badges"
             referencedColumns: ["id"]
           },
         ]

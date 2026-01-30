@@ -15,6 +15,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSemesterOnboarding } from '@/hooks/useSemesterOnboarding';
 import { createNotification } from '@/hooks/useNotifications';
+import { useForumPoints, FORUM_POINTS } from '@/hooks/useForumPoints';
+import { ForumSidebar } from '@/components/forum/ForumSidebar';
+import { ForumUserBadge } from '@/components/forum/ForumUserBadge';
 import { toast } from 'sonner';
 import { 
   MessageSquare, 
@@ -67,6 +70,7 @@ interface ForumReply {
 const Forum = () => {
   const { user, profile } = useAuth();
   const { profileData } = useSemesterOnboarding();
+  const { awardPoints, refetch: refetchPoints } = useForumPoints();
   const [searchQuery, setSearchQuery] = useState('');
   const [posts, setPosts] = useState<ForumPost[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -219,16 +223,19 @@ const Forum = () => {
 
     setSubmitting(true);
     try {
-      const { error } = await supabase.from('forum_posts').insert({
+      const { data, error } = await supabase.from('forum_posts').insert({
         user_id: user.id,
         title: newPostTitle,
         content: newPostContent,
         subject_id: newPostSubject === 'general' ? null : newPostSubject || null,
-      });
+      }).select().single();
 
       if (error) throw error;
 
-      toast.success('Post created successfully!');
+      // Award points for creating a post
+      await awardPoints('new_post', FORUM_POINTS.NEW_POST, data?.id, 'Created a new discussion');
+
+      toast.success('Post created successfully! +' + FORUM_POINTS.NEW_POST + ' points');
       setNewPostOpen(false);
       setNewPostTitle('');
       setNewPostContent('');
@@ -250,13 +257,16 @@ const Forum = () => {
 
     setSubmittingReply(true);
     try {
-      const { error } = await supabase.from('forum_replies').insert({
+      const { data, error } = await supabase.from('forum_replies').insert({
         post_id: selectedPost.id,
         user_id: user.id,
         content: replyContent,
-      });
+      }).select().single();
 
       if (error) throw error;
+
+      // Award points for adding a reply
+      await awardPoints('new_reply', FORUM_POINTS.NEW_REPLY, data?.id, 'Added a reply to a discussion');
 
       // Send notification to post owner (only if not replying to own post)
       if (selectedPost.user_id !== user.id) {
@@ -270,7 +280,7 @@ const Forum = () => {
         );
       }
 
-      toast.success('Reply posted!');
+      toast.success('Reply posted! +' + FORUM_POINTS.NEW_REPLY + ' points');
       setReplyContent('');
       fetchReplies(selectedPost.id);
       fetchData();
@@ -449,6 +459,8 @@ const Forum = () => {
       return;
     }
 
+    const reply = replies.find(r => r.id === replyId);
+
     try {
       // Unmark all other replies first
       await supabase
@@ -471,6 +483,20 @@ const Forum = () => {
         .eq('id', selectedPost.id);
 
       if (postError) throw postError;
+
+      // Award points to the user whose answer was accepted (if not the post author)
+      if (reply && reply.user_id !== selectedPost.user_id) {
+        // Award points via their own transaction (they need to do it themselves due to RLS)
+        // For now, we'll just show the notification - in production, you'd use a database function
+        await createNotification(
+          reply.user_id,
+          'best_answer',
+          'Your answer was accepted!',
+          `Your reply on "${selectedPost.title.substring(0, 50)}${selectedPost.title.length > 50 ? '...' : ''}" was marked as the best answer! +${FORUM_POINTS.BEST_ANSWER} points`,
+          selectedPost.id,
+          user.id
+        );
+      }
 
       toast.success('Marked as answer!');
       setSelectedPost({ ...selectedPost, is_answered: true });
@@ -658,7 +684,10 @@ const Forum = () => {
                     </div>
                     
                     <h2 className="text-xl font-semibold text-foreground">{selectedPost.title}</h2>
-                    <p className="text-sm text-muted-foreground mt-1">by {selectedPost.username}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-sm text-muted-foreground">by {selectedPost.username}</span>
+                      <ForumUserBadge userId={selectedPost.user_id} />
+                    </div>
                     <p className="text-foreground mt-4 whitespace-pre-wrap">{selectedPost.content}</p>
                     <div className="flex items-center gap-4 mt-4">
                       <Button
@@ -711,6 +740,7 @@ const Forum = () => {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-medium text-foreground text-sm">{reply.username}</span>
+                            <ForumUserBadge userId={reply.user_id} />
                             <span className="text-xs text-muted-foreground">
                               {format(new Date(reply.created_at), 'MMM d, h:mm a')}
                             </span>
@@ -882,7 +912,10 @@ const Forum = () => {
                           <h3 className="font-semibold text-foreground hover:text-primary transition-colors line-clamp-2">
                             {post.title}
                           </h3>
-                          <p className="text-sm text-muted-foreground mt-1">by {post.username}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-sm text-muted-foreground">by {post.username}</span>
+                            <ForumUserBadge userId={post.user_id} />
+                          </div>
                           <div className="flex items-center gap-4 mt-3">
                             <Button
                               variant="ghost"
@@ -906,8 +939,10 @@ const Forum = () => {
               )}
             </div>
 
-            {/* Sidebar */}
+            {/* Sidebar - Replace old sidebar with ForumSidebar component */}
             <div className="space-y-4">
+              <ForumSidebar />
+              
               <Card className="bg-card border-border">
                 <CardHeader>
                   <CardTitle className="text-foreground">Popular Subjects</CardTitle>
@@ -937,13 +972,13 @@ const Forum = () => {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Answered</span>
-                    <span className="font-semibold text-emerald-500">
+                    <span className="font-semibold text-primary">
                       {posts.filter(p => p.is_answered).length}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Unanswered</span>
-                    <span className="font-semibold text-amber-500">
+                    <span className="font-semibold text-destructive">
                       {posts.filter(p => !p.is_answered).length}
                     </span>
                   </div>

@@ -14,6 +14,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSemesterOnboarding } from '@/hooks/useSemesterOnboarding';
+import { createNotification } from '@/hooks/useNotifications';
 import { toast } from 'sonner';
 import { 
   MessageSquare, 
@@ -64,7 +65,7 @@ interface ForumReply {
 }
 
 const Forum = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { profileData } = useSemesterOnboarding();
   const [searchQuery, setSearchQuery] = useState('');
   const [posts, setPosts] = useState<ForumPost[]>([]);
@@ -257,6 +258,18 @@ const Forum = () => {
 
       if (error) throw error;
 
+      // Send notification to post owner (only if not replying to own post)
+      if (selectedPost.user_id !== user.id) {
+        await createNotification(
+          selectedPost.user_id,
+          'new_reply',
+          'New reply on your discussion',
+          `${profile?.username || 'Someone'} replied to "${selectedPost.title.substring(0, 50)}${selectedPost.title.length > 50 ? '...' : ''}"`,
+          selectedPost.id,
+          user.id
+        );
+      }
+
       toast.success('Reply posted!');
       setReplyContent('');
       fetchReplies(selectedPost.id);
@@ -339,6 +352,7 @@ const Forum = () => {
     }
 
     const hasUpvoted = userPostUpvotes.has(postId);
+    const post = posts.find(p => p.id === postId);
 
     try {
       if (hasUpvoted) {
@@ -365,6 +379,18 @@ const Forum = () => {
         if (selectedPost?.id === postId) {
           setSelectedPost({ ...selectedPost, upvotes: selectedPost.upvotes + 1 });
         }
+
+        // Send notification to post owner (only if not upvoting own post)
+        if (post && post.user_id !== user.id) {
+          await createNotification(
+            post.user_id,
+            'post_upvote',
+            'Someone liked your discussion',
+            `${profile?.username || 'Someone'} liked "${post.title.substring(0, 50)}${post.title.length > 50 ? '...' : ''}"`,
+            postId,
+            user.id
+          );
+        }
       }
     } catch (error: any) {
       console.error('Error toggling upvote:', error);
@@ -378,6 +404,7 @@ const Forum = () => {
     }
 
     const hasUpvoted = userReplyUpvotes.has(replyId);
+    const reply = replies.find(r => r.id === replyId);
 
     try {
       if (hasUpvoted) {
@@ -398,6 +425,18 @@ const Forum = () => {
         
         setUserReplyUpvotes(prev => new Set(prev).add(replyId));
         setReplies(replies.map(r => r.id === replyId ? { ...r, upvotes: r.upvotes + 1 } : r));
+
+        // Send notification to reply owner (only if not upvoting own reply)
+        if (reply && reply.user_id !== user.id) {
+          await createNotification(
+            reply.user_id,
+            'reply_upvote',
+            'Someone liked your reply',
+            `${profile?.username || 'Someone'} liked your reply`,
+            selectedPost?.id || replyId,
+            user.id
+          );
+        }
       }
     } catch (error: any) {
       console.error('Error toggling reply upvote:', error);

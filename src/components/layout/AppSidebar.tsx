@@ -26,6 +26,7 @@ import {
   Settings,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { NotificationDropdown } from '@/components/NotificationDropdown';
 
 const menuItems = [
   { title: 'Home', url: '/home', icon: Home },
@@ -101,13 +102,23 @@ export function AppSidebar() {
       <SidebarFooter className="p-4">
         {!collapsed && profile && (
           <div className="mb-4 p-3 rounded-lg bg-card border border-sidebar-border">
-            <p className="text-sm font-medium text-sidebar-foreground">{profile.username}</p>
-            <p className="text-xs text-muted-foreground">{profile.email}</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-sidebar-foreground">{profile.username}</p>
+                <p className="text-xs text-muted-foreground">{profile.email}</p>
+              </div>
+              <NotificationDropdown />
+            </div>
             {isAdmin && (
               <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full mt-1 inline-block">
                 Admin
               </span>
             )}
+          </div>
+        )}
+        {collapsed && profile && (
+          <div className="mb-4 flex justify-center">
+            <NotificationDropdown />
           </div>
         )}
         <Button

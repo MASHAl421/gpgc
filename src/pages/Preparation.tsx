@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useSemesterOnboarding } from '@/hooks/useSemesterOnboarding';
 import SemesterOnboarding from '@/components/SemesterOnboarding';
@@ -29,6 +30,8 @@ import {
   Atom,
   Users,
   Monitor,
+  Download,
+  ExternalLink,
 } from 'lucide-react';
 
 interface KeyNote {
@@ -58,6 +61,15 @@ interface Subject {
   icon: string | null;
   semester: number | null;
   units: Unit[];
+}
+
+interface PastPaper {
+  id: string;
+  title: string;
+  file_url: string;
+  year: number | null;
+  paper_type: string | null;
+  subject_id: string;
 }
 
 const preparationCategories = [
@@ -95,6 +107,9 @@ const Preparation = () => {
   const [keyNotes, setKeyNotes] = useState<Record<string, KeyNote[]>>({});
   const [loadingNotes, setLoadingNotes] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [pastPapers, setPastPapers] = useState<PastPaper[]>([]);
+  const [loadingPapers, setLoadingPapers] = useState(false);
+  const [selectedPaper, setSelectedPaper] = useState<PastPaper | null>(null);
 
   useEffect(() => {
     if (!onboardingLoading && !needsOnboarding) {
@@ -178,6 +193,24 @@ const Preparation = () => {
     }
   };
 
+  const fetchPastPapers = async (subjectId: string) => {
+    setLoadingPapers(true);
+    try {
+      const { data, error } = await supabase
+        .from('past_papers')
+        .select('*')
+        .eq('subject_id', subjectId)
+        .order('year', { ascending: false });
+
+      if (error) throw error;
+      setPastPapers(data || []);
+    } catch (error) {
+      console.error('Error fetching past papers:', error);
+    } finally {
+      setLoadingPapers(false);
+    }
+  };
+
   const handleTopicToggle = async (topicId: string) => {
     const isSelected = selectedTopics.includes(topicId);
     
@@ -208,6 +241,21 @@ const Preparation = () => {
   const handleBackToSubjects = () => {
     setSelectedSubject(null);
     setSelectedTopics([]);
+    setPastPapers([]);
+  };
+
+  const handleSubjectSelect = (subject: Subject) => {
+    setSelectedSubject(subject);
+    if (selectedCategory === 'pastpapers') {
+      fetchPastPapers(subject.id);
+    }
+  };
+
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category);
+    if (category === 'pastpapers' && selectedSubject) {
+      fetchPastPapers(selectedSubject.id);
+    }
   };
 
   const getSubjectIcon = (iconName: string | null) => {
@@ -266,7 +314,7 @@ const Preparation = () => {
                     key={category.id}
                     variant={selectedCategory === category.id ? 'default' : 'ghost'}
                     className="w-full justify-start gap-2 md:gap-3 text-xs md:text-sm"
-                    onClick={() => setSelectedCategory(category.id)}
+                    onClick={() => handleCategoryChange(category.id)}
                   >
                     <Icon className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
                     <span className="truncate">{category.name}</span>
@@ -304,7 +352,7 @@ const Preparation = () => {
                           <Card
                             key={subject.id}
                             className="cursor-pointer hover:shadow-lg transition-shadow bg-accent border-border group"
-                            onClick={() => setSelectedSubject(subject)}
+                            onClick={() => handleSubjectSelect(subject)}
                           >
                             <CardContent className="p-3 md:p-4 flex items-center justify-between">
                               <div className="flex items-center gap-3">
@@ -445,7 +493,7 @@ const Preparation = () => {
                         ))}
                       </Accordion>
 
-                      {selectedTopics.length > 0 && selectedCategory !== 'keynotes' && (
+                      {selectedTopics.length > 0 && selectedCategory !== 'keynotes' && selectedCategory !== 'pastpapers' && (
                         <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-primary/10 rounded-lg">
                           <span className="text-foreground font-medium text-sm md:text-base">
                             {selectedTopics.length} topic(s) selected
@@ -453,6 +501,56 @@ const Preparation = () => {
                           <Button className="w-full sm:w-auto">
                             Start Quiz
                           </Button>
+                        </div>
+                      )}
+
+                      {/* Past Papers Section */}
+                      {selectedCategory === 'pastpapers' && (
+                        <div className="mt-6">
+                          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                            <Files className="h-5 w-5 text-primary" />
+                            Past & Model Papers
+                          </h3>
+                          {loadingPapers ? (
+                            <div className="flex items-center justify-center py-8">
+                              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                            </div>
+                          ) : pastPapers.length === 0 ? (
+                            <div className="text-center py-8 bg-muted rounded-lg">
+                              <Files className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                              <p className="text-muted-foreground">No past papers available for this subject yet.</p>
+                            </div>
+                          ) : (
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              {pastPapers.map((paper) => (
+                                <Card
+                                  key={paper.id}
+                                  className="bg-muted hover:shadow-md transition-shadow cursor-pointer"
+                                  onClick={() => setSelectedPaper(paper)}
+                                >
+                                  <CardContent className="p-4 flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                                        <FileText className="h-5 w-5 text-primary" />
+                                      </div>
+                                      <div>
+                                        <h4 className="font-medium text-foreground">{paper.title}</h4>
+                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                          {paper.year && <span>{paper.year}</span>}
+                                          {paper.paper_type && (
+                                            <Badge variant="outline" className="text-xs">
+                                              {paper.paper_type}
+                                            </Badge>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                                  </CardContent>
+                                </Card>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       )}
                     </>
@@ -463,6 +561,44 @@ const Preparation = () => {
           </div>
         </div>
       </div>
+
+      {/* Past Paper Viewer Dialog */}
+      <Dialog open={!!selectedPaper} onOpenChange={() => setSelectedPaper(null)}>
+        <DialogContent className="max-w-4xl h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
+              {selectedPaper?.title}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden">
+            {selectedPaper?.file_url ? (
+              <iframe
+                src={selectedPaper.file_url}
+                className="w-full h-full rounded-lg border border-border"
+                title={selectedPaper.title}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <p className="text-muted-foreground">No file available</p>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button variant="outline" onClick={() => setSelectedPaper(null)}>
+              Close
+            </Button>
+            {selectedPaper?.file_url && (
+              <Button asChild>
+                <a href={selectedPaper.file_url} target="_blank" rel="noopener noreferrer">
+                  <Download className="h-4 w-4 mr-2" />
+                  Download
+                </a>
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 };

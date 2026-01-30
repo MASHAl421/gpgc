@@ -14,6 +14,298 @@ export type Database = {
   }
   public: {
     Tables: {
+      achievements: {
+        Row: {
+          achievement_type: string
+          coins_reward: number | null
+          created_at: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          name: string
+          requirement_value: number | null
+        }
+        Insert: {
+          achievement_type: string
+          coins_reward?: number | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+          requirement_value?: number | null
+        }
+        Update: {
+          achievement_type?: string
+          coins_reward?: number | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+          requirement_value?: number | null
+        }
+        Relationships: []
+      }
+      coin_transactions: {
+        Row: {
+          amount: number
+          created_at: string | null
+          description: string | null
+          id: string
+          reference_id: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          transaction_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      competition_attempts: {
+        Row: {
+          coins_earned: number | null
+          competition_id: string
+          completed_at: string | null
+          id: string
+          score: number | null
+          time_taken_seconds: number | null
+          total_questions: number | null
+          user_id: string
+        }
+        Insert: {
+          coins_earned?: number | null
+          competition_id: string
+          completed_at?: string | null
+          id?: string
+          score?: number | null
+          time_taken_seconds?: number | null
+          total_questions?: number | null
+          user_id: string
+        }
+        Update: {
+          coins_earned?: number | null
+          competition_id?: string
+          completed_at?: string | null
+          id?: string
+          score?: number | null
+          time_taken_seconds?: number | null
+          total_questions?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "competition_attempts_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: false
+            referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      competition_topics: {
+        Row: {
+          competition_id: string
+          id: string
+          topic_id: string
+        }
+        Insert: {
+          competition_id: string
+          id?: string
+          topic_id: string
+        }
+        Update: {
+          competition_id?: string
+          id?: string
+          topic_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "competition_topics_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: false
+            referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "competition_topics_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      competitions: {
+        Row: {
+          competition_type: string
+          created_at: string | null
+          description: string | null
+          end_time: string
+          id: string
+          is_active: boolean | null
+          semester: number | null
+          start_time: string
+          title: string
+        }
+        Insert: {
+          competition_type?: string
+          created_at?: string | null
+          description?: string | null
+          end_time: string
+          id?: string
+          is_active?: boolean | null
+          semester?: number | null
+          start_time: string
+          title: string
+        }
+        Update: {
+          competition_type?: string
+          created_at?: string | null
+          description?: string | null
+          end_time?: string
+          id?: string
+          is_active?: boolean | null
+          semester?: number | null
+          start_time?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      daily_logins: {
+        Row: {
+          coins_earned: number | null
+          created_at: string | null
+          id: string
+          login_date: string
+          streak_count: number | null
+          user_id: string
+        }
+        Insert: {
+          coins_earned?: number | null
+          created_at?: string | null
+          id?: string
+          login_date?: string
+          streak_count?: number | null
+          user_id: string
+        }
+        Update: {
+          coins_earned?: number | null
+          created_at?: string | null
+          id?: string
+          login_date?: string
+          streak_count?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      forum_posts: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          is_answered: boolean | null
+          subject_id: string | null
+          title: string
+          topic_id: string | null
+          updated_at: string | null
+          upvotes: number | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          is_answered?: boolean | null
+          subject_id?: string | null
+          title: string
+          topic_id?: string | null
+          updated_at?: string | null
+          upvotes?: number | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          is_answered?: boolean | null
+          subject_id?: string | null
+          title?: string
+          topic_id?: string | null
+          updated_at?: string | null
+          upvotes?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forum_posts_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forum_posts_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      forum_replies: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          is_accepted_answer: boolean | null
+          post_id: string
+          upvotes: number | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          is_accepted_answer?: boolean | null
+          post_id: string
+          upvotes?: number | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          is_accepted_answer?: boolean | null
+          post_id?: string
+          upvotes?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forum_replies_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "forum_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       key_notes: {
         Row: {
           content: string
@@ -249,6 +541,36 @@ export type Database = {
           },
         ]
       }
+      shop_items: {
+        Row: {
+          coin_cost: number
+          created_at: string | null
+          description: string | null
+          id: string
+          is_available: boolean | null
+          item_type: string
+          name: string
+        }
+        Insert: {
+          coin_cost: number
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_available?: boolean | null
+          item_type: string
+          name: string
+        }
+        Update: {
+          coin_cost?: number
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_available?: boolean | null
+          item_type?: string
+          name?: string
+        }
+        Relationships: []
+      }
       subjects: {
         Row: {
           created_at: string | null
@@ -346,6 +668,35 @@ export type Database = {
           },
         ]
       }
+      user_achievements: {
+        Row: {
+          achievement_id: string
+          earned_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          achievement_id: string
+          earned_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          achievement_id?: string
+          earned_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_achievements_achievement_id_fkey"
+            columns: ["achievement_id"]
+            isOneToOne: false
+            referencedRelation: "achievements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_progress: {
         Row: {
           attempts: number | null
@@ -383,6 +734,35 @@ export type Database = {
             columns: ["topic_id"]
             isOneToOne: false
             referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_purchases: {
+        Row: {
+          id: string
+          purchased_at: string | null
+          shop_item_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          purchased_at?: string | null
+          shop_item_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          purchased_at?: string | null
+          shop_item_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_purchases_shop_item_id_fkey"
+            columns: ["shop_item_id"]
+            isOneToOne: false
+            referencedRelation: "shop_items"
             referencedColumns: ["id"]
           },
         ]

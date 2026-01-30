@@ -12,48 +12,24 @@ import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
-import {
-  BookOpen,
-  PlayCircle,
-  FileText,
-  Beaker,
-  ClipboardList,
-  PenTool,
-  Files,
-  TestTube,
-  ChevronRight,
-  GraduationCap,
-  Loader2,
-  ArrowLeft,
-  Code,
-  Atom,
-  Users,
-  Monitor,
-  Download,
-  ExternalLink,
-  Library,
-} from 'lucide-react';
-
+import { BookOpen, PlayCircle, FileText, Beaker, ClipboardList, PenTool, Files, TestTube, ChevronRight, GraduationCap, Loader2, ArrowLeft, Code, Atom, Users, Monitor, Download, ExternalLink, Library } from 'lucide-react';
 interface KeyNote {
   id: string;
   title: string;
   content: string;
   order_index: number;
 }
-
 interface Topic {
   id: string;
   name: string;
   order_index: number;
 }
-
 interface Unit {
   id: string;
   name: string;
   order_index: number;
   topics: Topic[];
 }
-
 interface Subject {
   id: string;
   name: string;
@@ -62,7 +38,6 @@ interface Subject {
   semester: number | null;
   units: Unit[];
 }
-
 interface PastPaper {
   id: string;
   title: string;
@@ -71,17 +46,40 @@ interface PastPaper {
   paper_type: string | null;
   subject_id: string;
 }
-
-const preparationCategories = [
-  { id: 'academic', name: 'Academic Resources', icon: BookOpen, color: 'bg-emerald-500' },
-  { id: 'video', name: 'Video Lectures', icon: PlayCircle, color: 'bg-sky-500' },
-  { id: 'keynotes', name: 'Key Notes', icon: FileText, color: 'bg-amber-500' },
-  { id: 'objective', name: 'Objective Paper', icon: ClipboardList, color: 'bg-violet-500' },
-  { id: 'subjective', name: 'Subjective Paper', icon: PenTool, color: 'bg-pink-500' },
-  { id: 'pastpapers', name: 'Past & Model Papers', icon: Files, color: 'bg-rose-500' },
-];
-
-const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+const preparationCategories = [{
+  id: 'academic',
+  name: 'Academic Resources',
+  icon: BookOpen,
+  color: 'bg-emerald-500'
+}, {
+  id: 'video',
+  name: 'Video Lectures',
+  icon: PlayCircle,
+  color: 'bg-sky-500'
+}, {
+  id: 'keynotes',
+  name: 'Key Notes',
+  icon: FileText,
+  color: 'bg-amber-500'
+}, {
+  id: 'objective',
+  name: 'Objective Paper',
+  icon: ClipboardList,
+  color: 'bg-violet-500'
+}, {
+  id: 'subjective',
+  name: 'Subjective Paper',
+  icon: PenTool,
+  color: 'bg-pink-500'
+}, {
+  id: 'pastpapers',
+  name: 'Past & Model Papers',
+  icon: Files,
+  color: 'bg-rose-500'
+}];
+const iconMap: Record<string, React.ComponentType<{
+  className?: string;
+}>> = {
   BookOpen,
   PlayCircle,
   FileText,
@@ -93,11 +91,15 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Code,
   Atom,
   Users,
-  Monitor,
+  Monitor
 };
-
 const Preparation = () => {
-  const { needsOnboarding, profileData, isLoading: onboardingLoading, completeOnboarding } = useSemesterOnboarding();
+  const {
+    needsOnboarding,
+    profileData,
+    isLoading: onboardingLoading,
+    completeOnboarding
+  } = useSemesterOnboarding();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('keynotes');
@@ -108,55 +110,43 @@ const Preparation = () => {
   const [pastPapers, setPastPapers] = useState<PastPaper[]>([]);
   const [loadingPapers, setLoadingPapers] = useState(false);
   const [selectedPaper, setSelectedPaper] = useState<PastPaper | null>(null);
-
   useEffect(() => {
     if (!onboardingLoading && !needsOnboarding) {
       fetchSubjects();
     }
   }, [onboardingLoading, needsOnboarding, profileData?.semester]);
-
   const fetchSubjects = async () => {
     try {
       setIsLoading(true);
-      
       let query = supabase.from('subjects').select('*').order('name');
-      
       if (profileData?.semester) {
         query = query.eq('semester', profileData.semester);
       }
-
-      const { data: subjectsData, error: subjectsError } = await query;
-
+      const {
+        data: subjectsData,
+        error: subjectsError
+      } = await query;
       if (subjectsError) throw subjectsError;
-
-      const { data: unitsData, error: unitsError } = await supabase
-        .from('units')
-        .select('*')
-        .order('order_index');
-
+      const {
+        data: unitsData,
+        error: unitsError
+      } = await supabase.from('units').select('*').order('order_index');
       if (unitsError) throw unitsError;
-
-      const { data: topicsData, error: topicsError } = await supabase
-        .from('topics')
-        .select('*')
-        .order('order_index');
-
+      const {
+        data: topicsData,
+        error: topicsError
+      } = await supabase.from('topics').select('*').order('order_index');
       if (topicsError) throw topicsError;
-
-      const organizedSubjects: Subject[] = (subjectsData || []).map((subject) => {
-        const subjectUnits = (unitsData || [])
-          .filter((unit) => unit.subject_id === subject.id)
-          .map((unit) => ({
-            ...unit,
-            topics: (topicsData || []).filter((topic) => topic.unit_id === unit.id),
-          }));
-
+      const organizedSubjects: Subject[] = (subjectsData || []).map(subject => {
+        const subjectUnits = (unitsData || []).filter(unit => unit.subject_id === subject.id).map(unit => ({
+          ...unit,
+          topics: (topicsData || []).filter(topic => topic.unit_id === unit.id)
+        }));
         return {
           ...subject,
-          units: subjectUnits,
+          units: subjectUnits
         };
       });
-
       setSubjects(organizedSubjects);
     } catch (error) {
       console.error('Error fetching subjects:', error);
@@ -164,38 +154,40 @@ const Preparation = () => {
       setIsLoading(false);
     }
   };
-
   const fetchKeyNotesForTopic = async (topicId: string) => {
     if (keyNotes[topicId]) return;
-
-    setLoadingNotes((prev) => ({ ...prev, [topicId]: true }));
-    
+    setLoadingNotes(prev => ({
+      ...prev,
+      [topicId]: true
+    }));
     try {
-      const { data, error } = await supabase
-        .from('key_notes')
-        .select('*')
-        .eq('topic_id', topicId)
-        .order('order_index');
-
+      const {
+        data,
+        error
+      } = await supabase.from('key_notes').select('*').eq('topic_id', topicId).order('order_index');
       if (error) throw error;
-
-      setKeyNotes((prev) => ({ ...prev, [topicId]: data || [] }));
+      setKeyNotes(prev => ({
+        ...prev,
+        [topicId]: data || []
+      }));
     } catch (error) {
       console.error('Error fetching key notes:', error);
     } finally {
-      setLoadingNotes((prev) => ({ ...prev, [topicId]: false }));
+      setLoadingNotes(prev => ({
+        ...prev,
+        [topicId]: false
+      }));
     }
   };
-
   const fetchPastPapers = async (subjectId: string) => {
     setLoadingPapers(true);
     try {
-      const { data, error } = await supabase
-        .from('past_papers')
-        .select('*')
-        .eq('subject_id', subjectId)
-        .order('year', { ascending: false });
-
+      const {
+        data,
+        error
+      } = await supabase.from('past_papers').select('*').eq('subject_id', subjectId).order('year', {
+        ascending: false
+      });
       if (error) throw error;
       setPastPapers(data || []);
     } catch (error) {
@@ -204,18 +196,15 @@ const Preparation = () => {
       setLoadingPapers(false);
     }
   };
-
   const handleTopicToggle = async (topicId: string) => {
     const isSelected = selectedTopics.includes(topicId);
-    
     if (!isSelected) {
-      setSelectedTopics((prev) => [...prev, topicId]);
+      setSelectedTopics(prev => [...prev, topicId]);
       await fetchKeyNotesForTopic(topicId);
     } else {
-      setSelectedTopics((prev) => prev.filter((id) => id !== topicId));
+      setSelectedTopics(prev => prev.filter(id => id !== topicId));
     }
   };
-
   const handleSubjectSelect = (subject: Subject) => {
     setSelectedSubject(subject);
     setSelectedTopics([]);
@@ -223,7 +212,6 @@ const Preparation = () => {
       fetchPastPapers(subject.id);
     }
   };
-
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category);
     setSelectedTopics([]);
@@ -231,38 +219,28 @@ const Preparation = () => {
       fetchPastPapers(selectedSubject.id);
     }
   };
-
   const handleBackToSubjects = () => {
     setSelectedSubject(null);
     setSelectedTopics([]);
     setPastPapers([]);
   };
-
   const getSubjectIcon = (iconName: string | null) => {
     const Icon = iconName ? iconMap[iconName] : BookOpen;
     return Icon || BookOpen;
   };
-
   const getCategoryTitle = () => {
     const category = preparationCategories.find(c => c.id === selectedCategory);
     return category?.name || 'Key Notes';
   };
-
   if (onboardingLoading || isLoading) {
-    return (
-      <MainLayout>
+    return <MainLayout>
         <div className="flex items-center justify-center h-64">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-        {needsOnboarding && (
-          <SemesterOnboarding open={needsOnboarding} onComplete={completeOnboarding} />
-        )}
-      </MainLayout>
-    );
+        {needsOnboarding && <SemesterOnboarding open={needsOnboarding} onComplete={completeOnboarding} />}
+      </MainLayout>;
   }
-
-  return (
-    <MainLayout>
+  return <MainLayout>
       <SemesterOnboarding open={needsOnboarding} onComplete={completeOnboarding} />
       
       <div className="space-y-4 md:space-y-6">
@@ -274,23 +252,17 @@ const Preparation = () => {
               Preparation
             </h1>
             <p className="text-sm md:text-base text-muted-foreground mt-1">
-              {profileData?.semester 
-                ? `Semester ${profileData.semester} Resources`
-                : 'Select a subject to start learning'
-              }
+              {profileData?.semester ? `Semester ${profileData.semester} Resources` : 'Select a subject to start learning'}
             </p>
           </div>
-          {selectedSubject && (
-            <Button variant="outline" onClick={handleBackToSubjects} className="gap-2">
+          {selectedSubject && <Button variant="outline" onClick={handleBackToSubjects} className="gap-2">
               <Library className="h-4 w-4" />
               Show Books
-            </Button>
-          )}
+            </Button>}
         </div>
 
-        {!selectedSubject ? (
-          /* Subject Selection Grid */
-          <Card className="bg-card border-border">
+        {!selectedSubject ? (/* Subject Selection Grid */
+      <Card className="bg-card border-border">
             <CardHeader className="pb-4">
               <CardTitle className="text-lg md:text-xl text-foreground flex items-center gap-2">
                 <Library className="h-5 w-5 text-primary" />
@@ -298,28 +270,17 @@ const Preparation = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {subjects.length === 0 ? (
-                <div className="text-center py-8">
+              {subjects.length === 0 ? <div className="text-center py-8">
                   <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <p className="text-muted-foreground">No subjects available yet.</p>
                   <p className="text-sm text-muted-foreground mt-2">
-                    {profileData?.semester 
-                      ? `No subjects found for Semester ${profileData.semester}`
-                      : 'Admin needs to add subjects first.'
-                    }
+                    {profileData?.semester ? `No subjects found for Semester ${profileData.semester}` : 'Admin needs to add subjects first.'}
                   </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-                  {subjects.map((subject) => {
-                    const SubjectIcon = getSubjectIcon(subject.icon);
-                    const totalTopics = subject.units.reduce((acc, u) => acc + u.topics.length, 0);
-                    return (
-                      <Card
-                        key={subject.id}
-                        className="cursor-pointer hover:shadow-lg transition-all bg-accent border-border group hover:border-primary"
-                        onClick={() => handleSubjectSelect(subject)}
-                      >
+                </div> : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+                  {subjects.map(subject => {
+              const SubjectIcon = getSubjectIcon(subject.icon);
+              const totalTopics = subject.units.reduce((acc, u) => acc + u.topics.length, 0);
+              return <Card key={subject.id} className="cursor-pointer hover:shadow-lg transition-all bg-accent border-border group hover:border-primary" onClick={() => handleSubjectSelect(subject)}>
                         <CardContent className="p-4 md:p-5">
                           <div className="flex items-start justify-between mb-3">
                             <div className="h-12 w-12 rounded-xl bg-primary flex items-center justify-center shrink-0">
@@ -334,43 +295,29 @@ const Preparation = () => {
                             {subject.units.length} Units • {totalTopics} Topics
                           </p>
                         </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              )}
+                      </Card>;
+            })}
+                </div>}
             </CardContent>
-          </Card>
-        ) : (
-          /* Subject Detail View - Categories Sidebar + Topics */
-          <div className="grid lg:grid-cols-12 gap-4 md:gap-6">
+          </Card>) : (/* Subject Detail View - Categories Sidebar + Topics */
+      <div className="grid lg:grid-cols-12 gap-4 md:gap-6">
             {/* Categories Sidebar */}
             <div className="lg:col-span-3">
               <Card className="bg-card border-border sticky top-4">
                 <CardContent className="p-3 md:p-4">
                   <div className="space-y-1">
-                    {preparationCategories.map((category) => {
-                      const CategoryIcon = category.icon;
-                      const isActive = selectedCategory === category.id;
-                      return (
-                        <button
-                          key={category.id}
-                          className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all text-left ${
-                            isActive 
-                              ? 'bg-primary/10 border-l-4 border-primary' 
-                              : 'hover:bg-muted border-l-4 border-transparent'
-                          }`}
-                          onClick={() => handleCategoryChange(category.id)}
-                        >
+                    {preparationCategories.map(category => {
+                  const CategoryIcon = category.icon;
+                  const isActive = selectedCategory === category.id;
+                  return <button key={category.id} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all text-left ${isActive ? 'bg-primary/10 border-l-4 border-primary' : 'hover:bg-muted border-l-4 border-transparent'}`} onClick={() => handleCategoryChange(category.id)}>
                           <div className={`h-9 w-9 rounded-lg ${category.color} flex items-center justify-center shrink-0`}>
                             <CategoryIcon className="h-5 w-5 text-white" />
                           </div>
                           <span className={`text-sm font-medium ${isActive ? 'text-primary' : 'text-foreground'}`}>
                             {category.name}
                           </span>
-                        </button>
-                      );
-                    })}
+                        </button>;
+                })}
                   </div>
                 </CardContent>
               </Card>
@@ -393,25 +340,14 @@ const Preparation = () => {
                   </div>
                 </CardHeader>
                 <CardContent className="p-4 md:p-6">
-                  {selectedCategory === 'pastpapers' ? (
-                    /* Past Papers View */
-                    loadingPapers ? (
-                      <div className="flex items-center justify-center py-8">
+                  {selectedCategory === 'pastpapers' ? (/* Past Papers View */
+              loadingPapers ? <div className="flex items-center justify-center py-8">
                         <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                      </div>
-                    ) : pastPapers.length === 0 ? (
-                      <div className="text-center py-8">
+                      </div> : pastPapers.length === 0 ? <div className="text-center py-8">
                         <Files className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                         <p className="text-muted-foreground">No past papers available for this subject.</p>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {pastPapers.map((paper) => (
-                          <Card
-                            key={paper.id}
-                            className="cursor-pointer hover:shadow-md transition-shadow bg-accent border-border"
-                            onClick={() => setSelectedPaper(paper)}
-                          >
+                      </div> : <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {pastPapers.map(paper => <Card key={paper.id} className="cursor-pointer hover:shadow-md transition-shadow bg-accent border-border" onClick={() => setSelectedPaper(paper)}>
                             <CardContent className="p-4">
                               <div className="flex items-start gap-3">
                                 <div className="h-10 w-10 rounded-lg bg-rose-500/10 flex items-center justify-center shrink-0">
@@ -420,9 +356,7 @@ const Preparation = () => {
                                 <div className="min-w-0 flex-1">
                                   <h4 className="font-medium text-foreground text-sm truncate">{paper.title}</h4>
                                   <div className="flex items-center gap-2 mt-1">
-                                    {paper.year && (
-                                      <Badge variant="outline" className="text-xs">{paper.year}</Badge>
-                                    )}
+                                    {paper.year && <Badge variant="outline" className="text-xs">{paper.year}</Badge>}
                                     <Badge variant="secondary" className="text-xs capitalize">
                                       {paper.paper_type || 'Past'}
                                     </Badge>
@@ -430,110 +364,68 @@ const Preparation = () => {
                                 </div>
                               </div>
                             </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    )
-                  ) : selectedSubject.units.length === 0 ? (
-                    <div className="text-center py-8">
+                          </Card>)}
+                      </div>) : selectedSubject.units.length === 0 ? <div className="text-center py-8">
                       <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                       <p className="text-muted-foreground">No units available for this subject.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
+                    </div> : <div className="space-y-6">
                       <p className="text-muted-foreground">
                         Select topics of any unit to view {getCategoryTitle()}
                       </p>
 
-                      {selectedSubject.units.map((unit) => (
-                        <div key={unit.id} className="space-y-3">
-                          <h3 className="text-primary font-semibold text-base md:text-lg">
-                            {unit.name}
-                          </h3>
+                      {selectedSubject.units.map(unit => <div key={unit.id} className="space-y-3">
                           
-                          {unit.topics.length === 0 ? (
-                            <p className="text-sm text-muted-foreground pl-4">No topics in this unit yet.</p>
-                          ) : (
-                            <div className="space-y-2">
-                              {unit.topics.map((topic) => {
-                                const isSelected = selectedTopics.includes(topic.id);
-                                const topicNotes = keyNotes[topic.id] || [];
-                                const isLoadingNotes = loadingNotes[topic.id];
-
-                                return (
-                                  <div key={topic.id} className="space-y-2">
-                                    <div
-                                      className="flex items-center gap-3 py-2 cursor-pointer group"
-                                      onClick={() => handleTopicToggle(topic.id)}
-                                    >
-                                      <Checkbox
-                                        checked={isSelected}
-                                        onCheckedChange={() => handleTopicToggle(topic.id)}
-                                        className="h-5 w-5 rounded-full border-2 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                                      />
-                                      <span className={`text-sm md:text-base transition-colors ${
-                                        isSelected ? 'text-primary font-medium' : 'text-foreground group-hover:text-primary'
-                                      }`}>
+                          
+                          {unit.topics.length === 0 ? <p className="text-sm text-muted-foreground pl-4">
+                  </p> : <div className="space-y-2">
+                              {unit.topics.map(topic => {
+                      const isSelected = selectedTopics.includes(topic.id);
+                      const topicNotes = keyNotes[topic.id] || [];
+                      const isLoadingNotes = loadingNotes[topic.id];
+                      return <div key={topic.id} className="space-y-2">
+                                    <div className="flex items-center gap-3 py-2 cursor-pointer group" onClick={() => handleTopicToggle(topic.id)}>
+                                      <Checkbox checked={isSelected} onCheckedChange={() => handleTopicToggle(topic.id)} className="h-5 w-5 rounded-full border-2 data-[state=checked]:bg-primary data-[state=checked]:border-primary" />
+                                      <span className={`text-sm md:text-base transition-colors ${isSelected ? 'text-primary font-medium' : 'text-foreground group-hover:text-primary'}`}>
                                         {topic.name}
                                       </span>
                                     </div>
 
-                                    {isSelected && selectedCategory === 'keynotes' && (
-                                      <div className="ml-8 pl-4 border-l-2 border-primary/30">
-                                        {isLoadingNotes ? (
-                                          <div className="flex items-center gap-2 py-2">
+                                    {isSelected && selectedCategory === 'keynotes' && <div className="ml-8 pl-4 border-l-2 border-primary/30">
+                                        {isLoadingNotes ? <div className="flex items-center gap-2 py-2">
                                             <Loader2 className="h-4 w-4 animate-spin text-primary" />
                                             <span className="text-sm text-muted-foreground">Loading notes...</span>
-                                          </div>
-                                        ) : topicNotes.length === 0 ? (
-                                          <p className="text-sm text-muted-foreground py-2">
+                                          </div> : topicNotes.length === 0 ? <p className="text-sm text-muted-foreground py-2">
                                             No key notes available for this topic.
-                                          </p>
-                                        ) : (
-                                          <div className="space-y-3">
-                                            {topicNotes.map((note) => (
-                                              <Card key={note.id} className="bg-background border-border">
+                                          </p> : <div className="space-y-3">
+                                            {topicNotes.map(note => <Card key={note.id} className="bg-background border-border">
                                                 <CardContent className="p-3 md:p-4">
                                                   <h4 className="font-medium text-foreground mb-2 text-sm md:text-base">
                                                     {note.title}
                                                   </h4>
                                                   <div className="prose prose-sm max-w-none text-muted-foreground dark:prose-invert prose-headings:text-foreground prose-p:text-muted-foreground prose-strong:text-foreground prose-li:text-muted-foreground">
-                                                    <ReactMarkdown
-                                                      remarkPlugins={[remarkMath]}
-                                                      rehypePlugins={[rehypeKatex]}
-                                                    >
+                                                    <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
                                                       {note.content}
                                                     </ReactMarkdown>
                                                   </div>
                                                 </CardContent>
-                                              </Card>
-                                            ))}
-                                          </div>
-                                        )}
-                                      </div>
-                                    )}
+                                              </Card>)}
+                                          </div>}
+                                      </div>}
 
-                                    {isSelected && selectedCategory !== 'keynotes' && selectedCategory !== 'pastpapers' && (
-                                      <div className="ml-8 pl-4 border-l-2 border-primary/30">
+                                    {isSelected && selectedCategory !== 'keynotes' && selectedCategory !== 'pastpapers' && <div className="ml-8 pl-4 border-l-2 border-primary/30">
                                         <p className="text-sm text-muted-foreground py-2 italic">
                                           {getCategoryTitle()} coming soon for this topic.
                                         </p>
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                                      </div>}
+                                  </div>;
+                    })}
+                            </div>}
+                        </div>)}
+                    </div>}
                 </CardContent>
               </Card>
             </div>
-          </div>
-        )}
+          </div>)}
       </div>
 
       {/* PDF Viewer Dialog */}
@@ -546,8 +438,7 @@ const Preparation = () => {
             </DialogTitle>
           </DialogHeader>
           <div className="flex-1 overflow-hidden">
-            {selectedPaper && (
-              <div className="h-full flex flex-col gap-4">
+            {selectedPaper && <div className="h-full flex flex-col gap-4">
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" asChild>
                     <a href={selectedPaper.file_url} target="_blank" rel="noopener noreferrer">
@@ -562,18 +453,11 @@ const Preparation = () => {
                     </a>
                   </Button>
                 </div>
-                <iframe
-                  src={`${selectedPaper.file_url}#toolbar=1`}
-                  className="flex-1 w-full rounded-lg border border-border"
-                  title={selectedPaper.title}
-                />
-              </div>
-            )}
+                <iframe src={`${selectedPaper.file_url}#toolbar=1`} className="flex-1 w-full rounded-lg border border-border" title={selectedPaper.title} />
+              </div>}
           </div>
         </DialogContent>
       </Dialog>
-    </MainLayout>
-  );
+    </MainLayout>;
 };
-
 export default Preparation;

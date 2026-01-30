@@ -102,6 +102,9 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
     }));
   };
 
+  const normalizeOption = (value: string | null | undefined) =>
+    (value || '').trim().toLowerCase();
+
   const getOptionClass = (questionId: string, option: string, correctOption: string) => {
     const selected = selectedAnswers[questionId];
     
@@ -109,12 +112,16 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
       return 'bg-card hover:bg-muted border-border hover:border-primary/50 cursor-pointer';
     }
     
-    const isCorrect = option === correctOption;
-    const isSelected = option === selected;
+    const opt = normalizeOption(option);
+    const correct = normalizeOption(correctOption);
+    const chosen = normalizeOption(selected);
+
+    const isCorrect = opt === correct;
+    const isSelected = opt === chosen;
     
     if (isSelected && isCorrect) {
-      // User selected the correct answer - show green
-      return 'bg-green-500/10 border-green-500 text-green-600 dark:text-green-400';
+      // User selected the correct answer - show green (theme token)
+      return 'bg-success/10 border-success text-success';
     }
     if (isSelected && !isCorrect) {
       // User selected wrong answer - show red
@@ -122,7 +129,7 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
     }
     if (isCorrect) {
       // This is the correct answer (show it after user selects wrong) - show green
-      return 'bg-green-500/10 border-green-500/50 text-green-600 dark:text-green-400';
+      return 'bg-success/10 border-success/50 text-success';
     }
     // Other wrong options - dim them
     return 'bg-card border-border opacity-60';
@@ -167,9 +174,11 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
   }
 
   const answeredCount = Object.keys(selectedAnswers).length;
-  const correctCount = Object.entries(selectedAnswers).filter(
-    ([qId, answer]) => questions.find(q => q.id === qId)?.correct_option === answer
-  ).length;
+  const correctCount = Object.entries(selectedAnswers).filter(([qId, answer]) => {
+    const q = questions.find(q2 => q2.id === qId);
+    if (!q) return false;
+    return normalizeOption(q.correct_option) === normalizeOption(answer);
+  }).length;
 
   return (
     <div className="space-y-4">
@@ -205,7 +214,9 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
       <div className="space-y-6">
         {questions.map((question, index) => {
           const isAnswered = !!selectedAnswers[question.id];
-          const isCorrect = selectedAnswers[question.id] === question.correct_option;
+           const isCorrect =
+             normalizeOption(selectedAnswers[question.id]) ===
+             normalizeOption(question.correct_option);
           
           return (
             <Card key={question.id} className="bg-card border-border overflow-hidden">

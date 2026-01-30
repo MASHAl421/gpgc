@@ -6,6 +6,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { supabase } from '@/integrations/supabase/client';
+import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 import {
   BookOpen,
   PlayCircle,
@@ -19,6 +23,13 @@ import {
   GraduationCap,
   Loader2,
 } from 'lucide-react';
+
+interface KeyNote {
+  id: string;
+  title: string;
+  content: string;
+  order_index: number;
+}
 
 interface Topic {
   id: string;
@@ -67,6 +78,8 @@ const Preparation = () => {
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('keynotes');
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
+  const [keyNotes, setKeyNotes] = useState<Record<string, KeyNote[]>>({});
+  const [loadingNotes, setLoadingNotes] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -124,15 +137,43 @@ const Preparation = () => {
     }
   };
 
-  const handleTopicToggle = (topicId: string) => {
-    setSelectedTopics((prev) =>
-      prev.includes(topicId)
-        ? prev.filter((id) => id !== topicId)
-        : [...prev, topicId]
-    );
+  const fetchKeyNotesForTopic = async (topicId: string) => {
+    // Don't fetch if already loaded
+    if (keyNotes[topicId]) return;
+
+    setLoadingNotes((prev) => ({ ...prev, [topicId]: true }));
+    
+    try {
+      const { data, error } = await supabase
+        .from('key_notes')
+        .select('*')
+        .eq('topic_id', topicId)
+        .order('order_index');
+
+      if (error) throw error;
+
+      setKeyNotes((prev) => ({ ...prev, [topicId]: data || [] }));
+    } catch (error) {
+      console.error('Error fetching key notes:', error);
+    } finally {
+      setLoadingNotes((prev) => ({ ...prev, [topicId]: false }));
+    }
   };
 
-  const handleSelectAllTopics = (topics: Topic[]) => {
+  const handleTopicToggle = async (topicId: string) => {
+    const isSelected = selectedTopics.includes(topicId);
+    
+    if (!isSelected) {
+      // Adding topic - fetch key notes
+      setSelectedTopics((prev) => [...prev, topicId]);
+      await fetchKeyNotesForTopic(topicId);
+    } else {
+      // Removing topic
+      setSelectedTopics((prev) => prev.filter((id) => id !== topicId));
+    }
+  };
+
+  const handleSelectAllTopics = async (topics: Topic[]) => {
     const topicIds = topics.map((t) => t.id);
     const allSelected = topicIds.every((id) => selectedTopics.includes(id));
 
@@ -140,6 +181,12 @@ const Preparation = () => {
       setSelectedTopics((prev) => prev.filter((id) => !topicIds.includes(id)));
     } else {
       setSelectedTopics((prev) => [...new Set([...prev, ...topicIds])]);
+      // Fetch key notes for all newly selected topics
+      for (const topicId of topicIds) {
+        if (!keyNotes[topicId]) {
+          fetchKeyNotesForTopic(topicId);
+        }
+      }
     }
   };
 
@@ -237,7 +284,7 @@ const Preparation = () => {
                 </CardContent>
               </Card>
             ) : (
-              /* Topic Selection */
+              /* Topic Selection with Key Notes */
               <Card className="bg-card border-border">
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div>
@@ -263,7 +310,7 @@ const Preparation = () => {
                           : preparationCategories.find((c) => c.id === selectedCategory)?.name}
                       </p>
 
-                      <Accordion type="multiple" className="space-y-2">
+                      <Accordion type="multiple" defaultValue={selectedSubject.units.map(u => u.id)} className="space-y-2">
                         {selectedSubject.units.map((unit) => (
                           <AccordionItem
                             key={unit.id}
@@ -283,29 +330,70 @@ const Preparation = () => {
                                 >
                                   All Units
                                 </Button>
-                                <span className="font-semibold text-foreground">{unit.name}</span>
+                                <span className="font-semibold text-primary">{unit.name}</span>
                               </div>
                             </AccordionTrigger>
                             <AccordionContent>
                               {unit.topics.length === 0 ? (
                                 <p className="text-sm text-muted-foreground py-2">No topics in this unit yet.</p>
                               ) : (
-                                <div className="space-y-2 pt-2">
-                                  {unit.topics.map((topic) => (
-                                    <div
-                                      key={topic.id}
-                                      className="flex items-center justify-between p-3 rounded-lg bg-accent hover:bg-muted transition-colors cursor-pointer"
-                                      onClick={() => handleTopicToggle(topic.id)}
-                                    >
-                                      <div className="flex items-center gap-3">
-                                        <Checkbox
-                                          checked={selectedTopics.includes(topic.id)}
-                                          onCheckedChange={() => handleTopicToggle(topic.id)}
-                                        />
-                                        <span className="text-foreground">{topic.name}</span>
+                                <div className="space-y-3 pt-2">
+                                  {unit.topics.map((topic) => {
+                                    const isSelected = selectedTopics.includes(topic.id);
+                                    const topicNotes = keyNotes[topic.id] || [];
+                                    const isLoadingNotes = loadingNotes[topic.id];
+
+                                    return (
+                                      <div key={topic.id} className="space-y-2">
+                                        {/* Topic Row */}
+                                        <div
+                                          className="flex items-center gap-3 p-3 rounded-lg bg-accent hover:bg-muted transition-colors cursor-pointer"
+                                          onClick={() => handleTopicToggle(topic.id)}
+                                        >
+                                          <Checkbox
+                                            checked={isSelected}
+                                            onCheckedChange={() => handleTopicToggle(topic.id)}
+                                            className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                          />
+                                          <span className="text-foreground">{topic.name}</span>
+                                        </div>
+
+                                        {/* Key Notes Content - Shows when topic is selected */}
+                                        {isSelected && selectedCategory === 'keynotes' && (
+                                          <div className="ml-6 p-4 bg-muted/50 border-l-4 border-primary rounded-r-lg">
+                                            {isLoadingNotes ? (
+                                              <div className="flex items-center gap-2 text-muted-foreground">
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                Loading notes...
+                                              </div>
+                                            ) : topicNotes.length === 0 ? (
+                                              <p className="text-muted-foreground text-sm italic">
+                                                No key notes available for this topic yet.
+                                              </p>
+                                            ) : (
+                                              <div className="space-y-4">
+                                                {topicNotes.map((note) => (
+                                                  <div key={note.id}>
+                                                    <h4 className="font-semibold text-foreground mb-2">
+                                                      {note.title}
+                                                    </h4>
+                                                    <div className="prose prose-sm dark:prose-invert max-w-none text-foreground">
+                                                      <ReactMarkdown
+                                                        remarkPlugins={[remarkMath]}
+                                                        rehypePlugins={[rehypeKatex]}
+                                                      >
+                                                        {note.content}
+                                                      </ReactMarkdown>
+                                                    </div>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            )}
+                                          </div>
+                                        )}
                                       </div>
-                                    </div>
-                                  ))}
+                                    );
+                                  })}
                                 </div>
                               )}
                             </AccordionContent>
@@ -313,13 +401,13 @@ const Preparation = () => {
                         ))}
                       </Accordion>
 
-                      {selectedTopics.length > 0 && (
+                      {selectedTopics.length > 0 && selectedCategory !== 'keynotes' && (
                         <div className="mt-6 flex items-center justify-between p-4 bg-primary/10 rounded-lg">
                           <span className="text-foreground font-medium">
                             {selectedTopics.length} topic(s) selected
                           </span>
                           <Button>
-                            Start {selectedCategory === 'keynotes' ? 'Reading' : 'Quiz'}
+                            Start Quiz
                           </Button>
                         </div>
                       )}

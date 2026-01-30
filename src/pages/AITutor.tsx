@@ -195,12 +195,12 @@ const AITutor = () => {
 
   return (
     <MainLayout>
-      <div className="h-full min-h-0 flex overflow-hidden -m-6">
-        {/* Sidebar */}
+      <div className="fixed inset-0 top-16 flex overflow-hidden">
+        {/* Sidebar - Static/Fixed */}
         <div className={`${sidebarOpen ? 'w-64' : 'w-0'} flex-shrink-0 border-r border-border bg-muted/30 transition-all duration-300 overflow-hidden`}>
           <div className="w-64 h-full flex flex-col">
             {/* Sidebar Header with Close Button */}
-            <div className="p-3 flex items-center justify-between">
+            <div className="p-3 flex items-center justify-between flex-shrink-0">
               <Button 
                 variant="outline" 
                 className="flex-1 justify-start gap-2" 
@@ -220,7 +220,7 @@ const AITutor = () => {
             </div>
 
             {/* Search */}
-            <div className="px-3 pb-2">
+            <div className="px-3 pb-2 flex-shrink-0">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <input
@@ -231,53 +231,65 @@ const AITutor = () => {
               </div>
             </div>
 
-            {/* Chat History */}
-            <div className="flex-1 overflow-hidden">
-              <div className="px-3 py-2">
+            {/* Your Chats Section - Scrollable */}
+            <div className="flex-1 flex flex-col min-h-0">
+              <div className="px-3 py-2 flex-shrink-0">
                 <p className="text-xs font-medium text-muted-foreground">Your chats</p>
               </div>
-              <ScrollArea className="h-[calc(100%-40px)]">
-                <div className="px-2 space-y-1">
-                  {historyLoading ? (
-                    <div className="p-4 text-center">
-                      <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
-                    </div>
-                  ) : chatSessions.length === 0 ? (
-                    <div className="p-4 text-center text-muted-foreground text-sm">
-                      No chats yet
-                    </div>
-                  ) : (
-                    chatSessions.map((session) => (
-                      <div
-                        key={session.id}
-                        className={`group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-                          currentSessionId === session.id
-                            ? 'bg-accent text-accent-foreground'
-                            : 'hover:bg-muted'
-                        }`}
-                        onClick={() => handleLoadSession(session.id)}
+              <div className="flex-1 overflow-y-auto px-2 space-y-1">
+                {historyLoading ? (
+                  <div className="p-4 text-center">
+                    <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
+                  </div>
+                ) : chatSessions.length === 0 ? (
+                  <div className="p-4 text-center text-muted-foreground text-sm">
+                    No chats yet
+                  </div>
+                ) : (
+                  chatSessions.map((session) => (
+                    <div
+                      key={session.id}
+                      className={`group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+                        currentSessionId === session.id
+                          ? 'bg-accent text-accent-foreground'
+                          : 'hover:bg-muted'
+                      }`}
+                      onClick={() => handleLoadSession(session.id)}
+                    >
+                      <MessageSquare className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                      <span className="flex-1 text-sm truncate">
+                        {session.title || 'New Chat'}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 opacity-0 group-hover:opacity-100"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteSession(session.id);
+                        }}
                       >
-                        <MessageSquare className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                        <span className="flex-1 text-sm truncate">
-                          {session.title || 'New Chat'}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 opacity-0 group-hover:opacity-100"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteSession(session.id);
-                          }}
-                        >
-                          <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
-                        </Button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </ScrollArea>
+                        <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+                      </Button>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
+
+            {/* User Profile at Bottom */}
+            {user && (
+              <div className="p-3 border-t border-border flex-shrink-0">
+                <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-muted cursor-pointer">
+                  <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-medium">
+                    {user.email?.charAt(0).toUpperCase() || 'U'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{user.email?.split('@')[0] || 'User'}</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -299,16 +311,16 @@ const AITutor = () => {
             </div>
           </div>
 
-          {/* Messages Area */}
+          {/* Messages Area - Single scrollbar */}
           <div 
             ref={scrollContainerRef}
             onScroll={handleScroll}
-            className="flex-1 overflow-y-auto"
+            className="flex-1 overflow-y-auto scrollbar-thin"
           >
-          <div className="max-w-3xl mx-auto px-4 py-4">
+            <div className="max-w-3xl mx-auto px-4 py-4">
               {messages.length === 0 ? (
                 /* Welcome Screen */
-                <div className="flex flex-col items-center justify-center h-full text-center pt-8">
+                <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
                   <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
                     <MessageSquare className="h-8 w-8 text-primary" />
                   </div>
@@ -398,7 +410,6 @@ const AITutor = () => {
               )}
             </div>
           </div>
-
           {/* Input Area */}
           <div className="border-t border-border p-4">
             <div className="max-w-3xl mx-auto">
@@ -459,9 +470,8 @@ const AITutor = () => {
               className="absolute left-0 top-0 h-full w-64 bg-card border-r border-border shadow-xl"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Same sidebar content */}
               <div className="h-full flex flex-col">
-                <div className="p-3">
+                <div className="p-3 flex-shrink-0">
                   <Button 
                     variant="outline" 
                     className="w-full justify-start gap-2" 
@@ -471,25 +481,34 @@ const AITutor = () => {
                     New chat
                   </Button>
                 </div>
-                <div className="px-3 py-2">
+                <div className="px-3 py-2 flex-shrink-0">
                   <p className="text-xs font-medium text-muted-foreground">Your chats</p>
                 </div>
-                <ScrollArea className="flex-1">
-                  <div className="px-2 space-y-1">
-                    {chatSessions.map((session) => (
-                      <div
-                        key={session.id}
-                        className={`group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer ${
-                          currentSessionId === session.id ? 'bg-accent' : 'hover:bg-muted'
-                        }`}
-                        onClick={() => handleLoadSession(session.id)}
-                      >
-                        <MessageSquare className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                        <span className="flex-1 text-sm truncate">{session.title || 'New Chat'}</span>
+                <div className="flex-1 overflow-y-auto px-2 space-y-1">
+                  {chatSessions.map((session) => (
+                    <div
+                      key={session.id}
+                      className={`group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer ${
+                        currentSessionId === session.id ? 'bg-accent' : 'hover:bg-muted'
+                      }`}
+                      onClick={() => handleLoadSession(session.id)}
+                    >
+                      <MessageSquare className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                      <span className="flex-1 text-sm truncate">{session.title || 'New Chat'}</span>
+                    </div>
+                  ))}
+                </div>
+                {/* Mobile User Profile */}
+                {user && (
+                  <div className="p-3 border-t border-border flex-shrink-0">
+                    <div className="flex items-center gap-3 px-2 py-2 rounded-lg">
+                      <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-medium">
+                        {user.email?.charAt(0).toUpperCase() || 'U'}
                       </div>
-                    ))}
+                      <p className="text-sm font-medium truncate">{user.email?.split('@')[0] || 'User'}</p>
+                    </div>
                   </div>
-                </ScrollArea>
+                )}
               </div>
             </div>
           </div>

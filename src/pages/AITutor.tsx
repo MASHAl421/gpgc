@@ -305,10 +305,10 @@ const AITutor = () => {
             onScroll={handleScroll}
             className="flex-1 overflow-y-auto"
           >
-            <div className="max-w-3xl mx-auto px-4 py-6">
+          <div className="max-w-3xl mx-auto px-4 py-4">
               {messages.length === 0 ? (
                 /* Welcome Screen */
-                <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+                <div className="flex flex-col items-center justify-center h-full text-center pt-8">
                   <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
                     <MessageSquare className="h-8 w-8 text-primary" />
                   </div>

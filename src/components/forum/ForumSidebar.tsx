@@ -5,7 +5,7 @@ import { ForumBadge } from './ForumBadge';
 import { FORUM_POINTS } from '@/hooks/useForumPoints';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Coins, TrendingUp, Users, Award, Loader2 } from 'lucide-react';
+import { Coins, TrendingUp, Loader2 } from 'lucide-react';
 
 interface TopMember {
   username: string;
@@ -22,7 +22,6 @@ export const ForumSidebar = () => {
   useEffect(() => {
     const fetchTopMembers = async () => {
       try {
-        // Get top 5 members by forum_points
         const { data: profiles } = await supabase
           .from('profiles')
           .select('id, username, forum_points')
@@ -34,20 +33,17 @@ export const ForumSidebar = () => {
           return;
         }
 
-        // Get post counts for these users
         const userIds = profiles.map(p => p.id);
         const { data: postCounts } = await supabase
           .from('forum_posts')
           .select('user_id')
           .in('user_id', userIds);
 
-        // Get reply counts for badge calculation
         const { data: replyCounts } = await supabase
           .from('forum_replies')
           .select('user_id')
           .in('user_id', userIds);
 
-        // Get badges
         const { data: badges } = await supabase
           .from('forum_badges')
           .select('*')

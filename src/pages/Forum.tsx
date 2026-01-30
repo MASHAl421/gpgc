@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,6 +18,10 @@ import { createNotification } from '@/hooks/useNotifications';
 import { useForumPoints, FORUM_POINTS } from '@/hooks/useForumPoints';
 import { ForumSidebar } from '@/components/forum/ForumSidebar';
 import { ForumUserBadge } from '@/components/forum/ForumUserBadge';
+import { ForumQuestionCard } from '@/components/forum/ForumQuestionCard';
+import { ForumTabs, ForumSortOption } from '@/components/forum/ForumTabs';
+import { ForumStatsCard } from '@/components/forum/ForumStatsCard';
+import { ForumPopularQuestions } from '@/components/forum/ForumPopularQuestions';
 import { toast } from 'sonner';
 import { 
   MessageSquare, 
@@ -92,6 +96,9 @@ const Forum = () => {
   const [deletingReplyId, setDeletingReplyId] = useState<string | null>(null);
   const [userPostUpvotes, setUserPostUpvotes] = useState<Set<string>>(new Set());
   const [userReplyUpvotes, setUserReplyUpvotes] = useState<Set<string>>(new Set());
+  const [activeTab, setActiveTab] = useState<ForumSortOption>('recent');
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [totalReplies, setTotalReplies] = useState(0);
 
   useEffect(() => {
     fetchData();
@@ -153,14 +160,23 @@ const Forum = () => {
         profiles = profilesData || [];
       }
 
+      // Get total users count
+      const { count: usersCount } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true });
+      setTotalUsers(usersCount || 0);
+
       const { data: replyCounts } = await supabase
         .from('forum_replies')
         .select('post_id');
 
       const replyCountMap: Record<string, number> = {};
+      let totalReplyCount = 0;
       (replyCounts || []).forEach((r) => {
         replyCountMap[r.post_id] = (replyCountMap[r.post_id] || 0) + 1;
+        totalReplyCount++;
       });
+      setTotalReplies(totalReplyCount);
 
       const enrichedPosts = (postsData || []).map((post) => ({
         ...post,
@@ -215,6 +231,35 @@ const Forum = () => {
     fetchReplies(post.id);
   };
 
+  const handlePostClickById = async (postId: string) => {
+    const post = posts.find(p => p.id === postId);
+    if (post) {
+      handlePostClick(post);
+    } else {
+      // Fetch the post if not in current list
+      const { data } = await supabase
+        .from('forum_posts')
+        .select('*')
+        .eq('id', postId)
+        .single();
+      
+      if (data) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('id', data.user_id)
+          .single();
+        
+        const enrichedPost = {
+          ...data,
+          username: profile?.username || 'Unknown',
+          reply_count: 0,
+        };
+        handlePostClick(enrichedPost);
+      }
+    }
+  };
+
   const handleCreatePost = async () => {
     if (!user || !newPostTitle.trim() || !newPostContent.trim()) {
       toast.error('Please fill in all fields');
@@ -232,7 +277,6 @@ const Forum = () => {
 
       if (error) throw error;
 
-      // Award points for creating a post
       await awardPoints('new_post', FORUM_POINTS.NEW_POST, data?.id, 'Created a new discussion');
 
       toast.success('Post created successfully! +' + FORUM_POINTS.NEW_POST + ' points');
@@ -265,10 +309,8 @@ const Forum = () => {
 
       if (error) throw error;
 
-      // Award points for adding a reply
       await awardPoints('new_reply', FORUM_POINTS.NEW_REPLY, data?.id, 'Added a reply to a discussion');
 
-      // Send notification to post owner (only if not replying to own post)
       if (selectedPost.user_id !== user.id) {
         await createNotification(
           selectedPost.user_id,
@@ -294,10 +336,7 @@ const Forum = () => {
 
   const handleDeletePost = async (postId: string) => {
     try {
-      // First delete all replies
       await supabase.from('forum_replies').delete().eq('post_id', postId);
-      
-      // Then delete the post
       const { error } = await supabase.from('forum_posts').delete().eq('id', postId);
       
       if (error) throw error;
@@ -366,7 +405,6 @@ const Forum = () => {
 
     try {
       if (hasUpvoted) {
-        // Remove upvote
         await supabase.from('forum_post_upvotes').delete().eq('post_id', postId).eq('user_id', user.id);
         await supabase.from('forum_posts').update({ upvotes: Math.max(0, currentUpvotes - 1) }).eq('id', postId);
         
@@ -380,7 +418,6 @@ const Forum = () => {
           setSelectedPost({ ...selectedPost, upvotes: Math.max(0, selectedPost.upvotes - 1) });
         }
       } else {
-        // Add upvote
         await supabase.from('forum_post_upvotes').insert({ post_id: postId, user_id: user.id });
         await supabase.from('forum_posts').update({ upvotes: currentUpvotes + 1 }).eq('id', postId);
         
@@ -390,7 +427,6 @@ const Forum = () => {
           setSelectedPost({ ...selectedPost, upvotes: selectedPost.upvotes + 1 });
         }
 
-        // Send notification to post owner (only if not upvoting own post)
         if (post && post.user_id !== user.id) {
           await createNotification(
             post.user_id,
@@ -407,6 +443,18 @@ const Forum = () => {
     }
   };
 
+  const handleDownvotePost = async (postId: string, currentUpvotes: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) {
+      toast.error('Please login to vote');
+      return;
+    }
+    // For now, downvote just removes upvote if exists
+    if (userPostUpvotes.has(postId)) {
+      handleUpvotePost(postId, currentUpvotes, e);
+    }
+  };
+
   const handleUpvoteReply = async (replyId: string, currentUpvotes: number) => {
     if (!user) {
       toast.error('Please login to upvote');
@@ -418,7 +466,6 @@ const Forum = () => {
 
     try {
       if (hasUpvoted) {
-        // Remove upvote
         await supabase.from('forum_reply_upvotes').delete().eq('reply_id', replyId).eq('user_id', user.id);
         await supabase.from('forum_replies').update({ upvotes: Math.max(0, currentUpvotes - 1) }).eq('id', replyId);
         
@@ -429,14 +476,12 @@ const Forum = () => {
         });
         setReplies(replies.map(r => r.id === replyId ? { ...r, upvotes: Math.max(0, r.upvotes - 1) } : r));
       } else {
-        // Add upvote
         await supabase.from('forum_reply_upvotes').insert({ reply_id: replyId, user_id: user.id });
         await supabase.from('forum_replies').update({ upvotes: currentUpvotes + 1 }).eq('id', replyId);
         
         setUserReplyUpvotes(prev => new Set(prev).add(replyId));
         setReplies(replies.map(r => r.id === replyId ? { ...r, upvotes: r.upvotes + 1 } : r));
 
-        // Send notification to reply owner (only if not upvoting own reply)
         if (reply && reply.user_id !== user.id) {
           await createNotification(
             reply.user_id,
@@ -462,13 +507,11 @@ const Forum = () => {
     const reply = replies.find(r => r.id === replyId);
 
     try {
-      // Unmark all other replies first
       await supabase
         .from('forum_replies')
         .update({ is_accepted_answer: false })
         .eq('post_id', selectedPost.id);
 
-      // Mark this reply as answer
       const { error: replyError } = await supabase
         .from('forum_replies')
         .update({ is_accepted_answer: true })
@@ -476,7 +519,6 @@ const Forum = () => {
 
       if (replyError) throw replyError;
 
-      // Mark post as answered
       const { error: postError } = await supabase
         .from('forum_posts')
         .update({ is_answered: true })
@@ -484,10 +526,7 @@ const Forum = () => {
 
       if (postError) throw postError;
 
-      // Award points to the user whose answer was accepted (if not the post author)
       if (reply && reply.user_id !== selectedPost.user_id) {
-        // Award points via their own transaction (they need to do it themselves due to RLS)
-        // For now, we'll just show the notification - in production, you'd use a database function
         await createNotification(
           reply.user_id,
           'best_answer',
@@ -518,12 +557,6 @@ const Forum = () => {
     }
   };
 
-  const filteredPosts = posts.filter(
-    (post) =>
-      post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      post.content.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   const getSubjectName = (subjectId: string | null) => {
     if (!subjectId) return 'General';
     return subjects.find((s) => s.id === subjectId)?.name || 'Unknown';
@@ -535,6 +568,39 @@ const Forum = () => {
     setEditTitle(post.title);
     setEditContent(post.content);
   };
+
+  // Sort posts based on active tab
+  const getSortedPosts = () => {
+    let sorted = [...posts];
+    
+    switch (activeTab) {
+      case 'recent':
+        sorted.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        break;
+      case 'most_answered':
+        sorted.sort((a, b) => (b.reply_count || 0) - (a.reply_count || 0));
+        break;
+      case 'most_upvoted':
+        sorted.sort((a, b) => b.upvotes - a.upvotes);
+        break;
+      case 'unanswered':
+        sorted = sorted.filter(p => !p.is_answered);
+        break;
+      case 'trending':
+        sorted.sort((a, b) => (b.upvotes + (b.reply_count || 0) * 2) - (a.upvotes + (a.reply_count || 0) * 2));
+        break;
+    }
+    
+    return sorted;
+  };
+
+  const filteredPosts = getSortedPosts().filter(
+    (post) =>
+      post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      post.content.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const bestAnswersCount = posts.filter(p => p.is_answered).length;
 
   if (isLoading) {
     return (
@@ -549,72 +615,6 @@ const Forum = () => {
   return (
     <MainLayout>
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-2">
-              <MessageSquare className="h-6 w-6 md:h-8 md:w-8 text-primary" />
-              Discussion Forum
-            </h1>
-            <p className="text-sm md:text-base text-muted-foreground mt-1">
-              Ask questions and help fellow students
-            </p>
-          </div>
-          <Dialog open={newPostOpen} onOpenChange={setNewPostOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-5 w-5 mr-2" />
-                New Discussion
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Create New Discussion</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 pt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Title</Label>
-                  <Input
-                    id="title"
-                    placeholder="What's your question?"
-                    value={newPostTitle}
-                    onChange={(e) => setNewPostTitle(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="subject">Subject (optional)</Label>
-                  <Select value={newPostSubject} onValueChange={setNewPostSubject}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a subject" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="general">General</SelectItem>
-                      {subjects.map((subject) => (
-                        <SelectItem key={subject.id} value={subject.id}>
-                          {subject.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="content">Details</Label>
-                  <Textarea
-                    id="content"
-                    placeholder="Provide more details about your question..."
-                    rows={4}
-                    value={newPostContent}
-                    onChange={(e) => setNewPostContent(e.target.value)}
-                  />
-                </div>
-                <Button onClick={handleCreatePost} disabled={submitting} className="w-full">
-                  {submitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                  Post Discussion
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-
         {selectedPost ? (
           /* Post Detail View */
           <div className="space-y-4">
@@ -635,7 +635,7 @@ const Forum = () => {
                       <div className="flex items-center gap-2 mb-2 flex-wrap">
                         <Badge variant="secondary">{getSubjectName(selectedPost.subject_id)}</Badge>
                         {selectedPost.is_answered && (
-                          <Badge className="bg-emerald-500 text-white">
+                          <Badge className="bg-emerald-500/10 text-emerald-600 border border-emerald-500/30">
                             <CheckCircle className="h-3 w-3 mr-1" />
                             Answered
                           </Badge>
@@ -646,7 +646,6 @@ const Forum = () => {
                         </span>
                       </div>
                       
-                      {/* Post Actions Menu */}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -745,14 +744,13 @@ const Forum = () => {
                               {format(new Date(reply.created_at), 'MMM d, h:mm a')}
                             </span>
                             {reply.is_accepted_answer && (
-                              <Badge className="bg-emerald-500 text-white text-xs">
+                              <Badge className="bg-emerald-500/10 text-emerald-600 border border-emerald-500/30 text-xs">
                                 <CheckCircle className="h-3 w-3 mr-1" />
                                 Answer
                               </Badge>
                             )}
                           </div>
                           
-                          {/* Reply Actions */}
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-6 w-6">
@@ -801,7 +799,6 @@ const Forum = () => {
                   ))
                 )}
 
-                {/* Reply Input */}
                 {user ? (
                   <div className="flex gap-2 pt-4 border-t border-border">
                     <Textarea
@@ -828,10 +825,15 @@ const Forum = () => {
             </Card>
           </div>
         ) : (
-          /* Post List View */
+          /* Post List View - New Layout */
           <div className="grid lg:grid-cols-4 gap-6">
-            {/* Main Content */}
+            {/* Main Content - 3 columns */}
             <div className="lg:col-span-3 space-y-4">
+              {/* Tabs and Search Row */}
+              <div className="bg-card border border-border rounded-lg">
+                <ForumTabs activeTab={activeTab} onTabChange={setActiveTab} />
+              </div>
+
               {/* Search */}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -853,137 +855,107 @@ const Forum = () => {
                   </CardContent>
                 </Card>
               ) : (
-                filteredPosts.map((post) => (
-                  <Card 
-                    key={post.id} 
-                    className="bg-card border-border hover:shadow-md transition-shadow cursor-pointer"
-                    onClick={() => handlePostClick(post)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-start gap-4">
-                        <Avatar className="hidden sm:flex">
-                          <AvatarFallback className="bg-primary text-primary-foreground">
-                            {post.username?.charAt(0) || '?'}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              <Badge variant="secondary">{getSubjectName(post.subject_id)}</Badge>
-                              {post.is_answered && (
-                                <Badge className="bg-emerald-500 text-white">
-                                  <CheckCircle className="h-3 w-3 mr-1" />
-                                  Answered
-                                </Badge>
-                              )}
-                              <span className="text-sm text-muted-foreground flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                {format(new Date(post.created_at), 'MMM d')}
-                              </span>
-                            </div>
-                            
-                            {/* Quick Actions */}
-                            {user?.id === post.user_id && (
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-                                    <MoreVertical className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="bg-popover">
-                                  <DropdownMenuItem onClick={(e) => openEditPost(post, e)}>
-                                    <Edit className="h-4 w-4 mr-2" />
-                                    Edit
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem 
-                                    className="text-destructive focus:text-destructive"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setDeletingPostId(post.id);
-                                    }}
-                                  >
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Delete
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            )}
-                          </div>
-                          <h3 className="font-semibold text-foreground hover:text-primary transition-colors line-clamp-2">
-                            {post.title}
-                          </h3>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-sm text-muted-foreground">by {post.username}</span>
-                            <ForumUserBadge userId={post.user_id} />
-                          </div>
-                          <div className="flex items-center gap-4 mt-3">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className={`h-7 gap-1 text-sm p-0 hover:text-primary ${userPostUpvotes.has(post.id) ? 'text-primary' : 'text-muted-foreground'}`}
-                              onClick={(e) => handleUpvotePost(post.id, post.upvotes, e)}
-                            >
-                              <ThumbsUp className={`h-4 w-4 ${userPostUpvotes.has(post.id) ? 'fill-primary' : ''}`} />
-                              {post.upvotes}
-                            </Button>
-                            <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                              <MessageCircle className="h-4 w-4" />
-                              {post.reply_count} replies
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
+                <div className="space-y-4">
+                  {filteredPosts.map((post) => (
+                    <ForumQuestionCard
+                      key={post.id}
+                      id={post.id}
+                      title={post.title}
+                      content={post.content}
+                      username={post.username || 'Unknown'}
+                      userId={post.user_id}
+                      subjectName={getSubjectName(post.subject_id)}
+                      upvotes={post.upvotes}
+                      replyCount={post.reply_count || 0}
+                      createdAt={post.created_at}
+                      isAnswered={post.is_answered}
+                      hasUpvoted={userPostUpvotes.has(post.id)}
+                      isOwner={user?.id === post.user_id}
+                      onUpvote={(e) => handleUpvotePost(post.id, post.upvotes, e)}
+                      onDownvote={(e) => handleDownvotePost(post.id, post.upvotes, e)}
+                      onClick={() => handlePostClick(post)}
+                      onEdit={(e) => openEditPost(post, e)}
+                      onDelete={(e) => {
+                        e.stopPropagation();
+                        setDeletingPostId(post.id);
+                      }}
+                    />
+                  ))}
+                </div>
               )}
             </div>
 
-            {/* Sidebar - Replace old sidebar with ForumSidebar component */}
+            {/* Sidebar - 1 column */}
             <div className="space-y-4">
-              <ForumSidebar />
-              
-              <Card className="bg-card border-border">
-                <CardHeader>
-                  <CardTitle className="text-foreground">Popular Subjects</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-2">
-                    {subjects.map((subject) => (
-                      <Badge key={subject.id} variant="outline" className="cursor-pointer hover:bg-muted">
-                        {subject.name}
-                      </Badge>
-                    ))}
-                    {subjects.length === 0 && (
-                      <p className="text-sm text-muted-foreground">No subjects available</p>
-                    )}
+              {/* Ask A Question Button */}
+              <Dialog open={newPostOpen} onOpenChange={setNewPostOpen}>
+                <DialogTrigger asChild>
+                  <Button className="w-full" size="lg">
+                    <Plus className="h-5 w-5 mr-2" />
+                    Ask A Question
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle>Ask a Question</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 pt-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="title">Title</Label>
+                      <Input
+                        id="title"
+                        placeholder="What's your question?"
+                        value={newPostTitle}
+                        onChange={(e) => setNewPostTitle(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="subject">Subject (optional)</Label>
+                      <Select value={newPostSubject} onValueChange={setNewPostSubject}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a subject" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="general">General</SelectItem>
+                          {subjects.map((subject) => (
+                            <SelectItem key={subject.id} value={subject.id}>
+                              {subject.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="content">Details</Label>
+                      <Textarea
+                        id="content"
+                        placeholder="Provide more details about your question..."
+                        rows={4}
+                        value={newPostContent}
+                        onChange={(e) => setNewPostContent(e.target.value)}
+                      />
+                    </div>
+                    <Button onClick={handleCreatePost} disabled={submitting} className="w-full">
+                      {submitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                      Post Question
+                    </Button>
                   </div>
-                </CardContent>
-              </Card>
+                </DialogContent>
+              </Dialog>
 
-              <Card className="bg-card border-border">
-                <CardHeader>
-                  <CardTitle className="text-foreground">Forum Stats</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Total Discussions</span>
-                    <span className="font-semibold text-foreground">{posts.length}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Answered</span>
-                    <span className="font-semibold text-primary">
-                      {posts.filter(p => p.is_answered).length}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Unanswered</span>
-                    <span className="font-semibold text-destructive">
-                      {posts.filter(p => !p.is_answered).length}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Stats Card */}
+              <ForumStatsCard 
+                totalQuestions={posts.length}
+                totalAnswers={totalReplies}
+                bestAnswers={bestAnswersCount}
+                totalUsers={totalUsers}
+              />
+
+              {/* Popular Questions */}
+              <ForumPopularQuestions onQuestionClick={handlePostClickById} />
+
+              {/* Forum Sidebar (Points, Top Members) */}
+              <ForumSidebar />
             </div>
           </div>
         )}

@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Coins as CoinsIcon, Gift, TrendingUp, Award, Star } from 'lucide-react';
 
 const Coins = () => {
-  const { user } = useAuth();
+  const { profile } = useAuth();
 
   const earnHistory = [
     { id: 1, action: 'Completed Physics Quiz', coins: 50, date: '2026-01-30' },
@@ -40,7 +40,7 @@ const Coins = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-primary-foreground/80">Total Coins</p>
-                <h2 className="text-4xl font-bold mt-2">{user?.coinsEarned || 405}</h2>
+                <h2 className="text-4xl font-bold mt-2">{profile?.coins_earned || 0}</h2>
               </div>
               <CoinsIcon className="h-16 w-16 opacity-50" />
             </div>

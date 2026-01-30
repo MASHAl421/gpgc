@@ -3,13 +3,15 @@ import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Coins } from 'lucide-react';
 
 interface MainLayoutProps {
   children: ReactNode;
 }
 
 export const MainLayout = ({ children }: MainLayoutProps) => {
-  const { user } = useAuth();
+  const { profile, isAdmin } = useAuth();
 
   return (
     <SidebarProvider>
@@ -23,14 +25,23 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
               <h2 className="font-semibold text-foreground">EduLearn Portal</h2>
             </div>
             <div className="flex items-center gap-3">
-              {user && (
+              {profile && (
                 <>
+                  <div className="flex items-center gap-1 bg-muted px-3 py-1 rounded-full">
+                    <Coins className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium text-foreground">
+                      {profile.coins_earned || 0}
+                    </span>
+                  </div>
+                  {isAdmin && (
+                    <Badge variant="default">Admin</Badge>
+                  )}
                   <span className="text-sm text-muted-foreground hidden md:block">
-                    {user.username}
+                    {profile.username}
                   </span>
                   <Avatar className="h-9 w-9">
                     <AvatarFallback className="bg-primary text-primary-foreground">
-                      {user.username.charAt(0).toUpperCase()}
+                      {profile.username.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                 </>

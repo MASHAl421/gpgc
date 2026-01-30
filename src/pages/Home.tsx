@@ -17,7 +17,7 @@ import {
 
 const Home = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { profile } = useAuth();
 
   const preparationCards = [
     {
@@ -51,9 +51,9 @@ const Home = () => {
   ];
 
   const statsCards = [
-    { title: 'Tests Passed', value: '49/129', icon: Trophy, progress: 38 },
-    { title: 'Coins Earned', value: user?.coinsEarned || 0, icon: Coins, progress: 0 },
-    { title: 'Topics Completed', value: '12/50', icon: BookOpen, progress: 24 },
+    { title: 'Tests Passed', value: '0/0', icon: Trophy, progress: 0 },
+    { title: 'Coins Earned', value: profile?.coins_earned || 0, icon: Coins, progress: 0 },
+    { title: 'Topics Completed', value: '0/0', icon: BookOpen, progress: 0 },
   ];
 
   return (
@@ -63,7 +63,7 @@ const Home = () => {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-foreground">
-              Welcome back, {user?.username || 'Student'}! 👋
+              Welcome back, {profile?.username || 'Student'}! 👋
             </h1>
             <p className="text-muted-foreground mt-1">
               Continue your learning journey and achieve your goals

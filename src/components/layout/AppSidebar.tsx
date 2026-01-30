@@ -23,6 +23,7 @@ import {
   MessageSquare,
   LogOut,
   GraduationCap,
+  Settings,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -36,17 +37,23 @@ const menuItems = [
   { title: 'Discussion Forum', url: '/forum', icon: MessageSquare },
 ];
 
+const adminItems = [
+  { title: 'Admin Panel', url: '/admin', icon: Settings },
+];
+
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout, user } = useAuth();
+  const { logout, profile, isAdmin } = useAuth();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/');
   };
+
+  const allMenuItems = isAdmin ? [...menuItems, ...adminItems] : menuItems;
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -68,7 +75,7 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => (
+              {allMenuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
@@ -92,10 +99,15 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="p-4">
-        {!collapsed && user && (
+        {!collapsed && profile && (
           <div className="mb-4 p-3 rounded-lg bg-card border border-sidebar-border">
-            <p className="text-sm font-medium text-sidebar-foreground">{user.username}</p>
-            <p className="text-xs text-muted-foreground">{user.email}</p>
+            <p className="text-sm font-medium text-sidebar-foreground">{profile.username}</p>
+            <p className="text-xs text-muted-foreground">{profile.email}</p>
+            {isAdmin && (
+              <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full mt-1 inline-block">
+                Admin
+              </span>
+            )}
           </div>
         )}
         <Button

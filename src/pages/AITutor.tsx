@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { 
   Plus, Send, Loader2, 
-  MessageSquare, Trash2, Search, ChevronDown, X
+  MessageSquare, Trash2, Search, ChevronDown, X,
+  Copy, Check, Paperclip, Image as ImageIcon, FileText
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,18 +18,43 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import 'katex/dist/katex.min.css';
 
-type Message = { role: 'user' | 'assistant'; content: string };
+type Message = { role: 'user' | 'assistant'; content: string; imageData?: string; imageName?: string };
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-tutor`;
+
+// Copy button component
+const CopyButton = ({ text }: { text: string }) => {
+  const [copied, setCopied] = useState(false);
+  
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+      onClick={handleCopy}
+      title="Copy to clipboard"
+    >
+      {copied ? <Check className="h-3 w-3 text-primary" /> : <Copy className="h-3 w-3" />}
+    </Button>
+  );
+};
 
 const AITutor = () => {
   const [question, setQuestion] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [attachedFile, setAttachedFile] = useState<{ data: string; name: string; type: string } | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
@@ -88,14 +114,61 @@ const AITutor = () => {
     }
   }, [question]);
 
-  const handleSend = async () => {
-    if (!question.trim() || isLoading) return;
+  // Handle file selection
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-    const userMsg: Message = { role: 'user', content: question };
-    const questionText = question; // Store for title before clearing
+    // Check file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+    if (!validTypes.includes(file.type)) {
+      toast({
+        title: 'Invalid file type',
+        description: 'Please upload an image (JPG, PNG, GIF, WebP) or PDF file.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Check file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: 'File too large',
+        description: 'Please upload a file smaller than 10MB.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Convert to base64
+    const reader = new FileReader();
+    reader.onload = () => {
+      setAttachedFile({
+        data: reader.result as string,
+        name: file.name,
+        type: file.type,
+      });
+    };
+    reader.readAsDataURL(file);
+    
+    // Reset input
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleSend = async () => {
+    if ((!question.trim() && !attachedFile) || isLoading) return;
+
+    const userMsg: Message = { 
+      role: 'user', 
+      content: question || (attachedFile ? `Analyze this ${attachedFile.type.startsWith('image') ? 'image' : 'document'}` : ''),
+      imageData: attachedFile?.data,
+      imageName: attachedFile?.name,
+    };
+    const questionText = question || attachedFile?.name || 'File analysis';
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
     setQuestion('');
+    setAttachedFile(null);
     setIsLoading(true);
 
     let assistantContent = '';
@@ -355,44 +428,71 @@ const AITutor = () => {
                 /* Messages */
                 <div className="space-y-6">
                   {messages.map((message, index) => (
-                    <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div key={index} className={`group flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-[85%] ${message.role === 'user' ? '' : ''}`}>
                         {message.role === 'user' ? (
-                          <div className="bg-primary text-primary-foreground px-4 py-3 rounded-2xl rounded-br-md">
-                            <p className="whitespace-pre-wrap">{message.content}</p>
+                          <div className="relative">
+                            <div className="bg-primary text-primary-foreground px-4 py-3 rounded-2xl rounded-br-md">
+                              {message.imageName && (
+                                <div className="flex items-center gap-2 mb-2 pb-2 border-b border-primary-foreground/20">
+                                  {message.imageData?.startsWith('data:image') ? (
+                                    <ImageIcon className="h-4 w-4" />
+                                  ) : (
+                                    <FileText className="h-4 w-4" />
+                                  )}
+                                  <span className="text-sm truncate">{message.imageName}</span>
+                                </div>
+                              )}
+                              {message.imageData?.startsWith('data:image') && (
+                                <img 
+                                  src={message.imageData} 
+                                  alt="Uploaded" 
+                                  className="max-w-full max-h-48 rounded-lg mb-2"
+                                />
+                              )}
+                              <p className="whitespace-pre-wrap">{message.content}</p>
+                            </div>
+                            <div className="absolute -bottom-6 right-0">
+                              <CopyButton text={message.content} />
+                            </div>
                           </div>
                         ) : (
-                          <div className="prose prose-sm dark:prose-invert max-w-none">
-                            <ReactMarkdown
-                              remarkPlugins={[remarkMath]}
-                              rehypePlugins={[rehypeKatex]}
-                              components={{
-                                code({ node, inline, className, children, ...props }: any) {
-                                  const match = /language-(\w+)/.exec(className || '');
-                                  return !inline && match ? (
-                                    <SyntaxHighlighter
-                                      style={oneDark}
-                                      language={match[1]}
-                                      PreTag="div"
-                                      customStyle={{ 
-                                        borderRadius: '12px', 
-                                        fontSize: '0.85em',
-                                        margin: '1em 0'
-                                      }}
-                                      {...props}
-                                    >
-                                      {String(children).replace(/\n$/, '')}
-                                    </SyntaxHighlighter>
-                                  ) : (
-                                    <code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono" {...props}>
-                                      {children}
-                                    </code>
-                                  );
-                                },
-                              }}
-                            >
-                              {message.content}
-                            </ReactMarkdown>
+                          <div className="relative">
+                            <div className="prose prose-sm dark:prose-invert max-w-none">
+                              <ReactMarkdown
+                                remarkPlugins={[remarkMath]}
+                                rehypePlugins={[rehypeKatex]}
+                                components={{
+                                  code({ node, inline, className, children, ...props }: any) {
+                                    const match = /language-(\w+)/.exec(className || '');
+                                    return !inline && match ? (
+                                      <SyntaxHighlighter
+                                        style={oneDark}
+                                        language={match[1]}
+                                        PreTag="div"
+                                        customStyle={{ 
+                                          borderRadius: '12px', 
+                                          fontSize: '0.85em',
+                                          margin: '1em 0'
+                                        }}
+                                        {...props}
+                                      >
+                                        {String(children).replace(/\n$/, '')}
+                                      </SyntaxHighlighter>
+                                    ) : (
+                                      <code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono" {...props}>
+                                        {children}
+                                      </code>
+                                    );
+                                  },
+                                }}
+                              >
+                                {message.content}
+                              </ReactMarkdown>
+                            </div>
+                            <div className="absolute -bottom-6 left-0">
+                              <CopyButton text={message.content} />
+                            </div>
                           </div>
                         )}
                       </div>
@@ -417,19 +517,51 @@ const AITutor = () => {
           {/* Input Area */}
           <div className="border-t border-border p-4">
             <div className="max-w-3xl mx-auto">
+              {/* Attached File Preview */}
+              {attachedFile && (
+                <div className="mb-2 p-2 bg-muted rounded-lg flex items-center gap-2">
+                  {attachedFile.type.startsWith('image') ? (
+                    <img src={attachedFile.data} alt="Preview" className="h-12 w-12 object-cover rounded" />
+                  ) : (
+                    <div className="h-12 w-12 bg-primary/10 rounded flex items-center justify-center">
+                      <FileText className="h-6 w-6 text-primary" />
+                    </div>
+                  )}
+                  <span className="flex-1 text-sm truncate">{attachedFile.name}</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setAttachedFile(null)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+              
               <div className="relative flex items-end gap-2 bg-muted/50 rounded-2xl border border-border p-2">
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                
                 <Button
                   variant="ghost"
                   size="icon"
                   className="h-9 w-9 flex-shrink-0"
-                  onClick={handleNewChat}
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Attach image or PDF"
                 >
-                  <Plus className="h-5 w-5" />
+                  <Paperclip className="h-5 w-5" />
                 </Button>
                 
                 <Textarea
                   ref={textareaRef}
-                  placeholder="Ask anything"
+                  placeholder={attachedFile ? "Add a message about this file..." : "Ask anything"}
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
                   onKeyDown={(e) => {
@@ -448,7 +580,7 @@ const AITutor = () => {
                   size="icon"
                   className="h-9 w-9 rounded-full flex-shrink-0"
                   onClick={() => handleSend()}
-                  disabled={isLoading || !question.trim()}
+                  disabled={isLoading || (!question.trim() && !attachedFile)}
                 >
                   {isLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />

@@ -18,6 +18,26 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
+    // Build messages array, handling image content if present
+    const processedMessages = messages.map((msg: any) => {
+      // If the message has attached image data, format for vision
+      if (msg.imageData && msg.role === 'user') {
+        return {
+          role: 'user',
+          content: [
+            { type: 'text', text: msg.content || 'Analyze this image and help me understand it.' },
+            { 
+              type: 'image_url', 
+              image_url: { 
+                url: msg.imageData // base64 data URL
+              } 
+            }
+          ]
+        };
+      }
+      return msg;
+    });
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -55,11 +75,19 @@ Automatically determine the right response length based on the question:
 - Use bullet points and formatting to organize complex explanations
 - Don't just give definitions - help students truly understand
 
+**Image/Document Analysis:**
+When a user uploads an image or document:
+- If it's a question paper or assignment: Solve it step by step
+- If it's a diagram: Explain what it shows
+- If it's handwritten notes: Read and help understand or correct
+- If it's a textbook page: Explain the concepts clearly
+- Always use OCR to read any text in images
+
 **Key Principle:** When a student asks about a concept (like interference, ohm's law, loops, grammar rules), assume they want to LEARN and UNDERSTAND it, not just get a dictionary definition. Teach them properly!
 
 Be friendly, encouraging, and patient. You're here to help students succeed in their studies.`,
           },
-          ...messages,
+          ...processedMessages,
         ],
         stream: true,
       }),

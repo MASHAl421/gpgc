@@ -17,73 +17,85 @@ export const CompetitionPracticeMode = ({
 }: CompetitionPracticeModeProps) => {
   return (
     <Card className="bg-card border-border">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+      <CardHeader className="pb-4">
+        <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
           <BookOpen className="h-5 w-5 text-primary" />
           Practice Mode
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-sm">
           Practice without time pressure - no rankings, just learning
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Card className="bg-muted cursor-pointer hover:shadow-md transition-shadow">
+      <CardContent className="space-y-3 sm:space-y-4">
+        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
+          {/* Quick Practice */}
+          <Card className="bg-muted cursor-pointer hover:shadow-md transition-shadow active:bg-muted/80">
             <CardContent className="p-4">
               <div className="flex items-center gap-3 mb-2">
-                <Zap className="h-5 w-5 text-primary" />
-                <h3 className="font-semibold text-foreground">Quick Practice</h3>
+                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                  <Zap className="h-5 w-5 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-semibold text-foreground text-sm sm:text-base">Quick Practice</h3>
+                  <p className="text-xs text-muted-foreground">10 random questions</p>
+                </div>
               </div>
-              <p className="text-sm text-muted-foreground mb-3">
-                10 random questions from your subjects
-              </p>
-              <Button className="w-full" variant="outline" onClick={onStartQuickPractice}>
-                Start Quick Practice
+              <Button className="w-full mt-2" variant="outline" onClick={onStartQuickPractice}>
+                Start
               </Button>
             </CardContent>
           </Card>
 
-          <Card className="bg-muted cursor-pointer hover:shadow-md transition-shadow">
+          {/* Topic Practice */}
+          <Card className="bg-muted cursor-pointer hover:shadow-md transition-shadow active:bg-muted/80">
             <CardContent className="p-4">
               <div className="flex items-center gap-3 mb-2">
-                <Target className="h-5 w-5 text-primary" />
-                <h3 className="font-semibold text-foreground">Topic Practice</h3>
+                <div className="h-10 w-10 rounded-lg bg-secondary/50 flex items-center justify-center shrink-0">
+                  <Target className="h-5 w-5 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-semibold text-foreground text-sm sm:text-base">Topic Practice</h3>
+                  <p className="text-xs text-muted-foreground">Choose specific topics</p>
+                </div>
               </div>
-              <p className="text-sm text-muted-foreground mb-3">
-                Choose specific topics to practice
-              </p>
-              <Button className="w-full" variant="outline" onClick={onSelectTopics}>
+              <Button className="w-full mt-2" variant="outline" onClick={onSelectTopics}>
                 Select Topics
               </Button>
             </CardContent>
           </Card>
 
-          <Card className="bg-muted cursor-pointer hover:shadow-md transition-shadow">
+          {/* Mock Test */}
+          <Card className="bg-muted cursor-pointer hover:shadow-md transition-shadow active:bg-muted/80">
             <CardContent className="p-4">
               <div className="flex items-center gap-3 mb-2">
-                <BookOpen className="h-5 w-5 text-primary" />
-                <h3 className="font-semibold text-foreground">Mock Test</h3>
+                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                  <BookOpen className="h-5 w-5 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-semibold text-foreground text-sm sm:text-base">Mock Test</h3>
+                  <p className="text-xs text-muted-foreground">Full exam with timer</p>
+                </div>
               </div>
-              <p className="text-sm text-muted-foreground mb-3">
-                Full exam simulation with timer
-              </p>
-              <Button className="w-full" variant="outline" onClick={onStartMockTest}>
-                Start Mock Test
+              <Button className="w-full mt-2" variant="outline" onClick={onStartMockTest}>
+                Start Mock
               </Button>
             </CardContent>
           </Card>
 
-          <Card className="bg-muted cursor-pointer hover:shadow-md transition-shadow">
+          {/* Weak Areas */}
+          <Card className="bg-muted cursor-pointer hover:shadow-md transition-shadow active:bg-muted/80">
             <CardContent className="p-4">
               <div className="flex items-center gap-3 mb-2">
-                <Brain className="h-5 w-5 text-primary" />
-                <h3 className="font-semibold text-foreground">Weak Areas</h3>
+                <div className="h-10 w-10 rounded-lg bg-secondary/50 flex items-center justify-center shrink-0">
+                  <Brain className="h-5 w-5 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-semibold text-foreground text-sm sm:text-base">Weak Areas</h3>
+                  <p className="text-xs text-muted-foreground">Focus on struggles</p>
+                </div>
               </div>
-              <p className="text-sm text-muted-foreground mb-3">
-                Focus on topics you struggle with
-              </p>
-              <Button className="w-full" variant="outline" onClick={onPracticeWeakAreas}>
-                Practice Weak Areas
+              <Button className="w-full mt-2" variant="outline" onClick={onPracticeWeakAreas}>
+                Practice
               </Button>
             </CardContent>
           </Card>

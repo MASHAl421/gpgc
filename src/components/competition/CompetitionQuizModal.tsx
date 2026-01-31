@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent } from '@/components/ui/card';
-import { Clock, CheckCircle, XCircle, Loader2, Trophy } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, Loader2, Trophy, ArrowRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -198,12 +198,12 @@ export const CompetitionQuizModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
-            <span>{competition?.title || topic || 'Practice Quiz'}</span>
+      <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+        <DialogHeader className="pb-2">
+          <DialogTitle className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-base sm:text-lg">
+            <span className="truncate">{competition?.title || topic || 'Practice Quiz'}</span>
             {mode === 'mock' && timeLeft > 0 && (
-              <Badge variant="outline" className="flex items-center gap-1">
+              <Badge variant="outline" className="flex items-center gap-1 w-fit">
                 <Clock className="h-3 w-3" />
                 {formatTime(timeLeft)}
               </Badge>
@@ -212,16 +212,16 @@ export const CompetitionQuizModal = ({
         </DialogHeader>
 
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-12">
+          <div className="flex flex-col items-center justify-center py-8 sm:py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-            <p className="text-muted-foreground">Generating {questionCount} questions...</p>
-            <p className="text-sm text-muted-foreground mt-2">Topic: {topicToUse}</p>
+            <p className="text-muted-foreground text-sm sm:text-base">Generating {questionCount} questions...</p>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-2 text-center px-4">Topic: {topicToUse}</p>
           </div>
         ) : isCompleted ? (
-          <div className="flex flex-col items-center justify-center py-8">
-            <Trophy className="h-16 w-16 text-primary mb-4" />
-            <h3 className="text-2xl font-bold mb-2">Quiz Completed!</h3>
-            <p className="text-lg text-muted-foreground mb-4">
+          <div className="flex flex-col items-center justify-center py-6 sm:py-8">
+            <Trophy className="h-12 w-12 sm:h-16 sm:w-16 text-primary mb-4" />
+            <h3 className="text-xl sm:text-2xl font-bold mb-2">Quiz Completed!</h3>
+            <p className="text-base sm:text-lg text-muted-foreground mb-4">
               You scored {score} out of {questions.length}
             </p>
             <div className="flex items-center gap-2 mb-6">
@@ -233,10 +233,11 @@ export const CompetitionQuizModal = ({
                     ? 'secondary'
                     : 'destructive'
                 }
+                className="text-sm sm:text-base px-3 py-1"
               >
                 {Math.round((score / questions.length) * 100)}%
               </Badge>
-              <span className="text-sm text-muted-foreground">
+              <span className="text-xs sm:text-sm text-muted-foreground">
                 {(score / questions.length) * 100 >= 70
                   ? 'Excellent!'
                   : (score / questions.length) * 100 >= 50
@@ -244,27 +245,30 @@ export const CompetitionQuizModal = ({
                   : 'Keep practicing!'}
               </span>
             </div>
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={onClose}>
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+              <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
                 Close
               </Button>
-              <Button onClick={generateQuestions}>Try Again</Button>
+              <Button onClick={generateQuestions} className="w-full sm:w-auto">Try Again</Button>
             </div>
           </div>
         ) : currentQuestion ? (
           <div className="space-y-4">
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
+            {/* Progress Header */}
+            <div className="flex items-center justify-between text-xs sm:text-sm text-muted-foreground">
               <span>
                 Question {currentIndex + 1} of {questions.length}
               </span>
-              <Badge variant="outline">{currentQuestion.difficulty}</Badge>
+              <Badge variant="outline" className="text-xs">{currentQuestion.difficulty}</Badge>
             </div>
             <Progress value={progress} className="h-2" />
 
+            {/* Question Card */}
             <Card className="border-border">
-              <CardContent className="p-4">
-                <p className="text-lg font-medium mb-4">{currentQuestion.question}</p>
+              <CardContent className="p-3 sm:p-4">
+                <p className="text-sm sm:text-lg font-medium mb-4 leading-relaxed">{currentQuestion.question}</p>
 
+                {/* Options - Stack on mobile */}
                 <div className="space-y-2">
                   {Object.entries(currentQuestion.options).map(([key, value]) => {
                     const isCorrect = key === currentQuestion.correct;
@@ -275,20 +279,20 @@ export const CompetitionQuizModal = ({
                         key={key}
                         onClick={() => handleAnswerSelect(key)}
                         disabled={isAnswered}
-                        className={`w-full text-left p-3 rounded-lg border transition-all flex items-center gap-3 ${
+                        className={`w-full text-left p-3 rounded-lg border transition-all flex items-start gap-3 text-sm ${
                           isAnswered
                             ? isCorrect
                               ? 'border-primary bg-primary/10'
                               : isSelected
                               ? 'border-destructive bg-destructive/10'
-                              : 'border-border'
+                              : 'border-border opacity-60'
                             : isSelected
                             ? 'border-primary bg-primary/10'
-                            : 'border-border hover:border-primary/50'
+                            : 'border-border hover:border-primary/50 active:bg-muted'
                         }`}
                       >
                         <span
-                          className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                          className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium shrink-0 ${
                             isAnswered
                               ? isCorrect
                                 ? 'bg-primary text-primary-foreground'
@@ -302,27 +306,36 @@ export const CompetitionQuizModal = ({
                         >
                           {key}
                         </span>
-                        <span className="flex-1">{value}</span>
-                        {isAnswered && isCorrect && <CheckCircle className="h-5 w-5 text-primary" />}
-                        {isAnswered && isSelected && !isCorrect && <XCircle className="h-5 w-5 text-destructive" />}
+                        <span className="flex-1 pt-0.5">{value}</span>
+                        {isAnswered && isCorrect && <CheckCircle className="h-5 w-5 text-primary shrink-0" />}
+                        {isAnswered && isSelected && !isCorrect && <XCircle className="h-5 w-5 text-destructive shrink-0" />}
                       </button>
                     );
                   })}
                 </div>
 
+                {/* Explanation */}
                 {isAnswered && (
                   <div className="mt-4 p-3 bg-muted rounded-lg">
-                    <p className="text-sm font-medium mb-1">Explanation:</p>
-                    <p className="text-sm text-muted-foreground">{currentQuestion.explanation}</p>
+                    <p className="text-xs sm:text-sm font-medium mb-1">Explanation:</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">{currentQuestion.explanation}</p>
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            <div className="flex justify-between items-center">
-              <p className="text-sm text-muted-foreground">Score: {score}</p>
-              <Button onClick={handleNext} disabled={!isAnswered}>
-                {currentIndex < questions.length - 1 ? 'Next Question' : 'Finish Quiz'}
+            {/* Footer */}
+            <div className="flex items-center justify-between pt-2">
+              <p className="text-xs sm:text-sm text-muted-foreground">Score: {score}</p>
+              <Button onClick={handleNext} disabled={!isAnswered} className="gap-1">
+                {currentIndex < questions.length - 1 ? (
+                  <>
+                    Next
+                    <ArrowRight className="h-4 w-4" />
+                  </>
+                ) : (
+                  'Finish Quiz'
+                )}
               </Button>
             </div>
           </div>

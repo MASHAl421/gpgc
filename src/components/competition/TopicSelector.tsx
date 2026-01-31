@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Code, Languages, BookOpen } from 'lucide-react';
+import { Code, Languages, BookOpen, ArrowLeft, ChevronRight } from 'lucide-react';
 
 interface TopicSelectorProps {
   isOpen: boolean;
@@ -87,35 +87,36 @@ export const TopicSelector = ({ isOpen, onClose, onSelectTopic }: TopicSelectorP
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>
-            {!selectedSubject ? 'Select a Subject' : `${currentSubject?.name} - Select Topic`}
+      <DialogContent className="max-w-lg w-[95vw] max-h-[85vh] p-4 sm:p-6">
+        <DialogHeader className="pb-2">
+          <DialogTitle className="text-base sm:text-lg">
+            {!selectedSubject ? 'Select a Subject' : `${currentSubject?.name}`}
           </DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[400px] pr-4">
+        <ScrollArea className="max-h-[55vh] sm:max-h-[400px] pr-2 sm:pr-4">
           {!selectedSubject ? (
             // Subject Selection
-            <div className="grid gap-3">
+            <div className="grid gap-2 sm:gap-3">
               {subjects.map((subject) => {
                 const Icon = subject.icon;
                 return (
                   <Card
                     key={subject.id}
-                    className="cursor-pointer transition-all hover:bg-muted/50 hover:shadow-md"
+                    className="cursor-pointer transition-all hover:bg-muted/50 hover:shadow-md active:bg-muted"
                     onClick={() => setSelectedSubject(subject.id)}
                   >
-                    <CardContent className="p-4 flex items-center gap-4">
-                      <div className="p-2 rounded-lg bg-muted text-primary">
+                    <CardContent className="p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
+                      <div className="p-2 rounded-lg bg-muted text-primary shrink-0">
                         <Icon className="h-5 w-5" />
                       </div>
-                      <div className="flex-1">
-                        <h4 className="font-medium">{subject.name}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {subject.topics.length} topics available
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-sm sm:text-base">{subject.name}</h4>
+                        <p className="text-xs sm:text-sm text-muted-foreground">
+                          {subject.topics.length} topics
                         </p>
                       </div>
+                      <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
                     </CardContent>
                   </Card>
                 );
@@ -123,7 +124,7 @@ export const TopicSelector = ({ isOpen, onClose, onSelectTopic }: TopicSelectorP
             </div>
           ) : (
             // Topic Selection
-            <div className="space-y-4">
+            <div className="space-y-3">
               <Button 
                 variant="ghost" 
                 size="sm" 
@@ -131,28 +132,30 @@ export const TopicSelector = ({ isOpen, onClose, onSelectTopic }: TopicSelectorP
                   setSelectedSubject(null);
                   setSelectedTopic(null);
                 }}
+                className="gap-1 h-8 px-2"
               >
-                ← Back to Subjects
+                <ArrowLeft className="h-4 w-4" />
+                Back
               </Button>
 
-              <div className="grid gap-3">
+              <div className="grid gap-2">
                 {currentSubject?.topics.map((topic) => {
                   const isSelected = selectedTopic === topic.id;
                   return (
                     <Card
                       key={topic.id}
                       className={`cursor-pointer transition-all ${
-                        isSelected ? 'ring-2 ring-primary bg-primary/5' : 'hover:bg-muted/50'
+                        isSelected ? 'ring-2 ring-primary bg-primary/5' : 'hover:bg-muted/50 active:bg-muted'
                       }`}
                       onClick={() => setSelectedTopic(topic.id)}
                     >
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h4 className="font-medium">{topic.name}</h4>
-                            <p className="text-sm text-muted-foreground">{topic.description}</p>
+                      <CardContent className="p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <h4 className="font-medium text-sm">{topic.name}</h4>
+                            <p className="text-xs text-muted-foreground truncate">{topic.description}</p>
                           </div>
-                          {isSelected && <Badge>Selected</Badge>}
+                          {isSelected && <Badge className="shrink-0 text-xs">Selected</Badge>}
                         </div>
                       </CardContent>
                     </Card>
@@ -161,11 +164,11 @@ export const TopicSelector = ({ isOpen, onClose, onSelectTopic }: TopicSelectorP
               </div>
 
               {selectedTopic && (
-                <div className="pt-4 border-t space-y-3">
+                <div className="pt-3 border-t space-y-2">
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-medium">Difficulty:</span>
                     <Select value={difficulty} onValueChange={(v) => setDifficulty(v as 'easy' | 'medium')}>
-                      <SelectTrigger className="w-32">
+                      <SelectTrigger className="w-28 h-9">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -176,8 +179,8 @@ export const TopicSelector = ({ isOpen, onClose, onSelectTopic }: TopicSelectorP
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {difficulty === 'easy' 
-                      ? 'Basic concepts and definitions - great for beginners'
-                      : 'Application-based questions - tests understanding'}
+                      ? 'Basic concepts - great for beginners'
+                      : 'Application-based - tests understanding'}
                   </p>
                 </div>
               )}
@@ -185,11 +188,11 @@ export const TopicSelector = ({ isOpen, onClose, onSelectTopic }: TopicSelectorP
           )}
         </ScrollArea>
 
-        <div className="flex justify-end gap-3 mt-4">
-          <Button variant="outline" onClick={handleClose}>
+        <div className="flex gap-2 sm:gap-3 mt-3 sm:mt-4 pt-3 border-t">
+          <Button variant="outline" onClick={handleClose} className="flex-1 sm:flex-none">
             Cancel
           </Button>
-          <Button onClick={handleStart} disabled={!selectedTopic}>
+          <Button onClick={handleStart} disabled={!selectedTopic} className="flex-1 sm:flex-none">
             Start Practice
           </Button>
         </div>

@@ -127,32 +127,29 @@ const Coins = () => {
 
     setPurchasing(item.id);
     try {
-      // Insert purchase
+      // Use atomic RPC function to spend coins (prevents race conditions and double-spending)
+      const { error: spendError } = await supabase.rpc('spend_coins', {
+        _user_id: user.id,
+        _amount: item.coin_cost,
+        _description: `Purchased: ${item.name}`,
+        _reference_id: item.id,
+      });
+
+      if (spendError) throw spendError;
+
+      // Insert purchase record
       const { error: purchaseError } = await supabase
         .from('user_purchases')
         .insert({ user_id: user.id, shop_item_id: item.id });
 
       if (purchaseError) throw purchaseError;
 
-      // Log transaction
-      await supabase.from('coin_transactions').insert({
-        user_id: user.id,
-        amount: -item.coin_cost,
-        transaction_type: 'spent',
-        description: `Purchased: ${item.name}`,
-        reference_id: item.id,
-      });
-
-      // Update profile coins
-      await supabase
-        .from('profiles')
-        .update({ coins_earned: (profile.coins_earned || 0) - item.coin_cost })
-        .eq('id', user.id);
-
       toast.success(`Successfully purchased ${item.name}!`);
       fetchData();
     } catch (error: any) {
-      console.error('Error purchasing:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error purchasing:', error);
+      }
       toast.error(error.message || 'Failed to purchase item');
     } finally {
       setPurchasing(null);

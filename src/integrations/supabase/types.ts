@@ -1062,6 +1062,16 @@ export type Database = {
       }
     }
     Functions: {
+      add_coins: {
+        Args: {
+          _amount: number
+          _description?: string
+          _reference_id?: string
+          _transaction_type: string
+          _user_id: string
+        }
+        Returns: number
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1070,6 +1080,15 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      spend_coins: {
+        Args: {
+          _amount: number
+          _description: string
+          _reference_id?: string
+          _user_id: string
+        }
+        Returns: number
+      }
     }
     Enums: {
       app_role: "admin" | "student"

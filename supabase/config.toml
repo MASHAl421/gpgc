@@ -1,1 +1,4 @@
 project_id = "mjhcbfrfsshjyxrbfptm"
+
+[functions.generate-competition-questions]
+verify_jwt = false

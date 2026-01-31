@@ -18,27 +18,71 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { topic, count = 10, difficulty = 'mixed', type = 'practice' } = await req.json() as QuestionRequest;
+    const { topic, count = 10, difficulty = 'easy', type = 'practice' } = await req.json() as QuestionRequest;
 
-    const systemPrompt = `You are an expert question generator for BS-level academic competitions. Generate exactly ${count} multiple choice questions.
+    // Semester 1 focused prompt - easier, beginner-friendly questions
+    const difficultyGuide = difficulty === 'easy' 
+      ? `EASY LEVEL (Semester 1 Beginners):
+- Focus on basic definitions and concepts
+- Simple recall-based questions
+- No tricky or confusing options
+- Clear, straightforward language
+- Examples: "What is a variable?", "Which keyword is used for output in C++?", "What is a noun?"`
+      : difficulty === 'medium'
+      ? `MEDIUM LEVEL (Understanding):
+- Application of basic concepts
+- Simple problem-solving
+- Code output prediction (simple cases)
+- Grammar application questions
+- Examples: "What will be the output of: cout << 5 + 3;", "Identify the verb in: She runs fast"`
+      : `MIXED LEVEL: Include both easy and medium questions`;
+
+    const systemPrompt = `You are an expert question generator for BS Semester 1 students in Pakistan. Generate exactly ${count} multiple choice questions.
 
 TOPIC: ${topic}
 DIFFICULTY: ${difficulty}
 TYPE: ${type}
 
+${difficultyGuide}
+
+SUBJECT-SPECIFIC GUIDELINES:
+1. **Programming Fundamentals (C++):**
+   - For "Introduction to C++": History, IDE, basic structure of program
+   - For "Variables & Data Types": int, float, char, string declaration
+   - For "I/O Operations": cin, cout syntax and usage
+   - For "Operators": +, -, *, /, %, ==, !=, &&, ||
+   - For "Control Structures": if-else, switch, for, while loops
+   - For "Arrays": Declaration, initialization, accessing elements
+   - For "Functions": Definition, calling, parameters, return types
+   - For "Pointers": Basic concept, & and * operators
+   - Keep code snippets SHORT (2-4 lines max)
+   - Use simple variable names (a, b, x, num)
+
+2. **Functional English:**
+   - For "Parts of Speech": Identify nouns, verbs, adjectives, adverbs
+   - For "Tenses": Present, past, future tense identification
+   - For "Sentence Structure": Simple vs compound sentences
+   - For "Punctuation": Comma, period, question mark usage
+   - For "Voice": Active to passive conversion basics
+   - Use simple, clear sentences
+   - Avoid complex vocabulary
+
+3. **General Knowledge:**
+   - Pakistan geography, capitals, provinces
+   - Basic current affairs
+   - Simple science facts
+   - Computer basics (hardware/software)
+
 RULES:
 1. Questions must be educational and accurate
 2. Each question has exactly 4 options (A, B, C, D)
 3. Only ONE correct answer per question
-4. Include brief explanation for each answer
-5. Mix difficulty levels if 'mixed' is specified
-6. Questions should be unique and test different concepts
-7. For General Knowledge: include current affairs, history, geography, science facts, sports, famous personalities
-8. For Programming: include syntax, logic, algorithms, data structures
-9. For Physics/Chemistry: include formulas, concepts, applications
-10. For English: include grammar, vocabulary, comprehension
+4. Include brief explanation (1-2 sentences)
+5. Make wrong options plausible but clearly wrong
+6. No advanced/tricky questions for easy level
+7. Questions should be unique
 
-RESPONSE FORMAT (JSON array):
+RESPONSE FORMAT (JSON array only, no markdown):
 [
   {
     "question": "Question text here?",
@@ -50,11 +94,11 @@ RESPONSE FORMAT (JSON array):
     },
     "correct": "A",
     "explanation": "Brief explanation of why this is correct",
-    "difficulty": "easy|medium|hard"
+    "difficulty": "${difficulty}"
   }
 ]
 
-Generate ${count} unique, high-quality questions NOW:`;
+Generate ${count} unique, beginner-friendly questions NOW:`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -65,10 +109,10 @@ Generate ${count} unique, high-quality questions NOW:`;
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
-          { role: "system", content: "You are an expert academic question generator. Always respond with valid JSON array only, no markdown." },
+          { role: "system", content: "You are an expert academic question generator for beginners. Always respond with valid JSON array only, no markdown. Keep questions simple and educational." },
           { role: "user", content: systemPrompt }
         ],
-        temperature: 0.8,
+        temperature: 0.7,
         max_tokens: 4000,
       }),
     });
@@ -105,7 +149,7 @@ Generate ${count} unique, high-quality questions NOW:`;
       options: q.options,
       correct: q.correct,
       explanation: q.explanation,
-      difficulty: q.difficulty || 'medium'
+      difficulty: q.difficulty || difficulty
     }));
 
     return new Response(JSON.stringify({ 

@@ -29,6 +29,7 @@ interface CompetitionQuizModalProps {
   } | null;
   mode: 'competition' | 'practice' | 'mock';
   topic?: string;
+  difficulty?: 'easy' | 'medium';
   onComplete?: (score: number, total: number) => void;
 }
 
@@ -38,6 +39,7 @@ export const CompetitionQuizModal = ({
   competition,
   mode,
   topic,
+  difficulty = 'easy',
   onComplete,
 }: CompetitionQuizModalProps) => {
   const { user } = useAuth();
@@ -89,7 +91,7 @@ export const CompetitionQuizModal = ({
         body: {
           topic: topicToUse,
           count: questionCount,
-          difficulty: 'mixed',
+          difficulty: mode === 'competition' ? 'medium' : difficulty,
           type: mode,
         },
       });

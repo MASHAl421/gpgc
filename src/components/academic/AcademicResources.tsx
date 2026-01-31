@@ -31,6 +31,15 @@ const academicData: Record<string, {
   'programming-fundamentals': {
     courseContent: '/academic/programming-fundamentals-course-content.jpg',
     notes: [] // Notes will be added later
+  },
+  'civics-&-community-engagement': {
+    courseContent: '/academic/civics-community-engagement-course-content.jpg',
+    notes: [
+      { id: '1', title: 'Chapter 1: Meaning and Nature of Civics', file_url: '/academic/notes/meaning-and-nature-of-civics.pdf' },
+      { id: '2', title: 'Chapter 2: Concept of Citizenship', file_url: '/academic/notes/concept-of-citizenship.pdf' },
+      { id: '3', title: 'Chapter 3: Rights and Responsibilities', file_url: '/academic/notes/rights-and-responsibilities.pdf' },
+      { id: '4', title: 'Chapter 4: State, Govt and Civil Society', file_url: '/academic/notes/state-govt-civil-society.pdf' },
+    ]
   }
 };
 

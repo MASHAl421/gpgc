@@ -394,20 +394,20 @@ const AITutor = () => {
             onScroll={handleScroll}
             className="flex-1 min-h-0 overflow-y-auto scrollbar-thin"
           >
-            <div className="max-w-3xl mx-auto px-4 py-4">
+            <div className="max-w-3xl mx-auto px-3 sm:px-4 py-4">
               {messages.length === 0 ? (
                 /* Welcome Screen */
-                <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
-                  <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
-                    <MessageSquare className="h-8 w-8 text-primary" />
+                <div className="flex flex-col items-center justify-center min-h-[50vh] sm:min-h-[60vh] text-center px-2">
+                  <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4 sm:mb-6">
+                    <MessageSquare className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
                   </div>
-                  <h1 className="text-2xl font-semibold mb-2">How can I help you today?</h1>
-                  <p className="text-muted-foreground mb-8 max-w-md">
+                  <h1 className="text-xl sm:text-2xl font-semibold mb-2">How can I help you today?</h1>
+                  <p className="text-muted-foreground mb-6 sm:mb-8 max-w-md text-sm sm:text-base">
                     Ask me anything about Programming Fundamentals, Functional English, or any topic from your syllabus.
                   </p>
                   
                   {/* Quick Suggestions */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 w-full max-w-lg">
                     {[
                       "Explain loops in C++",
                       "What are parts of speech?",
@@ -417,22 +417,22 @@ const AITutor = () => {
                       <button
                         key={i}
                         onClick={() => setQuestion(suggestion)}
-                        className="text-left p-4 rounded-xl border border-border hover:bg-muted/50 transition-colors"
+                        className="text-left p-3 sm:p-4 rounded-xl border border-border hover:bg-muted/50 active:bg-muted transition-colors"
                       >
-                        <span className="text-sm">{suggestion}</span>
+                        <span className="text-xs sm:text-sm">{suggestion}</span>
                       </button>
                     ))}
                   </div>
                 </div>
               ) : (
                 /* Messages */
-                <div className="space-y-6">
+                <div className="space-y-4 sm:space-y-6">
                   {messages.map((message, index) => (
                     <div key={index} className={`group flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[85%] ${message.role === 'user' ? '' : ''}`}>
+                      <div className={`max-w-[90%] sm:max-w-[85%] ${message.role === 'user' ? '' : ''}`}>
                         {message.role === 'user' ? (
                           <div className="relative">
-                            <div className="bg-primary text-primary-foreground px-4 py-3 rounded-2xl rounded-br-md">
+                            <div className="bg-primary text-primary-foreground px-3 sm:px-4 py-2.5 sm:py-3 rounded-2xl rounded-br-md text-sm sm:text-base">
                               {message.imageName && (
                                 <div className="flex items-center gap-2 mb-2 pb-2 border-b border-primary-foreground/20">
                                   {message.imageData?.startsWith('data:image') ? (
@@ -440,14 +440,14 @@ const AITutor = () => {
                                   ) : (
                                     <FileText className="h-4 w-4" />
                                   )}
-                                  <span className="text-sm truncate">{message.imageName}</span>
+                                  <span className="text-xs sm:text-sm truncate">{message.imageName}</span>
                                 </div>
                               )}
                               {message.imageData?.startsWith('data:image') && (
                                 <img 
                                   src={message.imageData} 
                                   alt="Uploaded" 
-                                  className="max-w-full max-h-48 rounded-lg mb-2"
+                                  className="max-w-full max-h-32 sm:max-h-48 rounded-lg mb-2"
                                 />
                               )}
                               <p className="whitespace-pre-wrap">{message.content}</p>
@@ -515,19 +515,19 @@ const AITutor = () => {
             </div>
           </div>
           {/* Input Area */}
-          <div className="border-t border-border p-4">
+          <div className="border-t border-border p-2 sm:p-4 safe-area-bottom">
             <div className="max-w-3xl mx-auto">
               {/* Attached File Preview */}
               {attachedFile && (
                 <div className="mb-2 p-2 bg-muted rounded-lg flex items-center gap-2">
                   {attachedFile.type.startsWith('image') ? (
-                    <img src={attachedFile.data} alt="Preview" className="h-12 w-12 object-cover rounded" />
+                    <img src={attachedFile.data} alt="Preview" className="h-10 w-10 sm:h-12 sm:w-12 object-cover rounded" />
                   ) : (
-                    <div className="h-12 w-12 bg-primary/10 rounded flex items-center justify-center">
-                      <FileText className="h-6 w-6 text-primary" />
+                    <div className="h-10 w-10 sm:h-12 sm:w-12 bg-primary/10 rounded flex items-center justify-center">
+                      <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
                     </div>
                   )}
-                  <span className="flex-1 text-sm truncate">{attachedFile.name}</span>
+                  <span className="flex-1 text-xs sm:text-sm truncate">{attachedFile.name}</span>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -539,7 +539,7 @@ const AITutor = () => {
                 </div>
               )}
               
-              <div className="relative flex items-end gap-2 bg-muted/50 rounded-2xl border border-border p-2">
+              <div className="relative flex items-end gap-1 sm:gap-2 bg-muted/50 rounded-2xl border border-border p-1.5 sm:p-2">
                 {/* Hidden file input */}
                 <input
                   ref={fileInputRef}
@@ -552,16 +552,16 @@ const AITutor = () => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 flex-shrink-0"
+                  className="h-8 w-8 sm:h-9 sm:w-9 flex-shrink-0"
                   onClick={() => fileInputRef.current?.click()}
                   title="Attach image or PDF"
                 >
-                  <Paperclip className="h-5 w-5" />
+                  <Paperclip className="h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
                 
                 <Textarea
                   ref={textareaRef}
-                  placeholder={attachedFile ? "Add a message about this file..." : "Ask anything"}
+                  placeholder={attachedFile ? "Add a message..." : "Ask anything"}
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
                   onKeyDown={(e) => {
@@ -570,7 +570,7 @@ const AITutor = () => {
                       handleSend();
                     }
                   }}
-                  className="flex-1 min-h-[40px] max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 py-2.5 px-0"
+                  className="flex-1 min-h-[36px] sm:min-h-[40px] max-h-[150px] sm:max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 py-2 sm:py-2.5 px-0 text-sm sm:text-base"
                   rows={1}
                   disabled={isLoading}
                 />
@@ -578,7 +578,7 @@ const AITutor = () => {
                 <Button
                   variant="default"
                   size="icon"
-                  className="h-9 w-9 rounded-full flex-shrink-0"
+                  className="h-8 w-8 sm:h-9 sm:w-9 rounded-full flex-shrink-0"
                   onClick={() => handleSend()}
                   disabled={isLoading || (!question.trim() && !attachedFile)}
                 >
@@ -589,7 +589,7 @@ const AITutor = () => {
                   )}
                 </Button>
               </div>
-              <p className="text-xs text-center text-muted-foreground mt-2">
+              <p className="text-[10px] sm:text-xs text-center text-muted-foreground mt-1.5 sm:mt-2">
                 AI Tutor can make mistakes. Verify important information.
               </p>
             </div>

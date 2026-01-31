@@ -327,19 +327,20 @@ const Preparation = () => {
             </CardContent>
           </Card>) : (/* Subject Detail View - Categories Sidebar + Topics */
       <div className="grid lg:grid-cols-12 gap-4 md:gap-6">
-            {/* Categories Sidebar */}
+            {/* Categories Sidebar - Horizontal scroll on mobile */}
             <div className="lg:col-span-3">
-              <Card className="bg-card border-border sticky top-4">
-                <CardContent className="p-3 md:p-4">
-                  <div className="space-y-1">
+              <Card className="bg-card border-border lg:sticky lg:top-4">
+                <CardContent className="p-2 sm:p-3 md:p-4">
+                  {/* Mobile: Horizontal scrollable */}
+                  <div className="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0 scrollbar-hide">
                     {preparationCategories.map(category => {
                   const CategoryIcon = category.icon;
                   const isActive = selectedCategory === category.id;
-                  return <button key={category.id} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all text-left ${isActive ? 'bg-primary/10 border-l-4 border-primary' : 'hover:bg-muted border-l-4 border-transparent'}`} onClick={() => handleCategoryChange(category.id)}>
-                          <div className={`h-9 w-9 rounded-lg ${category.color} flex items-center justify-center shrink-0`}>
-                            <CategoryIcon className="h-5 w-5 text-white" />
+                  return <button key={category.id} className={`flex items-center gap-2 sm:gap-3 px-3 py-2.5 sm:py-3 rounded-lg transition-all text-left whitespace-nowrap lg:whitespace-normal lg:w-full shrink-0 ${isActive ? 'bg-primary/10 border-l-4 lg:border-l-4 border-primary' : 'hover:bg-muted border-l-4 lg:border-l-4 border-transparent'}`} onClick={() => handleCategoryChange(category.id)}>
+                          <div className={`h-8 w-8 sm:h-9 sm:w-9 rounded-lg ${category.color} flex items-center justify-center shrink-0`}>
+                            <CategoryIcon className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                           </div>
-                          <span className={`text-sm font-medium ${isActive ? 'text-primary' : 'text-foreground'}`}>
+                          <span className={`text-xs sm:text-sm font-medium ${isActive ? 'text-primary' : 'text-foreground'}`}>
                             {category.name}
                           </span>
                         </button>;
@@ -508,30 +509,30 @@ const Preparation = () => {
 
       {/* PDF Viewer Dialog */}
       <Dialog open={!!selectedPaper} onOpenChange={() => setSelectedPaper(null)}>
-        <DialogContent className="max-w-4xl h-[80vh]">
+        <DialogContent className="max-w-4xl w-[95vw] h-[85vh] p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-destructive" />
-              {selectedPaper?.title}
+            <DialogTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-destructive shrink-0" />
+              <span className="truncate">{selectedPaper?.title}</span>
             </DialogTitle>
           </DialogHeader>
-          <div className="flex-1 overflow-hidden">
-            {selectedPaper && <div className="h-full flex flex-col gap-4">
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" asChild>
+          <div className="flex-1 overflow-hidden min-h-0">
+            {selectedPaper && <div className="h-full flex flex-col gap-3 sm:gap-4">
+                <div className="flex gap-2 flex-wrap">
+                  <Button variant="outline" size="sm" asChild className="text-xs sm:text-sm">
                     <a href={selectedPaper.file_url} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      Open in New Tab
+                      <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      Open
                     </a>
                   </Button>
-                  <Button variant="outline" size="sm" asChild>
+                  <Button variant="outline" size="sm" asChild className="text-xs sm:text-sm">
                     <a href={selectedPaper.file_url} download>
-                      <Download className="h-4 w-4 mr-2" />
+                      <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                       Download
                     </a>
                   </Button>
                 </div>
-                <iframe src={`${selectedPaper.file_url}#toolbar=1`} className="flex-1 w-full rounded-lg border border-border" title={selectedPaper.title} />
+                <iframe src={`${selectedPaper.file_url}#toolbar=1`} className="flex-1 w-full rounded-lg border border-border min-h-0" title={selectedPaper.title} />
               </div>}
           </div>
         </DialogContent>

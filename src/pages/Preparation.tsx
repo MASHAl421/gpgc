@@ -16,6 +16,8 @@ import { BookOpen, PlayCircle, FileText, Beaker, ClipboardList, PenTool, Files, 
 import ObjectivePaperSelector, { QuizConfig } from '@/components/objective/ObjectivePaperSelector';
 import ObjectiveQuiz from '@/components/objective/ObjectiveQuiz';
 import AcademicResources from '@/components/academic/AcademicResources';
+import MobileCategoryMenu from '@/components/preparation/MobileCategoryMenu';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface KeyNote {
   id: string;
@@ -98,6 +100,7 @@ const iconMap: Record<string, React.ComponentType<{
   Monitor
 };
 const Preparation = () => {
+  const isMobile = useIsMobile();
   const {
     needsOnboarding,
     profileData,
@@ -269,82 +272,117 @@ const Preparation = () => {
   return <MainLayout>
       <SemesterOnboarding open={needsOnboarding} onComplete={completeOnboarding} />
       
-      <div className="space-y-4 md:space-y-6">
+      <div className="space-y-3 md:space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-2">
-              <GraduationCap className="h-6 w-6 md:h-8 md:w-8 text-primary" />
-              Preparation
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground flex items-center gap-2">
+              <GraduationCap className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 text-primary shrink-0" />
+              <span className="truncate">Preparation</span>
             </h1>
-            <p className="text-sm md:text-base text-muted-foreground mt-1">
-              {profileData?.semester ? `Semester ${profileData.semester} Resources` : 'Select a subject to start learning'}
+            <p className="text-xs sm:text-sm md:text-base text-muted-foreground mt-0.5 sm:mt-1">
+              {profileData?.semester ? `Semester ${profileData.semester} Resources` : 'Select a subject to start'}
             </p>
           </div>
-          {selectedSubject && <Button variant="outline" onClick={handleBackToSubjects} className="gap-2">
-              <Library className="h-4 w-4" />
-              Show Books
-            </Button>}
+          {selectedSubject && (
+            <Button variant="outline" onClick={handleBackToSubjects} className="gap-2 h-9 text-xs sm:text-sm shrink-0">
+              <Library className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Show</span> Books
+            </Button>
+          )}
         </div>
 
-        {!selectedSubject ? (/* Subject Selection Grid */
-      <Card className="bg-card border-border">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg md:text-xl text-foreground flex items-center gap-2">
-                <Library className="h-5 w-5 text-primary" />
+        {!selectedSubject ? (
+          /* Subject Selection Grid */
+          <Card className="bg-card border-border">
+            <CardHeader className="pb-3 sm:pb-4 px-3 sm:px-6">
+              <CardTitle className="text-base sm:text-lg md:text-xl text-foreground flex items-center gap-2">
+                <Library className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                 Select a Subject
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              {subjects.length === 0 ? <div className="text-center py-8">
-                  <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">No subjects available yet.</p>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    {profileData?.semester ? `No subjects found for Semester ${profileData.semester}` : 'Admin needs to add subjects first.'}
+            <CardContent className="px-3 sm:px-6 pb-4">
+              {subjects.length === 0 ? (
+                <div className="text-center py-6 sm:py-8">
+                  <BookOpen className="h-10 w-10 sm:h-12 sm:w-12 mx-auto text-muted-foreground mb-3 sm:mb-4" />
+                  <p className="text-sm sm:text-base text-muted-foreground">No subjects available yet.</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-1 sm:mt-2">
+                    {profileData?.semester ? `No subjects for Semester ${profileData.semester}` : 'Admin needs to add subjects.'}
                   </p>
-                </div> : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3 md:gap-4">
                   {subjects.map(subject => {
-              const SubjectIcon = getSubjectIcon(subject.icon);
-              const totalTopics = subject.units.reduce((acc, u) => acc + u.topics.length, 0);
-              return <Card key={subject.id} className="cursor-pointer hover:shadow-lg transition-all bg-accent border-border group hover:border-primary" onClick={() => handleSubjectSelect(subject)}>
-                        <CardContent className="p-4 md:p-5">
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="h-12 w-12 rounded-xl bg-primary flex items-center justify-center shrink-0">
-                              <SubjectIcon className="h-6 w-6 text-primary-foreground" />
+                    const SubjectIcon = getSubjectIcon(subject.icon);
+                    const totalTopics = subject.units.reduce((acc, u) => acc + u.topics.length, 0);
+                    return (
+                      <Card 
+                        key={subject.id} 
+                        className="cursor-pointer hover:shadow-lg transition-all bg-accent border-border group hover:border-primary active:scale-[0.98]" 
+                        onClick={() => handleSubjectSelect(subject)}
+                      >
+                        <CardContent className="p-3 sm:p-4 md:p-5">
+                          <div className="flex items-start justify-between mb-2 sm:mb-3">
+                            <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg sm:rounded-xl bg-primary flex items-center justify-center shrink-0">
+                              <SubjectIcon className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
                             </div>
-                            <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                            <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground group-hover:text-primary transition-colors" />
                           </div>
-                          <h3 className="font-semibold text-foreground text-base md:text-lg mb-1">
+                          <h3 className="font-semibold text-foreground text-sm sm:text-base md:text-lg mb-0.5 sm:mb-1 line-clamp-2">
                             {subject.name}
                           </h3>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-xs sm:text-sm text-muted-foreground">
                             {subject.units.length} Units • {totalTopics} Topics
                           </p>
                         </CardContent>
-                      </Card>;
-            })}
-                </div>}
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
             </CardContent>
-          </Card>) : (/* Subject Detail View - Categories Sidebar + Topics */
-      <div className="grid lg:grid-cols-12 gap-4 md:gap-6">
-            {/* Categories Sidebar - Horizontal scroll on mobile */}
-            <div className="lg:col-span-3">
-              <Card className="bg-card border-border lg:sticky lg:top-4">
-                <CardContent className="p-2 sm:p-3 md:p-4">
-                  {/* Mobile: Horizontal scrollable */}
-                  <div className="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0 scrollbar-hide">
+          </Card>
+        ) : (
+          /* Subject Detail View */
+          <div className="space-y-3 sm:space-y-0 sm:grid lg:grid-cols-12 sm:gap-4 md:gap-6">
+            {/* Mobile: Dropdown Menu for Categories */}
+            {isMobile && (
+              <div className="lg:hidden">
+                <MobileCategoryMenu
+                  categories={preparationCategories}
+                  selectedCategory={selectedCategory}
+                  onCategoryChange={handleCategoryChange}
+                />
+              </div>
+            )}
+
+            {/* Desktop: Categories Sidebar */}
+            <div className="hidden lg:block lg:col-span-3">
+              <Card className="bg-card border-border sticky top-4">
+                <CardContent className="p-3 md:p-4">
+                  <div className="flex flex-col gap-1">
                     {preparationCategories.map(category => {
-                  const CategoryIcon = category.icon;
-                  const isActive = selectedCategory === category.id;
-                  return <button key={category.id} className={`flex items-center gap-2 sm:gap-3 px-3 py-2.5 sm:py-3 rounded-lg transition-all text-left whitespace-nowrap lg:whitespace-normal lg:w-full shrink-0 ${isActive ? 'bg-primary/10 border-l-4 lg:border-l-4 border-primary' : 'hover:bg-muted border-l-4 lg:border-l-4 border-transparent'}`} onClick={() => handleCategoryChange(category.id)}>
-                          <div className={`h-8 w-8 sm:h-9 sm:w-9 rounded-lg ${category.color} flex items-center justify-center shrink-0`}>
-                            <CategoryIcon className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                      const CategoryIcon = category.icon;
+                      const isActive = selectedCategory === category.id;
+                      return (
+                        <button 
+                          key={category.id} 
+                          className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all text-left w-full ${
+                            isActive 
+                              ? 'bg-primary/10 border-l-4 border-primary' 
+                              : 'hover:bg-muted border-l-4 border-transparent'
+                          }`} 
+                          onClick={() => handleCategoryChange(category.id)}
+                        >
+                          <div className={`h-9 w-9 rounded-lg ${category.color} flex items-center justify-center shrink-0`}>
+                            <CategoryIcon className="h-5 w-5 text-white" />
                           </div>
-                          <span className={`text-xs sm:text-sm font-medium ${isActive ? 'text-primary' : 'text-foreground'}`}>
+                          <span className={`text-sm font-medium ${isActive ? 'text-primary' : 'text-foreground'}`}>
                             {category.name}
                           </span>
-                        </button>;
-                })}
+                        </button>
+                      );
+                    })}
                   </div>
                 </CardContent>
               </Card>
@@ -361,74 +399,91 @@ const Preparation = () => {
                 <ObjectivePaperSelector subject={selectedSubject} onStartQuiz={handleStartQuiz} />
               ) : (
               <Card className="bg-card border-border">
-                <CardHeader className="pb-4 border-b border-border">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
-                      <FileText className="h-5 w-5 text-primary-foreground" />
+                <CardHeader className="py-3 sm:pb-4 px-3 sm:px-6 border-b border-border">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-primary flex items-center justify-center shrink-0">
+                      <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-primary-foreground" />
                     </div>
-                    <div>
-                      <CardTitle className="text-lg text-foreground">
-                        {getCategoryTitle()} - {selectedSubject.name}
+                    <div className="min-w-0">
+                      <CardTitle className="text-sm sm:text-base md:text-lg text-foreground truncate">
+                        {getCategoryTitle()}
                       </CardTitle>
-                      <p className="text-sm text-muted-foreground">{selectedSubject.grade}</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground truncate">{selectedSubject.name}</p>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="p-4 md:p-6">
-                  {selectedCategory === 'pastpapers' ? (/* Past Papers View */
-              loadingPapers ? <div className="flex items-center justify-center py-8">
-                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                      </div> : pastPapers.length === 0 ? <div className="text-center py-8">
-                        <Files className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                        <p className="text-muted-foreground">No past papers available for this subject.</p>
-                      </div> : <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {pastPapers.map(paper => <Card key={paper.id} className="cursor-pointer hover:shadow-md transition-shadow bg-accent border-border" onClick={() => setSelectedPaper(paper)}>
-                            <CardContent className="p-4">
-                              <div className="flex items-start gap-3">
-                                <div className="h-10 w-10 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0">
-                                  <FileText className="h-5 w-5 text-destructive" />
+                <CardContent className="p-3 sm:p-4 md:p-6">
+                  {selectedCategory === 'pastpapers' ? (
+                    /* Past Papers View */
+                    loadingPapers ? (
+                      <div className="flex items-center justify-center py-6 sm:py-8">
+                        <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin text-primary" />
+                      </div>
+                    ) : pastPapers.length === 0 ? (
+                      <div className="text-center py-6 sm:py-8">
+                        <Files className="h-10 w-10 sm:h-12 sm:w-12 mx-auto text-muted-foreground mb-3 sm:mb-4" />
+                        <p className="text-sm sm:text-base text-muted-foreground">No past papers available.</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                        {pastPapers.map(paper => (
+                          <Card 
+                            key={paper.id} 
+                            className="cursor-pointer hover:shadow-md transition-shadow bg-accent border-border active:scale-[0.98]" 
+                            onClick={() => setSelectedPaper(paper)}
+                          >
+                            <CardContent className="p-3 sm:p-4">
+                              <div className="flex items-start gap-2 sm:gap-3">
+                                <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0">
+                                  <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-destructive" />
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                  <h4 className="font-medium text-foreground text-sm truncate">{paper.title}</h4>
-                                  <div className="flex items-center gap-2 mt-1">
-                                    {paper.year && <Badge variant="outline" className="text-xs">{paper.year}</Badge>}
-                                    <Badge variant="secondary" className="text-xs capitalize">
+                                  <h4 className="font-medium text-foreground text-xs sm:text-sm truncate">{paper.title}</h4>
+                                  <div className="flex items-center gap-1.5 sm:gap-2 mt-1">
+                                    {paper.year && <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5">{paper.year}</Badge>}
+                                    <Badge variant="secondary" className="text-[10px] sm:text-xs capitalize px-1.5">
                                       {paper.paper_type || 'Past'}
                                     </Badge>
                                   </div>
                                 </div>
                               </div>
                             </CardContent>
-                          </Card>)}
-                      </div>) : selectedSubject.units.length === 0 ? <div className="text-center py-8">
-                      <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <p className="text-muted-foreground">No units available for this subject.</p>
-                    </div> : <div className="space-y-6">
-                      <p className="text-muted-foreground">
-                        Select topics of any unit to view {getCategoryTitle()}
+                          </Card>
+                        ))}
+                      </div>
+                    )
+                  ) : selectedSubject.units.length === 0 ? (
+                    <div className="text-center py-6 sm:py-8">
+                      <FileText className="h-10 w-10 sm:h-12 sm:w-12 mx-auto text-muted-foreground mb-3 sm:mb-4" />
+                      <p className="text-sm sm:text-base text-muted-foreground">No units available.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4 sm:space-y-6">
+                      <p className="text-xs sm:text-sm text-muted-foreground">
+                        Select topics to view {getCategoryTitle()}
                       </p>
 
                       {selectedSubject.units.map(unit => {
                         const isUnitExpanded = expandedUnits.includes(unit.id);
                         return (
-                          <div key={unit.id} className="space-y-3">
-                            {/* Unit Header - Clickable */}
+                          <div key={unit.id} className="space-y-2 sm:space-y-3">
+                            {/* Unit Header */}
                             <button
                               onClick={() => handleUnitToggle(unit.id)}
-                              className="w-full flex items-center justify-between p-3 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
+                              className="w-full flex items-center justify-between p-2.5 sm:p-3 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
                             >
-                              <span className="font-semibold text-foreground">
+                              <span className="font-semibold text-foreground text-sm sm:text-base text-left">
                                 {unit.name}
                               </span>
-                              <ChevronRight className={`h-5 w-5 text-muted-foreground transition-transform ${isUnitExpanded ? 'rotate-90' : ''}`} />
+                              <ChevronRight className={`h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground transition-transform shrink-0 ${isUnitExpanded ? 'rotate-90' : ''}`} />
                             </button>
                             
                             {/* Topics - Show when unit is expanded */}
                             {isUnitExpanded && (
-                              <div className="ml-4 space-y-2">
+                              <div className="ml-2 sm:ml-4 space-y-1.5 sm:space-y-2">
                                 {unit.topics.length === 0 ? (
-                                  <p className="text-sm text-muted-foreground pl-4">
-                                    No topics available for this unit.
+                                  <p className="text-xs sm:text-sm text-muted-foreground pl-3 sm:pl-4">
+                                    No topics available.
                                   </p>
                                 ) : (
                                   unit.topics.map(topic => {
@@ -436,41 +491,41 @@ const Preparation = () => {
                                     const topicNotes = keyNotes[topic.id] || [];
                                     const isLoadingNotes = loadingNotes[topic.id];
                                     return (
-                                      <div key={topic.id} className="space-y-2">
+                                      <div key={topic.id} className="space-y-1.5 sm:space-y-2">
                                         <div 
-                                          className="flex items-center gap-3 py-2 cursor-pointer group" 
+                                          className="flex items-center gap-2 sm:gap-3 py-1.5 sm:py-2 cursor-pointer group" 
                                           onClick={() => handleTopicToggle(topic.id)}
                                         >
                                           <Checkbox 
                                             checked={isSelected} 
                                             onCheckedChange={() => handleTopicToggle(topic.id)} 
-                                            className="h-5 w-5 rounded-full border-2 data-[state=checked]:bg-primary data-[state=checked]:border-primary" 
+                                            className="h-4 w-4 sm:h-5 sm:w-5 rounded-full border-2 data-[state=checked]:bg-primary data-[state=checked]:border-primary" 
                                           />
-                                          <span className={`text-sm md:text-base transition-colors ${isSelected ? 'text-primary font-medium' : 'text-foreground group-hover:text-primary'}`}>
+                                          <span className={`text-xs sm:text-sm md:text-base transition-colors ${isSelected ? 'text-primary font-medium' : 'text-foreground group-hover:text-primary'}`}>
                                             {topic.name}
                                           </span>
                                         </div>
 
                                         {isSelected && selectedCategory === 'keynotes' && (
-                                          <div className="ml-8 pl-4 border-l-2 border-primary/30">
+                                          <div className="ml-6 sm:ml-8 pl-3 sm:pl-4 border-l-2 border-primary/30">
                                             {isLoadingNotes ? (
                                               <div className="flex items-center gap-2 py-2">
-                                                <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                                                <span className="text-sm text-muted-foreground">Loading notes...</span>
+                                                <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin text-primary" />
+                                                <span className="text-xs sm:text-sm text-muted-foreground">Loading...</span>
                                               </div>
                                             ) : topicNotes.length === 0 ? (
-                                              <p className="text-sm text-muted-foreground py-2">
-                                                No key notes available for this topic.
+                                              <p className="text-xs sm:text-sm text-muted-foreground py-2">
+                                                No notes available.
                                               </p>
                                             ) : (
-                                              <div className="space-y-3">
+                                              <div className="space-y-2 sm:space-y-3">
                                                 {topicNotes.map(note => (
                                                   <Card key={note.id} className="bg-background border-border">
-                                                    <CardContent className="p-3 md:p-4">
-                                                      <h4 className="font-medium text-foreground mb-2 text-sm md:text-base">
+                                                    <CardContent className="p-2.5 sm:p-3 md:p-4">
+                                                      <h4 className="font-medium text-foreground mb-1.5 sm:mb-2 text-xs sm:text-sm md:text-base">
                                                         {note.title}
                                                       </h4>
-                                                      <div className="prose prose-sm max-w-none text-muted-foreground dark:prose-invert prose-headings:text-foreground prose-p:text-muted-foreground prose-strong:text-foreground prose-li:text-muted-foreground">
+                                                      <div className="prose prose-sm max-w-none text-muted-foreground dark:prose-invert prose-headings:text-foreground prose-p:text-muted-foreground prose-strong:text-foreground prose-li:text-muted-foreground text-xs sm:text-sm">
                                                         <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
                                                           {note.content}
                                                         </ReactMarkdown>
@@ -484,9 +539,9 @@ const Preparation = () => {
                                         )}
 
                                         {isSelected && selectedCategory !== 'keynotes' && selectedCategory !== 'pastpapers' && (
-                                          <div className="ml-8 pl-4 border-l-2 border-primary/30">
-                                            <p className="text-sm text-muted-foreground py-2 italic">
-                                              {getCategoryTitle()} coming soon for this topic.
+                                          <div className="ml-6 sm:ml-8 pl-3 sm:pl-4 border-l-2 border-primary/30">
+                                            <p className="text-xs sm:text-sm text-muted-foreground py-2 italic">
+                                              Coming soon.
                                             </p>
                                           </div>
                                         )}
@@ -499,12 +554,14 @@ const Preparation = () => {
                           </div>
                         );
                       })}
-                    </div>}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
               )}
             </div>
-          </div>)}
+          </div>
+        )}
       </div>
 
       {/* PDF Viewer Dialog */}

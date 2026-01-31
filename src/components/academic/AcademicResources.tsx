@@ -15,7 +15,7 @@ interface Note {
   file_url: string;
 }
 
-// Static data for Functional English (can be moved to database later)
+// Static data for subjects (can be moved to database later)
 const academicData: Record<string, {
   courseContent: string;
   notes: Note[];
@@ -27,16 +27,38 @@ const academicData: Record<string, {
       { id: '2', title: 'Parts of Speech - Part 2', file_url: '/academic/notes/parts-of-speech-part-2.pdf' },
       { id: '3', title: 'Parts of Speech - Part 3', file_url: '/academic/notes/parts-of-speech-part-3.pdf' },
     ]
+  },
+  'programming-fundamentals': {
+    courseContent: '/academic/programming-fundamentals-course-content.jpg',
+    notes: [] // Notes will be added later
   }
+};
+
+// Check if subject has academic resources
+const hasAcademicResources = (subjectName: string): boolean => {
+  const subjectKey = subjectName.toLowerCase().replace(/\s+/g, '-');
+  return subjectKey in academicData;
 };
 
 const AcademicResources = ({ subjectId, subjectName }: AcademicResourcesProps) => {
   const [selectedView, setSelectedView] = useState<'menu' | 'course-content' | 'notes'>('menu');
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
 
-  // Get data for subject (fallback to functional-english for now)
+  // Get data for subject - only show if subject has data
   const subjectKey = subjectName.toLowerCase().replace(/\s+/g, '-');
-  const data = academicData[subjectKey] || academicData['functional-english'];
+  const data = academicData[subjectKey];
+
+  // If no data available for this subject, show message
+  if (!data) {
+    return (
+      <Card className="bg-card border-border">
+        <CardContent className="p-6 text-center">
+          <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <p className="text-muted-foreground">Academic resources for {subjectName} are not available yet.</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const handleDownload = (url: string, filename: string) => {
     const link = document.createElement('a');

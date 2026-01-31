@@ -28,7 +28,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
           <header className="h-14 sm:h-16 border-b border-border bg-card flex items-center justify-between px-2 sm:px-4 shrink-0">
             <div className="flex items-center gap-2 sm:gap-4 min-w-0">
               <SidebarTrigger className="shrink-0" />
-              <h2 className="font-semibold text-foreground text-sm sm:text-base truncate">EduLearn Portal</h2>
+              <h2 className="font-semibold text-foreground text-sm sm:text-base truncate">GPGC Portal</h2>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               {profile && (

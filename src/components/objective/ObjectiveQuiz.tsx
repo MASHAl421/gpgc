@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ArrowLeft, CheckCircle2, XCircle, BookOpen } from 'lucide-react';
+import { Loader2, ArrowLeft, CheckCircle2, XCircle, BookOpen, Coins } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { QuizConfig } from './ObjectivePaperSelector';
-
+import { toast } from 'sonner';
 interface Question {
   id: string;
   question_text: string;
@@ -26,10 +27,14 @@ interface ObjectiveQuizProps {
 }
 
 const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
+  const { user } = useAuth();
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
   const [showExplanation, setShowExplanation] = useState<Record<string, boolean>>({});
+  const [quizSaved, setQuizSaved] = useState(false);
+  const [coinsEarned, setCoinsEarned] = useState(0);
+  const [startTime] = useState(Date.now());
 
   useEffect(() => {
     fetchQuestions();
@@ -101,6 +106,87 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
       [questionId]: true,
     }));
   };
+
+  // Save quiz attempt and award coins when quiz is completed
+  const saveQuizAttempt = useCallback(async (score: number, total: number) => {
+    if (!user || quizSaved || questions.length === 0) return;
+    
+    try {
+      setQuizSaved(true);
+      const timeTaken = Math.floor((Date.now() - startTime) / 1000);
+      
+      // Calculate coins based on performance
+      const percentage = (score / total) * 100;
+      let coins = 0;
+      if (percentage >= 90) coins = 15;
+      else if (percentage >= 80) coins = 12;
+      else if (percentage >= 70) coins = 10;
+      else if (percentage >= 60) coins = 7;
+      else if (percentage >= 50) coins = 5;
+      else coins = 2; // Participation coins
+
+      // Get quiz_id from first question
+      const quizId = questions[0].quiz_id;
+
+      // Save quiz attempt
+      const { error: attemptError } = await supabase
+        .from('quiz_attempts')
+        .insert({
+          user_id: user.id,
+          quiz_id: quizId,
+          score,
+          total_questions: total,
+          time_taken_seconds: timeTaken,
+          coins_earned: coins,
+        });
+
+      if (attemptError) throw attemptError;
+
+      // Log coin transaction
+      await supabase.from('coin_transactions').insert({
+        user_id: user.id,
+        amount: coins,
+        transaction_type: 'quiz_reward',
+        description: `Quiz completed: ${score}/${total} (${Math.round(percentage)}%)`,
+        reference_id: quizId,
+      });
+
+      // Update profile coins
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('coins_earned')
+        .eq('id', user.id)
+        .single();
+
+      if (profile) {
+        await supabase
+          .from('profiles')
+          .update({ coins_earned: (profile.coins_earned || 0) + coins })
+          .eq('id', user.id);
+      }
+
+      setCoinsEarned(coins);
+      toast.success(`You earned ${coins} coins!`, {
+        icon: '🪙',
+        description: `Quiz score: ${score}/${total}`,
+      });
+    } catch (error) {
+      console.error('Error saving quiz attempt:', error);
+    }
+  }, [user, quizSaved, questions, startTime]);
+
+  // Effect to save when all questions are answered
+  useEffect(() => {
+    const answeredCount = Object.keys(selectedAnswers).length;
+    if (answeredCount === questions.length && questions.length > 0 && !quizSaved) {
+      const correctCount = Object.entries(selectedAnswers).filter(([qId, answer]) => {
+        const q = questions.find(q2 => q2.id === qId);
+        if (!q) return false;
+        return normalizeOption(q.correct_option) === normalizeOption(answer);
+      }).length;
+      saveQuizAttempt(correctCount, questions.length);
+    }
+  }, [selectedAnswers, questions, quizSaved, saveQuizAttempt]);
 
   const normalizeOption = (value: string | null | undefined) =>
     (value || '').trim().toLowerCase();
@@ -299,6 +385,12 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
             <p className="text-sm text-muted-foreground mt-1">
               ({Math.round((correctCount / questions.length) * 100)}% accuracy)
             </p>
+            {coinsEarned > 0 && (
+              <div className="flex items-center justify-center gap-2 mt-3 text-primary">
+                <Coins className="h-5 w-5" />
+                <span className="font-bold">+{coinsEarned} Coins Earned!</span>
+              </div>
+            )}
             <Button onClick={onBack} className="mt-4">
               Try Another Quiz
             </Button>

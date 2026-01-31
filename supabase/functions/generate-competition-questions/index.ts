@@ -56,16 +56,14 @@ RESPONSE FORMAT (JSON array):
 
 Generate ${count} unique, high-quality questions NOW:`;
 
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${Deno.env.get("LOVABLE_API_KEY")}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://lovable.dev",
-        "X-Title": "Competition Questions Generator",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: "You are an expert academic question generator. Always respond with valid JSON array only, no markdown." },
           { role: "user", content: systemPrompt }

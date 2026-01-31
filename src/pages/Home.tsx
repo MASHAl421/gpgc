@@ -5,9 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
-import { useDailyLogin } from '@/hooks/useDailyLogin';
 import { useSemesterOnboarding } from '@/hooks/useSemesterOnboarding';
-import DailyLoginReward from '@/components/DailyLoginReward';
 import SemesterOnboarding from '@/components/SemesterOnboarding';
 import {
   BookOpen,
@@ -18,14 +16,11 @@ import {
   Users,
   Coins,
   TrendingUp,
-  Flame,
-  Sparkles,
 } from 'lucide-react';
 
 const Home = () => {
   const navigate = useNavigate();
   const { profile } = useAuth();
-  const { todayLogin, showReward, dismissReward } = useDailyLogin();
   const { needsOnboarding, profileData, completeOnboarding } = useSemesterOnboarding();
 
   const preparationCards = [
@@ -62,23 +57,12 @@ const Home = () => {
   const statsCards = [
     { title: 'Tests Passed', value: '0/0', icon: Trophy, progress: 0 },
     { title: 'Coins Earned', value: profile?.coins_earned || 0, icon: Coins, progress: 0 },
-    { title: 'Login Streak', value: todayLogin?.streak_count || 0, icon: Flame, progress: 0 },
   ];
 
   return (
     <MainLayout>
       {/* Onboarding Modal */}
       <SemesterOnboarding open={needsOnboarding} onComplete={completeOnboarding} />
-      
-      {/* Daily Login Reward Modal */}
-      {todayLogin && (
-        <DailyLoginReward
-          open={showReward}
-          onClose={dismissReward}
-          streak={todayLogin.streak_count}
-          coins={todayLogin.coins_earned}
-        />
-      )}
 
       <div className="space-y-6 md:space-y-8">
         {/* Welcome Section */}
@@ -101,28 +85,6 @@ const Home = () => {
             Start Learning
           </Button>
         </div>
-
-        {/* Daily Streak Banner */}
-        {todayLogin && todayLogin.streak_count >= 3 && (
-          <Card className="bg-gradient-to-r from-orange-500/20 to-primary/20 border-orange-500/30">
-            <CardContent className="p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-orange-500/20 flex items-center justify-center">
-                  <Flame className="h-5 w-5 text-orange-500" />
-                </div>
-                <div>
-                  <p className="font-semibold text-foreground">
-                    {todayLogin.streak_count} Day Streak! 🔥
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Keep it up for bonus coins!
-                  </p>
-                </div>
-              </div>
-              <Sparkles className="h-6 w-6 text-primary hidden sm:block" />
-            </CardContent>
-          </Card>
-        )}
 
         {/* Stats Cards */}
         <div className="grid gap-4 grid-cols-2 md:grid-cols-3">

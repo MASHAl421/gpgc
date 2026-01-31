@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useChatHistory } from '@/hooks/useChatHistory';
+import { supabase } from '@/integrations/supabase/client';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
@@ -158,9 +159,24 @@ const AITutor = () => {
   const handleSend = async () => {
     if ((!question.trim() && !attachedFile) || isLoading) return;
 
-    // AI Tutor backend requires a real user JWT (not the publishable key).
-    // If session isn't ready, ask user to re-login.
-    const accessToken = session?.access_token;
+    // AI Tutor backend requires a real user JWT.
+    // Session tokens can be stale/expired on some clients, so we fetch the latest
+    // session and refresh if it's near expiry.
+    const getValidAccessToken = async (): Promise<string | null> => {
+      const { data } = await supabase.auth.getSession();
+      let token = data.session?.access_token ?? session?.access_token ?? null;
+      const expiresAt = data.session?.expires_at;
+
+      // Refresh if expiring in the next 60 seconds.
+      if (token && expiresAt && expiresAt * 1000 - Date.now() < 60_000) {
+        const { data: refreshed } = await supabase.auth.refreshSession();
+        token = refreshed.session?.access_token ?? token;
+      }
+
+      return token;
+    };
+
+    let accessToken = await getValidAccessToken();
     if (!accessToken) {
       toast({
         title: 'Session expired',
@@ -186,14 +202,27 @@ const AITutor = () => {
     let assistantContent = '';
 
     try {
-      const resp = await fetch(CHAT_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ messages: newMessages }),
-      });
+      const doRequest = async (token: string) =>
+        fetch(CHAT_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ messages: newMessages }),
+        });
+
+      let resp = await doRequest(accessToken);
+
+      // If token expired between checks, refresh once and retry.
+      if (resp.status === 401) {
+        const { data: refreshed } = await supabase.auth.refreshSession();
+        const refreshedToken = refreshed.session?.access_token;
+        if (refreshedToken) {
+          accessToken = refreshedToken;
+          resp = await doRequest(accessToken);
+        }
+      }
 
       if (!resp.ok) {
         const errorData = await resp.json().catch(() => ({}));

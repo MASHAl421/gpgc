@@ -1030,7 +1030,36 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      profiles_public: {
+        Row: {
+          coins_earned: number | null
+          created_at: string | null
+          forum_points: number | null
+          id: string | null
+          is_bs_student: boolean | null
+          semester: number | null
+          username: string | null
+        }
+        Insert: {
+          coins_earned?: number | null
+          created_at?: string | null
+          forum_points?: number | null
+          id?: string | null
+          is_bs_student?: boolean | null
+          semester?: number | null
+          username?: string | null
+        }
+        Update: {
+          coins_earned?: number | null
+          created_at?: string | null
+          forum_points?: number | null
+          id?: string | null
+          is_bs_student?: boolean | null
+          semester?: number | null
+          username?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {

@@ -22,11 +22,20 @@ export const ForumSidebar = () => {
   useEffect(() => {
     const fetchTopMembers = async () => {
       try {
-        const { data: profiles } = await supabase
-          .from('profiles')
+        // Use the public view to avoid exposing email addresses
+        interface PublicProfile {
+          id: string;
+          username: string;
+          forum_points: number | null;
+        }
+        
+        const { data } = await supabase
+          .from('profiles_public' as any)
           .select('id, username, forum_points')
           .order('forum_points', { ascending: false })
           .limit(5);
+
+        const profiles = data as unknown as PublicProfile[] | null;
 
         if (!profiles) {
           setLoading(false);

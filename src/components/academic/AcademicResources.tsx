@@ -40,6 +40,12 @@ const academicData: Record<string, {
       { id: '3', title: 'Chapter 3: Rights and Responsibilities', file_url: '/academic/notes/rights-and-responsibilities.pdf' },
       { id: '4', title: 'Chapter 4: State, Govt and Civil Society', file_url: '/academic/notes/state-govt-civil-society.pdf' },
     ]
+  },
+  'introduction-to-ict': {
+    courseContent: '/academic/ict-course-content.jpg',
+    notes: [
+      { id: '1', title: 'Lecture 1 to 14: Complete ICT Notes', file_url: '/academic/notes/ict-lectures-1-to-14.pdf' },
+    ]
   }
 };
 

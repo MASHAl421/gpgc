@@ -66,7 +66,7 @@ const Login = () => {
         <div className="relative z-10 flex flex-col justify-center items-center p-12 text-primary-foreground">
           <div className="flex items-center gap-3 mb-8">
             <GraduationCap className="h-16 w-16" />
-            <h1 className="text-4xl font-bold">EduLearn</h1>
+            <h1 className="text-4xl font-bold">GPGC</h1>
           </div>
           <h2 className="text-3xl font-bold mb-4 text-center">
             A Smart Way to Learn
@@ -94,11 +94,11 @@ const Login = () => {
           <CardHeader className="space-y-1 text-center">
             <div className="flex items-center justify-center gap-2 mb-4 lg:hidden">
               <GraduationCap className="h-10 w-10 text-primary" />
-              <span className="text-2xl font-bold text-foreground">EduLearn</span>
+              <span className="text-2xl font-bold text-foreground">GPGC</span>
             </div>
             <CardTitle className="text-2xl font-bold text-foreground">Welcome!</CardTitle>
             <CardDescription className="text-muted-foreground">
-              Start your learning journey with EduLearn
+              Start your learning journey with GPGC
             </CardDescription>
           </CardHeader>
           <CardContent>

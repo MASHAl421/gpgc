@@ -59,7 +59,7 @@ const HowItWorks = () => {
         <div className="text-center">
           <h1 className="text-3xl font-bold text-foreground">How It Works</h1>
           <p className="text-muted-foreground mt-2">
-            Your complete guide to using EduLearn Portal
+            Your complete guide to using GPGC Portal
           </p>
         </div>
 

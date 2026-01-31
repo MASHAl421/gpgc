@@ -46,6 +46,12 @@ const academicData: Record<string, {
     notes: [
       { id: '1', title: 'Lecture 1 to 14: Complete ICT Notes', file_url: '/academic/notes/ict-lectures-1-to-14.pdf' },
     ]
+  },
+  'ict': {
+    courseContent: '/academic/ict-course-content.jpg',
+    notes: [
+      { id: '1', title: 'Lecture 1 to 14: Complete ICT Notes', file_url: '/academic/notes/ict-lectures-1-to-14.pdf' },
+    ]
   }
 };
 

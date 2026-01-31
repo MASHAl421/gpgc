@@ -58,7 +58,7 @@ const AITutor = () => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, session } = useAuth();
   const isMobile = useIsMobile();
   
   const { 
@@ -158,6 +158,18 @@ const AITutor = () => {
   const handleSend = async () => {
     if ((!question.trim() && !attachedFile) || isLoading) return;
 
+    // AI Tutor backend requires a real user JWT (not the publishable key).
+    // If session isn't ready, ask user to re-login.
+    const accessToken = session?.access_token;
+    if (!accessToken) {
+      toast({
+        title: 'Session expired',
+        description: 'Please sign out and sign in again, then try the AI Tutor.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     const userMsg: Message = { 
       role: 'user', 
       content: question || (attachedFile ? `Analyze this ${attachedFile.type.startsWith('image') ? 'image' : 'document'}` : ''),
@@ -178,7 +190,7 @@ const AITutor = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({ messages: newMessages }),
       });

@@ -18,6 +18,9 @@ import ObjectiveQuiz from '@/components/objective/ObjectiveQuiz';
 import AcademicResources from '@/components/academic/AcademicResources';
 import MobileCategoryMenu from '@/components/preparation/MobileCategoryMenu';
 import { useIsMobile } from '@/hooks/use-mobile';
+import SubjectivePaperSelector, { SubjectiveConfig } from '@/components/subjective/SubjectivePaperSelector';
+import SubjectiveQuestionCount from '@/components/subjective/SubjectiveQuestionCount';
+import SubjectivePaperDisplay from '@/components/subjective/SubjectivePaperDisplay';
 
 interface KeyNote {
   id: string;
@@ -119,6 +122,12 @@ const Preparation = () => {
   const [loadingPapers, setLoadingPapers] = useState(false);
   const [selectedPaper, setSelectedPaper] = useState<PastPaper | null>(null);
   const [quizConfig, setQuizConfig] = useState<QuizConfig | null>(null);
+  
+  // Subjective Paper State
+  const [subjectiveStep, setSubjectiveStep] = useState<'select' | 'count' | 'paper'>('select');
+  const [subjectiveConfig, setSubjectiveConfig] = useState<SubjectiveConfig | null>(null);
+  const [subjectiveShortCount, setSubjectiveShortCount] = useState(5);
+  const [subjectiveLongCount, setSubjectiveLongCount] = useState(3);
   useEffect(() => {
     if (!onboardingLoading && !needsOnboarding) {
       fetchSubjects();
@@ -234,6 +243,9 @@ const Preparation = () => {
     setSelectedCategory(category);
     setSelectedTopics([]);
     setQuizConfig(null); // Reset quiz when changing category
+    // Reset subjective state when changing category
+    setSubjectiveStep('select');
+    setSubjectiveConfig(null);
     if (category === 'pastpapers' && selectedSubject) {
       fetchPastPapers(selectedSubject.id);
     }
@@ -244,6 +256,8 @@ const Preparation = () => {
     setExpandedUnits([]);
     setPastPapers([]);
     setQuizConfig(null);
+    setSubjectiveStep('select');
+    setSubjectiveConfig(null);
   };
 
   const handleStartQuiz = (config: QuizConfig) => {
@@ -252,6 +266,26 @@ const Preparation = () => {
 
   const handleBackFromQuiz = () => {
     setQuizConfig(null);
+  };
+
+  // Subjective Paper Handlers
+  const handleSubjectiveNext = (config: SubjectiveConfig) => {
+    setSubjectiveConfig(config);
+    setSubjectiveStep('count');
+  };
+
+  const handleSubjectiveStart = (shortCount: number, longCount: number) => {
+    setSubjectiveShortCount(shortCount);
+    setSubjectiveLongCount(longCount);
+    setSubjectiveStep('paper');
+  };
+
+  const handleSubjectiveBack = () => {
+    if (subjectiveStep === 'count') {
+      setSubjectiveStep('select');
+    } else if (subjectiveStep === 'paper') {
+      setSubjectiveStep('count');
+    }
   };
   const getSubjectIcon = (iconName: string | null) => {
     const Icon = iconName ? iconMap[iconName] : BookOpen;
@@ -397,6 +431,21 @@ const Preparation = () => {
                 <ObjectiveQuiz config={quizConfig} onBack={handleBackFromQuiz} />
               ) : selectedCategory === 'objective' ? (
                 <ObjectivePaperSelector subject={selectedSubject} onStartQuiz={handleStartQuiz} />
+              ) : selectedCategory === 'subjective' && subjectiveStep === 'paper' && subjectiveConfig ? (
+                <SubjectivePaperDisplay 
+                  config={subjectiveConfig} 
+                  shortCount={subjectiveShortCount} 
+                  longCount={subjectiveLongCount} 
+                  onBack={handleSubjectiveBack} 
+                />
+              ) : selectedCategory === 'subjective' && subjectiveStep === 'count' && subjectiveConfig ? (
+                <SubjectiveQuestionCount 
+                  config={subjectiveConfig} 
+                  onBack={handleSubjectiveBack} 
+                  onStart={handleSubjectiveStart} 
+                />
+              ) : selectedCategory === 'subjective' ? (
+                <SubjectivePaperSelector subject={selectedSubject} onNext={handleSubjectiveNext} />
               ) : (
               <Card className="bg-card border-border">
                 <CardHeader className="py-3 sm:pb-4 px-3 sm:px-6 border-b border-border">

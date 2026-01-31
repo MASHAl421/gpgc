@@ -11,6 +11,8 @@ import { CompetitionStatsCards } from '@/components/competition/CompetitionStats
 import { CompetitionTestsTable } from '@/components/competition/CompetitionTestsTable';
 import { CompetitionLeaderboard } from '@/components/competition/CompetitionLeaderboard';
 import { CompetitionPracticeMode } from '@/components/competition/CompetitionPracticeMode';
+import { CompetitionQuizModal } from '@/components/competition/CompetitionQuizModal';
+import { TopicSelector } from '@/components/competition/TopicSelector';
 
 interface Competition {
   id: string;
@@ -45,6 +47,11 @@ const Competition = () => {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('tests');
+  const [selectedCompetition, setSelectedCompetition] = useState<Competition | null>(null);
+  const [quizMode, setQuizMode] = useState<'competition' | 'practice' | 'mock'>('competition');
+  const [isQuizOpen, setIsQuizOpen] = useState(false);
+  const [isTopicSelectorOpen, setIsTopicSelectorOpen] = useState(false);
+  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
 
   useEffect(() => {
     fetchCompetitions();
@@ -159,17 +166,56 @@ const Competition = () => {
   }, [competitions, userAttempts]);
 
   const handleStartTest = (competitionId: string) => {
-    toast.info('Competition test feature coming soon!');
-    // TODO: Navigate to test taking page
+    const comp = competitions.find((c) => c.id === competitionId);
+    if (comp) {
+      setSelectedCompetition(comp);
+      setQuizMode('competition');
+      setIsQuizOpen(true);
+    }
   };
 
   const handleViewResult = (competitionId: string) => {
-    toast.info('Results view coming soon!');
-    // TODO: Show results modal/page
+    const attempt = userAttempts.find((a) => a.competition_id === competitionId);
+    if (attempt) {
+      toast.success(`Your score: ${attempt.score}/${attempt.total_questions}`);
+    }
   };
 
-  const handlePractice = (type: string) => {
-    toast.info(`${type} mode coming soon!`);
+  const handleQuickPractice = () => {
+    setSelectedCompetition(null);
+    setSelectedTopic('General Knowledge');
+    setQuizMode('practice');
+    setIsQuizOpen(true);
+  };
+
+  const handleSelectTopics = () => {
+    setIsTopicSelectorOpen(true);
+  };
+
+  const handleTopicSelected = (topic: string) => {
+    setSelectedTopic(topic);
+    setSelectedCompetition(null);
+    setQuizMode('practice');
+    setIsQuizOpen(true);
+  };
+
+  const handleMockTest = () => {
+    setSelectedCompetition(null);
+    setSelectedTopic('General Knowledge');
+    setQuizMode('mock');
+    setIsQuizOpen(true);
+  };
+
+  const handleWeakAreas = () => {
+    setSelectedCompetition(null);
+    setSelectedTopic('Logical Reasoning');
+    setQuizMode('practice');
+    setIsQuizOpen(true);
+  };
+
+  const handleQuizComplete = () => {
+    fetchUserAttempts();
+    fetchLeaderboard();
   };
 
   if (isLoading) {
@@ -225,10 +271,10 @@ const Competition = () => {
 
           <TabsContent value="practice" className="mt-6">
             <CompetitionPracticeMode
-              onStartQuickPractice={() => handlePractice('Quick Practice')}
-              onSelectTopics={() => handlePractice('Topic Practice')}
-              onStartMockTest={() => handlePractice('Mock Test')}
-              onPracticeWeakAreas={() => handlePractice('Weak Areas')}
+              onStartQuickPractice={handleQuickPractice}
+              onSelectTopics={handleSelectTopics}
+              onStartMockTest={handleMockTest}
+              onPracticeWeakAreas={handleWeakAreas}
             />
           </TabsContent>
 
@@ -236,6 +282,23 @@ const Competition = () => {
             <CompetitionLeaderboard leaderboard={leaderboard} currentUserId={user?.id} />
           </TabsContent>
         </Tabs>
+
+        {/* Quiz Modal */}
+        <CompetitionQuizModal
+          isOpen={isQuizOpen}
+          onClose={() => setIsQuizOpen(false)}
+          competition={selectedCompetition}
+          mode={quizMode}
+          topic={selectedTopic || undefined}
+          onComplete={handleQuizComplete}
+        />
+
+        {/* Topic Selector */}
+        <TopicSelector
+          isOpen={isTopicSelectorOpen}
+          onClose={() => setIsTopicSelectorOpen(false)}
+          onSelectTopic={handleTopicSelected}
+        />
       </div>
     </MainLayout>
   );

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -17,18 +16,41 @@ import {
   FileText,
   ClipboardList,
   Plus,
-  Trash2,
-  Save,
+  Loader2,
 } from 'lucide-react';
+
+interface Subject {
+  id: string;
+  name: string;
+}
+
+interface Unit {
+  id: string;
+  name: string;
+  subject_id: string;
+}
+
+interface Topic {
+  id: string;
+  name: string;
+  unit_id: string;
+}
 
 const Admin = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   
+  // Data for dropdowns
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [units, setUnits] = useState<Unit[]>([]);
+  const [topics, setTopics] = useState<Topic[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
+
   // Subject Form
   const [subjectName, setSubjectName] = useState('');
   const [subjectGrade, setSubjectGrade] = useState('BS Level');
   const [subjectDescription, setSubjectDescription] = useState('');
+  const [subjectSemester, setSubjectSemester] = useState<string>('');
 
   // Unit Form
   const [unitSubjectId, setUnitSubjectId] = useState('');
@@ -53,6 +75,52 @@ const Admin = () => {
   const [noteTitle, setNoteTitle] = useState('');
   const [noteContent, setNoteContent] = useState('');
 
+  // Fetch all data for dropdowns
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [subjectsRes, unitsRes, topicsRes] = await Promise.all([
+          supabase.from('subjects').select('id, name').order('name'),
+          supabase.from('units').select('id, name, subject_id').order('name'),
+          supabase.from('topics').select('id, name, unit_id').order('name'),
+        ]);
+
+        if (subjectsRes.data) setSubjects(subjectsRes.data);
+        if (unitsRes.data) setUnits(unitsRes.data);
+        if (topicsRes.data) setTopics(topicsRes.data);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoadingData(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Refresh data after adding new items
+  const refreshData = async () => {
+    const [subjectsRes, unitsRes, topicsRes] = await Promise.all([
+      supabase.from('subjects').select('id, name').order('name'),
+      supabase.from('units').select('id, name, subject_id').order('name'),
+      supabase.from('topics').select('id, name, unit_id').order('name'),
+    ]);
+
+    if (subjectsRes.data) setSubjects(subjectsRes.data);
+    if (unitsRes.data) setUnits(unitsRes.data);
+    if (topicsRes.data) setTopics(topicsRes.data);
+  };
+
+  // Get filtered units based on selected subject
+  const getFilteredUnits = (subjectId: string) => {
+    return units.filter(u => u.subject_id === subjectId);
+  };
+
+  // Get filtered topics based on selected unit
+  const getFilteredTopics = (unitId: string) => {
+    return topics.filter(t => t.unit_id === unitId);
+  };
+
   const handleAddSubject = async () => {
     if (!subjectName.trim()) {
       toast({ title: "Error", description: "Please enter subject name", variant: "destructive" });
@@ -62,9 +130,10 @@ const Admin = () => {
     setIsLoading(true);
     try {
       const { error } = await supabase.from('subjects').insert({
-        name: subjectName,
-        grade: subjectGrade,
-        description: subjectDescription,
+        name: subjectName.trim(),
+        grade: subjectGrade.trim(),
+        description: subjectDescription.trim() || null,
+        semester: subjectSemester ? parseInt(subjectSemester) : null,
       });
 
       if (error) throw error;
@@ -72,68 +141,114 @@ const Admin = () => {
       toast({ title: "Success", description: "Subject added successfully!" });
       setSubjectName('');
       setSubjectDescription('');
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      setSubjectSemester('');
+      await refreshData();
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'An error occurred';
+      toast({ title: "Error", description: message, variant: "destructive" });
     }
     setIsLoading(false);
   };
 
   const handleAddUnit = async () => {
     if (!unitName.trim() || !unitSubjectId) {
-      toast({ title: "Error", description: "Please fill all fields", variant: "destructive" });
+      toast({ title: "Error", description: "Please select a subject and enter unit name", variant: "destructive" });
       return;
     }
 
     setIsLoading(true);
     try {
+      // Verify subject exists
+      const { data: subject } = await supabase
+        .from('subjects')
+        .select('id')
+        .eq('id', unitSubjectId)
+        .single();
+
+      if (!subject) {
+        toast({ title: "Error", description: "Selected subject not found", variant: "destructive" });
+        setIsLoading(false);
+        return;
+      }
+
       const { error } = await supabase.from('units').insert({
         subject_id: unitSubjectId,
-        name: unitName,
+        name: unitName.trim(),
       });
 
       if (error) throw error;
 
       toast({ title: "Success", description: "Unit added successfully!" });
       setUnitName('');
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      await refreshData();
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'An error occurred';
+      toast({ title: "Error", description: message, variant: "destructive" });
     }
     setIsLoading(false);
   };
 
   const handleAddTopic = async () => {
     if (!topicName.trim() || !topicUnitId) {
-      toast({ title: "Error", description: "Please fill all fields", variant: "destructive" });
+      toast({ title: "Error", description: "Please select a unit and enter topic name", variant: "destructive" });
       return;
     }
 
     setIsLoading(true);
     try {
+      // Verify unit exists
+      const { data: unit } = await supabase
+        .from('units')
+        .select('id')
+        .eq('id', topicUnitId)
+        .single();
+
+      if (!unit) {
+        toast({ title: "Error", description: "Selected unit not found", variant: "destructive" });
+        setIsLoading(false);
+        return;
+      }
+
       const { error } = await supabase.from('topics').insert({
         unit_id: topicUnitId,
-        name: topicName,
+        name: topicName.trim(),
       });
 
       if (error) throw error;
 
       toast({ title: "Success", description: "Topic added successfully!" });
       setTopicName('');
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      await refreshData();
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'An error occurred';
+      toast({ title: "Error", description: message, variant: "destructive" });
     }
     setIsLoading(false);
   };
 
   const handleAddQuestion = async () => {
-    if (!questionText.trim() || !optionA || !optionB || !optionC || !optionD || !correctOption || !questionTopicId) {
+    if (!questionText.trim() || !optionA.trim() || !optionB.trim() || !optionC.trim() || !optionD.trim() || !correctOption || !questionTopicId) {
       toast({ title: "Error", description: "Please fill all required fields", variant: "destructive" });
       return;
     }
 
     setIsLoading(true);
     try {
+      // Verify topic exists
+      const { data: topic } = await supabase
+        .from('topics')
+        .select('id')
+        .eq('id', questionTopicId)
+        .single();
+
+      if (!topic) {
+        toast({ title: "Error", description: "Selected topic not found", variant: "destructive" });
+        setIsLoading(false);
+        return;
+      }
+
       // First create or get quiz for this topic
-      let { data: quiz, error: quizError } = await supabase
+      let { data: quiz } = await supabase
         .from('quizzes')
         .select('id')
         .eq('topic_id', questionTopicId)
@@ -152,13 +267,13 @@ const Admin = () => {
 
       const { error } = await supabase.from('questions').insert({
         quiz_id: quiz.id,
-        question_text: questionText,
-        option_a: optionA,
-        option_b: optionB,
-        option_c: optionC,
-        option_d: optionD,
+        question_text: questionText.trim(),
+        option_a: optionA.trim(),
+        option_b: optionB.trim(),
+        option_c: optionC.trim(),
+        option_d: optionD.trim(),
         correct_option: correctOption,
-        explanation: explanation,
+        explanation: explanation.trim() || null,
       });
 
       if (error) throw error;
@@ -171,8 +286,9 @@ const Admin = () => {
       setOptionD('');
       setCorrectOption('');
       setExplanation('');
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'An error occurred';
+      toast({ title: "Error", description: message, variant: "destructive" });
     }
     setIsLoading(false);
   };
@@ -185,10 +301,23 @@ const Admin = () => {
 
     setIsLoading(true);
     try {
+      // Verify topic exists
+      const { data: topic } = await supabase
+        .from('topics')
+        .select('id')
+        .eq('id', noteTopicId)
+        .single();
+
+      if (!topic) {
+        toast({ title: "Error", description: "Selected topic not found", variant: "destructive" });
+        setIsLoading(false);
+        return;
+      }
+
       const { error } = await supabase.from('key_notes').insert({
         topic_id: noteTopicId,
-        title: noteTitle,
-        content: noteContent,
+        title: noteTitle.trim(),
+        content: noteContent.trim(),
       });
 
       if (error) throw error;
@@ -196,11 +325,22 @@ const Admin = () => {
       toast({ title: "Success", description: "Key note added successfully!" });
       setNoteTitle('');
       setNoteContent('');
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'An error occurred';
+      toast({ title: "Error", description: message, variant: "destructive" });
     }
     setIsLoading(false);
   };
+
+  if (loadingData) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
@@ -250,9 +390,10 @@ const Admin = () => {
                   <div className="space-y-2">
                     <Label>Subject Name</Label>
                     <Input
-                      placeholder="e.g., Physics"
+                      placeholder="e.g., Functional English"
                       value={subjectName}
                       onChange={(e) => setSubjectName(e.target.value)}
+                      maxLength={100}
                     />
                   </div>
                   <div className="space-y-2">
@@ -261,7 +402,25 @@ const Admin = () => {
                       placeholder="e.g., BS Level"
                       value={subjectGrade}
                       onChange={(e) => setSubjectGrade(e.target.value)}
+                      maxLength={50}
                     />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Semester</Label>
+                    <Select value={subjectSemester} onValueChange={setSubjectSemester}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select semester" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
+                          <SelectItem key={sem} value={sem.toString()}>
+                            Semester {sem}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -270,10 +429,11 @@ const Admin = () => {
                     placeholder="Subject description..."
                     value={subjectDescription}
                     onChange={(e) => setSubjectDescription(e.target.value)}
+                    maxLength={500}
                   />
                 </div>
                 <Button onClick={handleAddSubject} disabled={isLoading}>
-                  <Plus className="h-4 w-4 mr-2" />
+                  {isLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
                   Add Subject
                 </Button>
               </CardContent>
@@ -288,23 +448,31 @@ const Admin = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Subject ID (copy from database)</Label>
-                  <Input
-                    placeholder="Subject UUID"
-                    value={unitSubjectId}
-                    onChange={(e) => setUnitSubjectId(e.target.value)}
-                  />
+                  <Label>Select Subject</Label>
+                  <Select value={unitSubjectId} onValueChange={setUnitSubjectId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a subject" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {subjects.map((subject) => (
+                        <SelectItem key={subject.id} value={subject.id}>
+                          {subject.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label>Unit Name</Label>
                   <Input
-                    placeholder="e.g., Unit 1: Electrostatics"
+                    placeholder="e.g., Unit 1: Introduction"
                     value={unitName}
                     onChange={(e) => setUnitName(e.target.value)}
+                    maxLength={150}
                   />
                 </div>
-                <Button onClick={handleAddUnit} disabled={isLoading}>
-                  <Plus className="h-4 w-4 mr-2" />
+                <Button onClick={handleAddUnit} disabled={isLoading || !unitSubjectId}>
+                  {isLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
                   Add Unit
                 </Button>
               </CardContent>
@@ -318,24 +486,53 @@ const Admin = () => {
                 <CardDescription>Add a topic to an existing unit</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Unit ID (copy from database)</Label>
-                  <Input
-                    placeholder="Unit UUID"
-                    value={topicUnitId}
-                    onChange={(e) => setTopicUnitId(e.target.value)}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Select Subject</Label>
+                    <Select 
+                      onValueChange={(value) => {
+                        setTopicUnitId(''); // Reset unit when subject changes
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Filter by subject" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {subjects.map((subject) => (
+                          <SelectItem key={subject.id} value={subject.id}>
+                            {subject.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Select Unit</Label>
+                    <Select value={topicUnitId} onValueChange={setTopicUnitId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a unit" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {units.map((unit) => (
+                          <SelectItem key={unit.id} value={unit.id}>
+                            {unit.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label>Topic Name</Label>
                   <Input
-                    placeholder="e.g., Coulomb's Law"
+                    placeholder="e.g., Parts of Speech"
                     value={topicName}
                     onChange={(e) => setTopicName(e.target.value)}
+                    maxLength={150}
                   />
                 </div>
-                <Button onClick={handleAddTopic} disabled={isLoading}>
-                  <Plus className="h-4 w-4 mr-2" />
+                <Button onClick={handleAddTopic} disabled={isLoading || !topicUnitId}>
+                  {isLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
                   Add Topic
                 </Button>
               </CardContent>
@@ -350,12 +547,19 @@ const Admin = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Topic ID (copy from database)</Label>
-                  <Input
-                    placeholder="Topic UUID"
-                    value={questionTopicId}
-                    onChange={(e) => setQuestionTopicId(e.target.value)}
-                  />
+                  <Label>Select Topic</Label>
+                  <Select value={questionTopicId} onValueChange={setQuestionTopicId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a topic" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {topics.map((topic) => (
+                        <SelectItem key={topic.id} value={topic.id}>
+                          {topic.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label>Question</Label>
@@ -363,6 +567,7 @@ const Admin = () => {
                     placeholder="Enter your question..."
                     value={questionText}
                     onChange={(e) => setQuestionText(e.target.value)}
+                    maxLength={1000}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -371,6 +576,7 @@ const Admin = () => {
                     <Input
                       value={optionA}
                       onChange={(e) => setOptionA(e.target.value)}
+                      maxLength={500}
                     />
                   </div>
                   <div className="space-y-2">
@@ -378,6 +584,7 @@ const Admin = () => {
                     <Input
                       value={optionB}
                       onChange={(e) => setOptionB(e.target.value)}
+                      maxLength={500}
                     />
                   </div>
                   <div className="space-y-2">
@@ -385,6 +592,7 @@ const Admin = () => {
                     <Input
                       value={optionC}
                       onChange={(e) => setOptionC(e.target.value)}
+                      maxLength={500}
                     />
                   </div>
                   <div className="space-y-2">
@@ -392,6 +600,7 @@ const Admin = () => {
                     <Input
                       value={optionD}
                       onChange={(e) => setOptionD(e.target.value)}
+                      maxLength={500}
                     />
                   </div>
                 </div>
@@ -417,10 +626,11 @@ const Admin = () => {
                     placeholder="Explain the correct answer..."
                     value={explanation}
                     onChange={(e) => setExplanation(e.target.value)}
+                    maxLength={1000}
                   />
                 </div>
-                <Button onClick={handleAddQuestion} disabled={isLoading}>
-                  <Plus className="h-4 w-4 mr-2" />
+                <Button onClick={handleAddQuestion} disabled={isLoading || !questionTopicId}>
+                  {isLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
                   Add Question
                 </Button>
               </CardContent>
@@ -435,19 +645,27 @@ const Admin = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Topic ID (copy from database)</Label>
-                  <Input
-                    placeholder="Topic UUID"
-                    value={noteTopicId}
-                    onChange={(e) => setNoteTopicId(e.target.value)}
-                  />
+                  <Label>Select Topic</Label>
+                  <Select value={noteTopicId} onValueChange={setNoteTopicId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a topic" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {topics.map((topic) => (
+                        <SelectItem key={topic.id} value={topic.id}>
+                          {topic.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label>Note Title</Label>
                   <Input
-                    placeholder="e.g., Introduction to Electrostatics"
+                    placeholder="e.g., Introduction to Parts of Speech"
                     value={noteTitle}
                     onChange={(e) => setNoteTitle(e.target.value)}
+                    maxLength={200}
                   />
                 </div>
                 <div className="space-y-2">
@@ -457,10 +675,11 @@ const Admin = () => {
                     value={noteContent}
                     onChange={(e) => setNoteContent(e.target.value)}
                     className="min-h-[200px]"
+                    maxLength={10000}
                   />
                 </div>
-                <Button onClick={handleAddKeyNote} disabled={isLoading}>
-                  <Plus className="h-4 w-4 mr-2" />
+                <Button onClick={handleAddKeyNote} disabled={isLoading || !noteTopicId}>
+                  {isLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
                   Add Key Note
                 </Button>
               </CardContent>
@@ -472,14 +691,11 @@ const Admin = () => {
           <CardContent className="p-6">
             <h3 className="font-semibold text-foreground mb-2">📌 How to Add Content</h3>
             <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
-              <li><strong>Step 1:</strong> Add a Subject (e.g., Physics, Chemistry)</li>
-              <li><strong>Step 2:</strong> Copy the Subject ID from the database and add Units</li>
-              <li><strong>Step 3:</strong> Copy the Unit ID and add Topics</li>
-              <li><strong>Step 4:</strong> Copy the Topic ID and add Questions/Key Notes</li>
+              <li>First, create <strong>Subjects</strong> (e.g., Functional English, Programming)</li>
+              <li>Then add <strong>Units</strong> to each subject</li>
+              <li>Add <strong>Topics</strong> to each unit</li>
+              <li>Finally, add <strong>Questions</strong> and <strong>Key Notes</strong> to topics</li>
             </ol>
-            <p className="mt-4 text-sm text-muted-foreground">
-              💡 Tip: You can view all IDs in the Cloud database viewer by clicking "View Backend" below.
-            </p>
           </CardContent>
         </Card>
       </div>

@@ -6,6 +6,45 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Fisher-Yates shuffle algorithm
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+// Shuffle options and update correct answer accordingly
+function shuffleQuestionOptions(question: any): any {
+  const optionKeys = ['A', 'B', 'C', 'D'];
+  const optionEntries = optionKeys.map(key => ({
+    originalKey: key,
+    value: question.options[key]
+  }));
+  
+  // Shuffle the entries
+  const shuffledEntries = shuffleArray(optionEntries);
+  
+  // Find where the correct answer ended up
+  const correctOriginalKey = question.correct;
+  const newCorrectIndex = shuffledEntries.findIndex(e => e.originalKey === correctOriginalKey);
+  const newCorrectKey = optionKeys[newCorrectIndex];
+  
+  // Build new options object
+  const newOptions: Record<string, string> = {};
+  shuffledEntries.forEach((entry, index) => {
+    newOptions[optionKeys[index]] = entry.value;
+  });
+  
+  return {
+    ...question,
+    options: newOptions,
+    correct: newCorrectKey
+  };
+}
+
 interface QuestionRequest {
   topic: string;
   count: number;
@@ -195,15 +234,18 @@ Generate ${validatedCount} unique, beginner-friendly questions NOW:`;
       throw new Error("Invalid response format");
     }
 
-    // Add unique IDs to questions
-    const formattedQuestions = questions.map((q: any, index: number) => ({
-      id: `q-${Date.now()}-${index}`,
-      question: q.question,
-      options: q.options,
-      correct: q.correct,
-      explanation: q.explanation,
-      difficulty: q.difficulty || validatedDifficulty
-    }));
+    // Add unique IDs to questions and shuffle options
+    const formattedQuestions = questions.map((q: any, index: number) => {
+      const shuffledQuestion = shuffleQuestionOptions(q);
+      return {
+        id: `q-${Date.now()}-${index}`,
+        question: shuffledQuestion.question,
+        options: shuffledQuestion.options,
+        correct: shuffledQuestion.correct,
+        explanation: shuffledQuestion.explanation,
+        difficulty: shuffledQuestion.difficulty || validatedDifficulty
+      };
+    });
 
     return new Response(JSON.stringify({ 
       success: true, 

@@ -21,6 +21,18 @@ interface Question {
   question_type?: string;
 }
 
+type OptionKey = 'a' | 'b' | 'c' | 'd';
+
+interface ShuffledOption {
+  label: 'A' | 'B' | 'C' | 'D';
+  key: OptionKey; // original key in DB
+  text: string;
+}
+
+interface UIQuestion extends Question {
+  shuffledOptions: ShuffledOption[];
+}
+
 interface ObjectiveQuizProps {
   config: QuizConfig;
   onBack: () => void;
@@ -28,13 +40,54 @@ interface ObjectiveQuizProps {
 
 const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
   const { user } = useAuth();
-  const [questions, setQuestions] = useState<Question[]>([]);
+  const [questions, setQuestions] = useState<UIQuestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
   const [showExplanation, setShowExplanation] = useState<Record<string, boolean>>({});
   const [quizSaved, setQuizSaved] = useState(false);
   const [coinsEarned, setCoinsEarned] = useState(0);
   const [startTime] = useState(Date.now());
+
+  const normalizeOption = (value: string | null | undefined) =>
+    (value || '').trim().toLowerCase();
+
+  // Deterministic shuffle per question.id (so options don't reshuffle on every render)
+  const hashString = (str: string) => {
+    let hash = 2166136261;
+    for (let i = 0; i < str.length; i++) {
+      hash ^= str.charCodeAt(i);
+      hash = Math.imul(hash, 16777619);
+    }
+    return hash >>> 0;
+  };
+
+  const mulberry32 = (seed: number) => {
+    return () => {
+      let t = (seed += 0x6d2b79f5);
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  };
+
+  const buildShuffledOptions = (q: Question): ShuffledOption[] => {
+    const options: Array<{ key: OptionKey; text: string }> = [
+      { key: 'a', text: q.option_a },
+      { key: 'b', text: q.option_b },
+      { key: 'c', text: q.option_c },
+      { key: 'd', text: q.option_d },
+    ];
+
+    const rng = mulberry32(hashString(q.id));
+    // Fisher-Yates shuffle
+    for (let i = options.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [options[i], options[j]] = [options[j], options[i]];
+    }
+
+    const labels: Array<'A' | 'B' | 'C' | 'D'> = ['A', 'B', 'C', 'D'];
+    return options.map((o, idx) => ({ label: labels[idx], key: o.key, text: o.text }));
+  };
 
   useEffect(() => {
     fetchQuestions();
@@ -78,10 +131,11 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
 
       // Add quiz difficulty to questions for display
       const quizDifficultyMap = Object.fromEntries(quizzes.map(q => [q.id, q.difficulty]));
-      const enrichedQuestions = (questionsData || []).map(q => ({
+      const enrichedQuestions: UIQuestion[] = (questionsData || []).map((q: Question) => ({
         ...q,
         difficulty: quizDifficultyMap[q.quiz_id] || 'medium',
         question_type: 'exercise', // Default, can be enhanced later
+        shuffledOptions: buildShuffledOptions(q),
       }));
 
       setQuestions(enrichedQuestions);
@@ -187,9 +241,6 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
       saveQuizAttempt(correctCount, questions.length);
     }
   }, [selectedAnswers, questions, quizSaved, saveQuizAttempt]);
-
-  const normalizeOption = (value: string | null | undefined) =>
-    (value || '').trim().toLowerCase();
 
   const getOptionClass = (questionId: string, option: string, correctOption: string) => {
     const selected = selectedAnswers[questionId];
@@ -328,31 +379,25 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
 
                 {/* Options */}
                 <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {(['a', 'b', 'c', 'd'] as const).map((opt) => {
-                    const optionKey = `option_${opt}` as keyof Question;
-                    const optionText = question[optionKey] as string;
-                    const optionLabel = opt.toUpperCase();
-                    
-                    return (
-                      <div
-                        key={opt}
-                        onClick={() => handleSelectAnswer(question.id, opt)}
-                        className={`
-                          p-4 rounded-lg border-2 transition-all
-                          ${getOptionClass(question.id, opt, question.correct_option)}
-                          ${!isAnswered ? 'cursor-pointer' : 'cursor-default'}
-                        `}
-                      >
-                        <div className="flex items-start gap-3">
-                          <span className="font-bold text-lg shrink-0">{optionLabel}.</span>
-                          <span className="text-sm">{optionText}</span>
-                        </div>
-                        {isAnswered && opt === question.correct_option && (
-                          <CheckCircle2 className="h-4 w-4 text-primary absolute top-2 right-2" />
-                        )}
+                  {question.shuffledOptions.map((opt) => (
+                    <div
+                      key={opt.label}
+                      onClick={() => handleSelectAnswer(question.id, opt.key)}
+                      className={`
+                        p-4 rounded-lg border-2 transition-all
+                        ${getOptionClass(question.id, opt.key, question.correct_option)}
+                        ${!isAnswered ? 'cursor-pointer' : 'cursor-default'}
+                      `}
+                    >
+                      <div className="flex items-start gap-3">
+                        <span className="font-bold text-lg shrink-0">{opt.label}.</span>
+                        <span className="text-sm">{opt.text}</span>
                       </div>
-                    );
-                  })}
+                      {isAnswered && opt.key === question.correct_option && (
+                        <CheckCircle2 className="h-4 w-4 text-primary absolute top-2 right-2" />
+                      )}
+                    </div>
+                  ))}
                 </div>
 
                 {/* Meta Info */}

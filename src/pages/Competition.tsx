@@ -52,6 +52,7 @@ const Competition = () => {
   const [isQuizOpen, setIsQuizOpen] = useState(false);
   const [isTopicSelectorOpen, setIsTopicSelectorOpen] = useState(false);
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+  const [selectedDifficulty, setSelectedDifficulty] = useState<'easy' | 'medium'>('easy');
 
   useEffect(() => {
     fetchCompetitions();
@@ -183,7 +184,8 @@ const Competition = () => {
 
   const handleQuickPractice = () => {
     setSelectedCompetition(null);
-    setSelectedTopic('General Knowledge');
+    setSelectedTopic('Programming Fundamentals - Variables & Data Types');
+    setSelectedDifficulty('easy');
     setQuizMode('practice');
     setIsQuizOpen(true);
   };
@@ -192,8 +194,9 @@ const Competition = () => {
     setIsTopicSelectorOpen(true);
   };
 
-  const handleTopicSelected = (topic: string) => {
+  const handleTopicSelected = (topic: string, difficulty: 'easy' | 'medium') => {
     setSelectedTopic(topic);
+    setSelectedDifficulty(difficulty);
     setSelectedCompetition(null);
     setQuizMode('practice');
     setIsQuizOpen(true);
@@ -201,14 +204,16 @@ const Competition = () => {
 
   const handleMockTest = () => {
     setSelectedCompetition(null);
-    setSelectedTopic('General Knowledge');
+    setSelectedTopic('Programming Fundamentals - Control Structures');
+    setSelectedDifficulty('medium');
     setQuizMode('mock');
     setIsQuizOpen(true);
   };
 
   const handleWeakAreas = () => {
     setSelectedCompetition(null);
-    setSelectedTopic('Logical Reasoning');
+    setSelectedTopic('Functional English - Parts of Speech');
+    setSelectedDifficulty('easy');
     setQuizMode('practice');
     setIsQuizOpen(true);
   };
@@ -290,6 +295,7 @@ const Competition = () => {
           competition={selectedCompetition}
           mode={quizMode}
           topic={selectedTopic || undefined}
+          difficulty={selectedDifficulty}
           onComplete={handleQuizComplete}
         />
 

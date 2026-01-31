@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,21 +12,70 @@ serve(async (req) => {
   }
 
   try {
+    // Authenticate user
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const { messages } = await req.json();
+    
+    // Input validation
+    if (!messages || !Array.isArray(messages)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid request: messages must be an array" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (messages.length > 50) {
+      return new Response(
+        JSON.stringify({ error: "Too many messages: maximum 50 allowed" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Build messages array, handling image content if present
+    // Build messages array, handling image content if present with validation
     const processedMessages = messages.map((msg: any) => {
+      // Validate message structure
+      if (!msg.role || typeof msg.role !== 'string') {
+        throw new Error("Invalid message format: missing or invalid role");
+      }
+
       // If the message has attached image data, format for vision
       if (msg.imageData && msg.role === 'user') {
+        // Validate image data size (10MB limit)
+        if (typeof msg.imageData === 'string' && msg.imageData.length > 10 * 1024 * 1024) {
+          throw new Error("Image too large: maximum 10MB allowed");
+        }
+        
         return {
           role: 'user',
           content: [
-            { type: 'text', text: msg.content || 'Analyze this image and help me understand it.' },
+            { type: 'text', text: (msg.content || 'Analyze this image and help me understand it.').slice(0, 10000) },
             { 
               type: 'image_url', 
               image_url: { 
@@ -35,7 +85,12 @@ serve(async (req) => {
           ]
         };
       }
-      return msg;
+      
+      // Sanitize text content
+      return {
+        role: msg.role,
+        content: typeof msg.content === 'string' ? msg.content.slice(0, 10000) : ''
+      };
     });
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { GraduationCap, BookOpen, ArrowRight } from 'lucide-react';
+import { GraduationCap, BookOpen, ArrowRight, XCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
-type OnboardingStep = 'program' | 'semester' | 'complete';
+type OnboardingStep = 'program' | 'semester' | 'not_eligible';
 
 interface SemesterOnboardingProps {
   open: boolean;
@@ -14,18 +14,22 @@ interface SemesterOnboardingProps {
 }
 
 const SemesterOnboarding = ({ open, onComplete }: SemesterOnboardingProps) => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [step, setStep] = useState<OnboardingStep>('program');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleProgramSelection = async (isBsStudent: boolean) => {
     if (!isBsStudent) {
-      // If not BS student, just mark as complete with null values
-      await updateProfile(false, null);
-      onComplete();
+      // Show not eligible message before logout
+      setStep('not_eligible');
       return;
     }
     setStep('semester');
+  };
+
+  const handleLogoutNonBsStudent = async () => {
+    setIsLoading(true);
+    await logout();
   };
 
   const handleSemesterSelection = async (semester: number) => {
@@ -59,14 +63,19 @@ const SemesterOnboarding = ({ open, onComplete }: SemesterOnboardingProps) => {
       <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
-            <GraduationCap className="h-6 w-6 text-primary" />
-            {step === 'program' ? 'Welcome!' : 'Select Your Semester'}
+            {step === 'not_eligible' ? (
+              <XCircle className="h-6 w-6 text-destructive" />
+            ) : (
+              <GraduationCap className="h-6 w-6 text-primary" />
+            )}
+            {step === 'program' && 'Welcome!'}
+            {step === 'semester' && 'Select Your Semester'}
+            {step === 'not_eligible' && 'Access Restricted'}
           </DialogTitle>
           <DialogDescription>
-            {step === 'program' 
-              ? 'Let us personalize your learning experience'
-              : 'Choose your current semester to see relevant subjects'
-            }
+            {step === 'program' && 'Let us personalize your learning experience'}
+            {step === 'semester' && 'Choose your current semester to see relevant subjects'}
+            {step === 'not_eligible' && 'This platform is exclusively for BS students'}
           </DialogDescription>
         </DialogHeader>
 
@@ -95,6 +104,33 @@ const SemesterOnboarding = ({ open, onComplete }: SemesterOnboardingProps) => {
                 <span>No</span>
               </Button>
             </div>
+          </div>
+        )}
+
+        {step === 'not_eligible' && (
+          <div className="space-y-6 pt-4">
+            <div className="text-center space-y-4">
+              <div className="mx-auto h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center">
+                <XCircle className="h-10 w-10 text-destructive" />
+              </div>
+              <div className="space-y-2">
+                <p className="text-foreground font-semibold text-lg">
+                  Sorry, this site is not for you
+                </p>
+                <p className="text-muted-foreground text-sm">
+                  GPGC Portal is designed exclusively for BS program students. 
+                  If you're not enrolled in a BS program, you won't be able to access this platform.
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="destructive"
+              className="w-full"
+              onClick={handleLogoutNonBsStudent}
+              disabled={isLoading}
+            >
+              {isLoading ? 'Logging out...' : 'Logout'}
+            </Button>
           </div>
         )}
 

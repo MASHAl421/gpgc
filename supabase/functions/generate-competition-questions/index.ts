@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -18,17 +19,69 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Authenticate user
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { topic, count = 10, difficulty = 'easy', type = 'practice' } = await req.json() as QuestionRequest;
 
+    // Input validation
+    if (!topic || typeof topic !== 'string') {
+      return new Response(
+        JSON.stringify({ error: "Invalid request: topic is required" }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Sanitize topic (alphanumeric, spaces, and common punctuation only)
+    const sanitizedTopic = topic.replace(/[^a-zA-Z0-9\s\-\+\(\)]/g, '').slice(0, 200);
+    
+    if (sanitizedTopic.length === 0) {
+      return new Response(
+        JSON.stringify({ error: "Invalid topic" }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate count (max 50 questions)
+    const validatedCount = Math.min(Math.max(1, Number(count) || 10), 50);
+
+    // Validate difficulty
+    const validDifficulties = ['easy', 'medium', 'hard', 'mixed'];
+    const validatedDifficulty = validDifficulties.includes(difficulty) ? difficulty : 'easy';
+
+    // Validate type
+    const validTypes = ['practice', 'competition', 'mock'];
+    const validatedType = validTypes.includes(type) ? type : 'practice';
+
     // Semester 1 focused prompt - easier, beginner-friendly questions
-    const difficultyGuide = difficulty === 'easy' 
+    const difficultyGuide = validatedDifficulty === 'easy' 
       ? `EASY LEVEL (Semester 1 Beginners):
 - Focus on basic definitions and concepts
 - Simple recall-based questions
 - No tricky or confusing options
 - Clear, straightforward language
 - Examples: "What is a variable?", "Which keyword is used for output in C++?", "What is a noun?"`
-      : difficulty === 'medium'
+      : validatedDifficulty === 'medium'
       ? `MEDIUM LEVEL (Understanding):
 - Application of basic concepts
 - Simple problem-solving
@@ -37,11 +90,11 @@ Deno.serve(async (req) => {
 - Examples: "What will be the output of: cout << 5 + 3;", "Identify the verb in: She runs fast"`
       : `MIXED LEVEL: Include both easy and medium questions`;
 
-    const systemPrompt = `You are an expert question generator for BS Semester 1 students in Pakistan. Generate exactly ${count} multiple choice questions.
+    const systemPrompt = `You are an expert question generator for BS Semester 1 students in Pakistan. Generate exactly ${validatedCount} multiple choice questions.
 
-TOPIC: ${topic}
-DIFFICULTY: ${difficulty}
-TYPE: ${type}
+TOPIC: ${sanitizedTopic}
+DIFFICULTY: ${validatedDifficulty}
+TYPE: ${validatedType}
 
 ${difficultyGuide}
 
@@ -94,11 +147,11 @@ RESPONSE FORMAT (JSON array only, no markdown):
     },
     "correct": "A",
     "explanation": "Brief explanation of why this is correct",
-    "difficulty": "${difficulty}"
+    "difficulty": "${validatedDifficulty}"
   }
 ]
 
-Generate ${count} unique, beginner-friendly questions NOW:`;
+Generate ${validatedCount} unique, beginner-friendly questions NOW:`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -149,13 +202,13 @@ Generate ${count} unique, beginner-friendly questions NOW:`;
       options: q.options,
       correct: q.correct,
       explanation: q.explanation,
-      difficulty: q.difficulty || difficulty
+      difficulty: q.difficulty || validatedDifficulty
     }));
 
     return new Response(JSON.stringify({ 
       success: true, 
       questions: formattedQuestions,
-      topic,
+      topic: sanitizedTopic,
       count: formattedQuestions.length
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

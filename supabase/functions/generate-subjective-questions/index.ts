@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -20,6 +21,29 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Authenticate user
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { 
       subject, 
       topics, 
@@ -29,18 +53,82 @@ Deno.serve(async (req) => {
       difficultyLevels = ['easy', 'medium', 'hard']
     } = await req.json() as QuestionRequest;
 
-    const topicsText = topics.join(', ');
-    const typesText = questionTypes.join(' and ');
-    const difficultiesText = difficultyLevels.join(', ');
+    // Input validation
+    if (!subject || typeof subject !== 'string') {
+      return new Response(
+        JSON.stringify({ error: "Invalid request: subject is required" }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Sanitize subject
+    const sanitizedSubject = subject.replace(/[^a-zA-Z0-9\s\-\+\(\)]/g, '').slice(0, 200);
+    if (sanitizedSubject.length === 0) {
+      return new Response(
+        JSON.stringify({ error: "Invalid subject" }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate and sanitize topics array
+    if (!Array.isArray(topics) || topics.length === 0) {
+      return new Response(
+        JSON.stringify({ error: "Invalid request: topics must be a non-empty array" }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (topics.length > 10) {
+      return new Response(
+        JSON.stringify({ error: "Too many topics: maximum 10 allowed" }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const sanitizedTopics = topics
+      .filter(t => typeof t === 'string')
+      .map(t => t.replace(/[^a-zA-Z0-9\s\-\+\(\)]/g, '').slice(0, 100))
+      .filter(t => t.length > 0);
+
+    if (sanitizedTopics.length === 0) {
+      return new Response(
+        JSON.stringify({ error: "No valid topics provided" }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate counts (max 20 each)
+    const validatedShortCount = Math.min(Math.max(1, Number(shortCount) || 5), 20);
+    const validatedLongCount = Math.min(Math.max(1, Number(longCount) || 3), 20);
+
+    // Validate question types
+    const validQuestionTypes = ['exercise', 'conceptual'];
+    const validatedQuestionTypes = (Array.isArray(questionTypes) ? questionTypes : [])
+      .filter(t => validQuestionTypes.includes(t));
+    if (validatedQuestionTypes.length === 0) {
+      validatedQuestionTypes.push('exercise', 'conceptual');
+    }
+
+    // Validate difficulty levels
+    const validDifficultyLevels = ['easy', 'medium', 'hard'];
+    const validatedDifficultyLevels = (Array.isArray(difficultyLevels) ? difficultyLevels : [])
+      .filter(d => validDifficultyLevels.includes(d));
+    if (validatedDifficultyLevels.length === 0) {
+      validatedDifficultyLevels.push('easy', 'medium', 'hard');
+    }
+
+    const topicsText = sanitizedTopics.join(', ');
+    const typesText = validatedQuestionTypes.join(' and ');
+    const difficultiesText = validatedDifficultyLevels.join(', ');
 
     const systemPrompt = `You are an expert exam paper generator for BS Semester 1 students in Pakistan. Generate subjective questions with detailed answers.
 
-SUBJECT: ${subject}
+SUBJECT: ${sanitizedSubject}
 TOPICS: ${topicsText}
 QUESTION TYPES: ${typesText}
 DIFFICULTY LEVELS: ${difficultiesText}
 
-Generate exactly ${shortCount} SHORT questions and ${longCount} LONG questions.
+Generate exactly ${validatedShortCount} SHORT questions and ${validatedLongCount} LONG questions.
 
 GUIDELINES:
 1. **Short Questions** (2-4 lines answer):
@@ -154,7 +242,7 @@ Generate unique, educational questions with accurate answers. Each question must
       id: q.id || `q-${Date.now()}-${index}`,
       question: q.question,
       answer: q.answer,
-      type: q.type || (index < shortCount ? 'short' : 'long'),
+      type: q.type || (index < validatedShortCount ? 'short' : 'long'),
       category: q.category || 'conceptual',
       difficulty: q.difficulty || 'medium'
     }));
@@ -162,7 +250,7 @@ Generate unique, educational questions with accurate answers. Each question must
     return new Response(JSON.stringify({ 
       success: true, 
       questions: formattedQuestions,
-      subject,
+      subject: sanitizedSubject,
       shortCount: formattedQuestions.filter((q: any) => q.type === 'short').length,
       longCount: formattedQuestions.filter((q: any) => q.type === 'long').length
     }), {

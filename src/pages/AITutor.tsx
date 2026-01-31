@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   Plus, Send, Loader2, 
   MessageSquare, Trash2, Search, ChevronDown, X
@@ -16,7 +15,6 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { formatDistanceToNow } from 'date-fns';
 import 'katex/dist/katex.min.css';
 
 type Message = { role: 'user' | 'assistant'; content: string };
@@ -59,10 +57,14 @@ const AITutor = () => {
     if (isMobile) setSidebarOpen(false);
   }, [isMobile]);
 
-  const scrollToBottom = () => {
-    if (shouldAutoScroll) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
+  const scrollToBottom = (behavior: ScrollBehavior = 'auto') => {
+    if (!shouldAutoScroll) return;
+    const el = scrollContainerRef.current;
+    if (!el) return;
+
+    // Using scrollTop avoids the "blank space" jump that can happen with
+    // scrollIntoView during streaming + layout reflow.
+    el.scrollTo({ top: el.scrollHeight, behavior });
   };
 
   const handleScroll = () => {
@@ -74,8 +76,9 @@ const AITutor = () => {
   };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, shouldAutoScroll]);
+    // Keep the view pinned while streaming; smooth only after the message settles.
+    scrollToBottom(isLoading ? 'auto' : 'smooth');
+  }, [messages, shouldAutoScroll, isLoading]);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -195,7 +198,8 @@ const AITutor = () => {
 
   return (
     <MainLayout>
-      <div className="fixed inset-0 top-16 flex overflow-hidden">
+      {/* Fill MainLayout's <main> (which is overflow-hidden for /ai-tutor) */}
+      <div className="h-full flex overflow-hidden">
         {/* Sidebar - Static/Fixed */}
         <div className={`${sidebarOpen ? 'w-64' : 'w-0'} flex-shrink-0 border-r border-border bg-muted/30 transition-all duration-300 overflow-hidden`}>
           <div className="w-64 h-full flex flex-col">
@@ -315,7 +319,7 @@ const AITutor = () => {
           <div 
             ref={scrollContainerRef}
             onScroll={handleScroll}
-            className="flex-1 overflow-y-auto scrollbar-thin"
+            className="flex-1 min-h-0 overflow-y-auto scrollbar-thin"
           >
             <div className="max-w-3xl mx-auto px-4 py-4">
               {messages.length === 0 ? (

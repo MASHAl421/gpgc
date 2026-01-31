@@ -74,26 +74,17 @@ export const useDailyLogin = () => {
 
       if (insertError) throw insertError;
 
-      // Log the coin transaction
-      await supabase.from('coin_transactions').insert({
-        user_id: user.id,
-        amount: totalCoins,
-        transaction_type: 'daily_login',
-        description: `Daily login (${newStreak} day streak)`,
+      // Use atomic RPC function to add coins (prevents race conditions)
+      const { error: coinError } = await supabase.rpc('add_coins', {
+        _user_id: user.id,
+        _amount: totalCoins,
+        _transaction_type: 'daily_login',
+        _description: `Daily login (${newStreak} day streak)`,
+        _reference_id: null,
       });
 
-      // Update profile coins
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('coins_earned')
-        .eq('id', user.id)
-        .single();
-
-      if (profile) {
-        await supabase
-          .from('profiles')
-          .update({ coins_earned: (profile.coins_earned || 0) + totalCoins })
-          .eq('id', user.id);
+      if (coinError && import.meta.env.DEV) {
+        console.error('Error adding daily login coins:', coinError);
       }
 
       setTodayLogin(newLogin);

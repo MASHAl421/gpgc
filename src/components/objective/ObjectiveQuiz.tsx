@@ -196,27 +196,17 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
 
       if (attemptError) throw attemptError;
 
-      // Log coin transaction
-      await supabase.from('coin_transactions').insert({
-        user_id: user.id,
-        amount: coins,
-        transaction_type: 'quiz_reward',
-        description: `Quiz completed: ${score}/${total} (${Math.round(percentage)}%)`,
-        reference_id: quizId,
+      // Use atomic RPC function to add coins (prevents race conditions)
+      const { error: coinError } = await supabase.rpc('add_coins', {
+        _user_id: user.id,
+        _amount: coins,
+        _transaction_type: 'quiz_reward',
+        _description: `Quiz completed: ${score}/${total} (${Math.round(percentage)}%)`,
+        _reference_id: quizId,
       });
 
-      // Update profile coins
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('coins_earned')
-        .eq('id', user.id)
-        .single();
-
-      if (profile) {
-        await supabase
-          .from('profiles')
-          .update({ coins_earned: (profile.coins_earned || 0) + coins })
-          .eq('id', user.id);
+      if (coinError) {
+        console.error('Error adding coins:', coinError);
       }
 
       setCoinsEarned(coins);

@@ -155,27 +155,17 @@ export const CompetitionQuizModal = ({
           coins_earned: coinsEarned,
         });
 
-        // Add coins
-        await supabase.from('coin_transactions').insert({
-          user_id: user.id,
-          amount: coinsEarned,
-          transaction_type: 'competition_reward',
-          description: `Competition: ${competition.title}`,
-          reference_id: competition.id,
+        // Use atomic RPC function to add coins (prevents race conditions)
+        const { error: coinError } = await supabase.rpc('add_coins', {
+          _user_id: user.id,
+          _amount: coinsEarned,
+          _transaction_type: 'competition_reward',
+          _description: `Competition: ${competition.title}`,
+          _reference_id: competition.id,
         });
 
-        // Update profile coins
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('coins_earned')
-          .eq('id', user.id)
-          .single();
-          
-        if (profileData) {
-          await supabase
-            .from('profiles')
-            .update({ coins_earned: (profileData.coins_earned || 0) + coinsEarned })
-            .eq('id', user.id);
+        if (coinError && import.meta.env.DEV) {
+          console.error('Error adding coins:', coinError);
         }
 
         toast.success(`You earned ${coinsEarned} coins!`);

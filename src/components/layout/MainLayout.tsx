@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import { useLocation } from 'react-router-dom';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,6 +13,11 @@ interface MainLayoutProps {
 
 export const MainLayout = ({ children }: MainLayoutProps) => {
   const { profile, isAdmin } = useAuth();
+  const location = useLocation();
+
+  // AI Tutor needs an app-like layout with a single internal scrollbar.
+  // Other pages can keep the default page-level scrolling.
+  const isAITutor = location.pathname === '/ai-tutor';
 
   return (
     <SidebarProvider>
@@ -50,7 +56,13 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
           </header>
           
           {/* Main Content */}
-          <main className="flex-1 p-6 overflow-auto bg-background">
+          <main
+            className={
+              isAITutor
+                ? 'flex-1 overflow-hidden bg-background'
+                : 'flex-1 p-6 overflow-auto bg-background'
+            }
+          >
             {children}
           </main>
         </div>

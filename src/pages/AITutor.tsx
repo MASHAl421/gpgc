@@ -5,12 +5,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { 
   Plus, Send, Loader2, 
   MessageSquare, Trash2, Search, ChevronDown, X,
-  Copy, Check, Paperclip, Image as ImageIcon, FileText
+  Copy, Check, Paperclip, Image as ImageIcon, FileText,
+  ThumbsUp, ThumbsDown, Share2, Volume2, VolumeX, RotateCcw
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useChatHistory } from '@/hooks/useChatHistory';
+import { useTextToSpeech } from '@/hooks/useTextToSpeech';
 import { supabase } from '@/integrations/supabase/client';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
@@ -23,26 +25,124 @@ type Message = { role: 'user' | 'assistant'; content: string; imageData?: string
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-tutor`;
 
-// Copy button component
-const CopyButton = ({ text }: { text: string }) => {
+// Message action buttons component for assistant messages
+interface MessageActionsProps {
+  text: string;
+  onRetry: () => void;
+  speak: (text: string) => void;
+  stop: () => void;
+  isSpeaking: boolean;
+  isSupported: boolean;
+}
+
+const MessageActions = ({ text, onRetry, speak, stop, isSpeaking, isSupported }: MessageActionsProps) => {
   const [copied, setCopied] = useState(false);
+  const [liked, setLiked] = useState<boolean | null>(null);
+  const { toast } = useToast();
   
   const handleCopy = async () => {
     await navigator.clipboard.writeText(text);
     setCopied(true);
+    toast({ title: 'Copied to clipboard' });
     setTimeout(() => setCopied(false), 2000);
   };
   
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({ text });
+        toast({ title: 'Shared successfully' });
+      } catch (err) {
+        // User cancelled or error
+      }
+    } else {
+      await navigator.clipboard.writeText(text);
+      toast({ title: 'Copied to clipboard (sharing not supported)' });
+    }
+  };
+  
+  const handleSpeak = () => {
+    if (isSpeaking) {
+      stop();
+    } else {
+      speak(text);
+    }
+  };
+  
+  const handleLike = () => {
+    setLiked(liked === true ? null : true);
+    if (liked !== true) toast({ title: 'Thanks for your feedback!' });
+  };
+  
+  const handleDislike = () => {
+    setLiked(liked === false ? null : false);
+    if (liked !== false) toast({ title: 'Thanks for your feedback!' });
+  };
+  
   return (
-    <Button
-      variant="ghost"
-      size="icon"
-      className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-      onClick={handleCopy}
-      title="Copy to clipboard"
-    >
-      {copied ? <Check className="h-3 w-3 text-primary" /> : <Copy className="h-3 w-3" />}
-    </Button>
+    <div className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-7 w-7"
+        onClick={handleCopy}
+        title="Copy"
+      >
+        {copied ? <Check className="h-3.5 w-3.5 text-primary" /> : <Copy className="h-3.5 w-3.5" />}
+      </Button>
+      
+      <Button
+        variant="ghost"
+        size="icon"
+        className={`h-7 w-7 ${liked === true ? 'text-primary bg-primary/10' : ''}`}
+        onClick={handleLike}
+        title="Like"
+      >
+        <ThumbsUp className="h-3.5 w-3.5" />
+      </Button>
+      
+      <Button
+        variant="ghost"
+        size="icon"
+        className={`h-7 w-7 ${liked === false ? 'text-destructive bg-destructive/10' : ''}`}
+        onClick={handleDislike}
+        title="Dislike"
+      >
+        <ThumbsDown className="h-3.5 w-3.5" />
+      </Button>
+      
+      {isSupported && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className={`h-7 w-7 ${isSpeaking ? 'text-primary bg-primary/10' : ''}`}
+          onClick={handleSpeak}
+          title={isSpeaking ? "Stop speaking" : "Read aloud"}
+        >
+          {isSpeaking ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+        </Button>
+      )}
+      
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-7 w-7"
+        onClick={handleShare}
+        title="Share"
+      >
+        <Share2 className="h-3.5 w-3.5" />
+      </Button>
+      
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-7 w-7"
+        onClick={onRetry}
+        title="Retry"
+      >
+        <RotateCcw className="h-3.5 w-3.5" />
+      </Button>
+    </div>
   );
 };
 
@@ -53,6 +153,7 @@ const AITutor = () => {
   const [attachedFile, setAttachedFile] = useState<{ data: string; name: string; type: string } | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+  const [lastUserMessage, setLastUserMessage] = useState<{ content: string; imageData?: string; imageName?: string } | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -61,6 +162,7 @@ const AITutor = () => {
   const { toast } = useToast();
   const { isAuthenticated, user, session } = useAuth();
   const isMobile = useIsMobile();
+  const { speak, stop, isSpeaking, isSupported } = useTextToSpeech();
   
   const { 
     chatSessions, 
@@ -192,6 +294,12 @@ const AITutor = () => {
       imageData: attachedFile?.data,
       imageName: attachedFile?.name,
     };
+    // Store last user message for retry functionality
+    setLastUserMessage({ 
+      content: userMsg.content, 
+      imageData: userMsg.imageData, 
+      imageName: userMsg.imageName 
+    });
     const questionText = question || attachedFile?.name || 'File analysis';
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
@@ -301,13 +409,43 @@ const AITutor = () => {
   const handleNewChat = async () => {
     setMessages([]);
     setCurrentSessionId(null);
+    setLastUserMessage(null);
     if (isMobile) setSidebarOpen(false);
   };
 
   const handleLoadSession = (sessionId: string) => {
     const sessionMessages = loadSession(sessionId);
     setMessages(sessionMessages);
+    // Find last user message for retry
+    const lastUser = [...sessionMessages].reverse().find(m => m.role === 'user');
+    if (lastUser) {
+      setLastUserMessage({ content: lastUser.content, imageData: (lastUser as any).imageData, imageName: (lastUser as any).imageName });
+    }
     if (isMobile) setSidebarOpen(false);
+  };
+
+  // Retry last message - removes last assistant response and resends
+  const handleRetry = () => {
+    if (!lastUserMessage || isLoading) return;
+    
+    // Remove the last assistant message
+    setMessages(prev => {
+      const newMessages = [...prev];
+      if (newMessages.length > 0 && newMessages[newMessages.length - 1].role === 'assistant') {
+        newMessages.pop();
+      }
+      return newMessages;
+    });
+    
+    // Set the question and trigger send
+    setQuestion(lastUserMessage.content);
+    if (lastUserMessage.imageData && lastUserMessage.imageName) {
+      setAttachedFile({
+        data: lastUserMessage.imageData,
+        name: lastUserMessage.imageName,
+        type: lastUserMessage.imageData.startsWith('data:image') ? 'image/png' : 'application/pdf'
+      });
+    }
   };
 
   return (
@@ -493,12 +631,9 @@ const AITutor = () => {
                               )}
                               <p className="whitespace-pre-wrap">{message.content}</p>
                             </div>
-                            <div className="absolute -bottom-6 right-0">
-                              <CopyButton text={message.content} />
-                            </div>
                           </div>
                         ) : (
-                          <div className="relative">
+                          <div className="relative group">
                             <div className="prose prose-sm dark:prose-invert max-w-none">
                               <ReactMarkdown
                                 remarkPlugins={[remarkMath]}
@@ -531,9 +666,14 @@ const AITutor = () => {
                                 {message.content}
                               </ReactMarkdown>
                             </div>
-                            <div className="absolute -bottom-6 left-0">
-                              <CopyButton text={message.content} />
-                            </div>
+                            <MessageActions 
+                              text={message.content} 
+                              onRetry={handleRetry}
+                              speak={speak}
+                              stop={stop}
+                              isSpeaking={isSpeaking}
+                              isSupported={isSupported}
+                            />
                           </div>
                         )}
                       </div>

@@ -62,8 +62,18 @@ const SubjectivePaperDisplay = ({ config, shortCount, longCount, onBack }: Subje
         difficultyLevels: config.difficultyLevels,
       });
 
-      setQuestions(generated);
-      toast.success(`Generated ${generated.length} questions successfully!`);
+      // Filter questions based on user's selected criteria (AI may return extras)
+      const filtered = generated.filter((q) => {
+        const matchesDifficulty = config.difficultyLevels.includes(q.difficulty);
+        const matchesType = config.questionTypes.includes(q.category);
+        return matchesDifficulty && matchesType;
+      });
+
+      // Use filtered if any match, otherwise use all (AI may not have tagged correctly)
+      const finalQuestions = filtered.length > 0 ? filtered : generated;
+
+      setQuestions(finalQuestions);
+      toast.success(`Generated ${finalQuestions.length} questions successfully!`);
     } catch (error: any) {
       console.error('Error generating questions:', error);
       const errorMessage = error?.message || 'Unknown error occurred';

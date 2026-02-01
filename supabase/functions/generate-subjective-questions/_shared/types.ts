@@ -4,7 +4,7 @@ export type Category = "exercise" | "conceptual";
 export const LIMITS = {
   maxSubjectLen: 200,
   maxTopicLen: 100,
-  maxTopics: 10,
+  maxTopics: 50,
 
   // UI caps (mirrored in frontend UI)
   uiMaxShort: 80,

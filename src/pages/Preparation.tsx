@@ -427,6 +427,19 @@ const Preparation = () => {
               {/* Show Academic Resources */}
               {selectedCategory === 'academic' ? (
                 <AcademicResources subjectId={selectedSubject.id} subjectName={selectedSubject.name} />
+              ) : selectedCategory === 'video' && selectedSubject.name.toLowerCase().includes('islamic') ? (
+                /* Islamic Studies - Show English message for video lectures */
+                <Card className="bg-card border-border">
+                  <CardContent className="p-6 sm:p-8 text-center">
+                    <PlayCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-lg text-foreground mb-2">
+                      Video lectures are not available yet
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Please check back later for updates
+                    </p>
+                  </CardContent>
+                </Card>
               ) : (selectedCategory === 'keynotes' || selectedCategory === 'objective' || selectedCategory === 'subjective') && selectedSubject.name.toLowerCase().includes('islamic') ? (
                 /* Islamic Studies - Show Urdu message for keynotes, objective, subjective */
                 <Card className="bg-card border-border">

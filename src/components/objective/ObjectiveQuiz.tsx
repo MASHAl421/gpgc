@@ -121,22 +121,44 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
       const quizIds = quizzes.map(q => q.id);
       
       // Get questions for these quizzes
-      const { data: questionsData, error: questionsError } = await supabase
+      let questionsQuery = supabase
         .from('questions')
         .select('*')
-        .in('quiz_id', quizIds)
-        .order('order_index');
+        .in('quiz_id', quizIds);
+      
+      // Filter by question_type if not all selected
+      if (config.questionTypes.length === 1) {
+        questionsQuery = questionsQuery.eq('question_type', config.questionTypes[0]);
+      } else if (config.questionTypes.length > 0 && config.questionTypes.length < 2) {
+        questionsQuery = questionsQuery.in('question_type', config.questionTypes);
+      }
+
+      const { data: questionsData, error: questionsError } = await questionsQuery.order('order_index');
 
       if (questionsError) throw questionsError;
 
       // Add quiz difficulty to questions for display
       const quizDifficultyMap = Object.fromEntries(quizzes.map(q => [q.id, q.difficulty]));
-      const enrichedQuestions: UIQuestion[] = (questionsData || []).map((q: Question) => ({
+      let enrichedQuestions: UIQuestion[] = (questionsData || []).map((q: Question) => ({
         ...q,
         difficulty: quizDifficultyMap[q.quiz_id] || 'medium',
-        question_type: 'exercise', // Default, can be enhanced later
+        question_type: q.question_type || 'exercise',
         shuffledOptions: buildShuffledOptions(q),
       }));
+
+      // Client-side filter by difficulty (in case DB filter didn't apply via quiz)
+      if (config.difficultyLevels.length > 0 && config.difficultyLevels.length < 3) {
+        enrichedQuestions = enrichedQuestions.filter(q => 
+          config.difficultyLevels.includes(q.difficulty || 'medium')
+        );
+      }
+
+      // Client-side filter by question type as fallback
+      if (config.questionTypes.length > 0 && config.questionTypes.length < 2) {
+        enrichedQuestions = enrichedQuestions.filter(q =>
+          config.questionTypes.includes(q.question_type || 'exercise')
+        );
+      }
 
       setQuestions(enrichedQuestions);
     } catch (error) {

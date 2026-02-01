@@ -19,6 +19,7 @@ interface Note {
 const academicData: Record<string, {
   courseContent: string;
   notes: Note[];
+  externalLink?: { title: string; url: string };
 }> = {
   'functional-english': {
     courseContent: '/academic/functional-english-course-content.jpg',
@@ -52,6 +53,16 @@ const academicData: Record<string, {
     notes: [
       { id: '1', title: 'Lecture 1 to 14: Complete ICT Notes', file_url: '/academic/notes/ict-lectures-1-to-14.pdf' },
     ]
+  },
+  'islamic-studies': {
+    courseContent: '/academic/islamic-studies-course-content.pdf',
+    notes: [
+      { id: '1', title: 'تیس احادیث مبارکہ - 30 Hadiths', file_url: '/academic/notes/30-hadiths.pdf' },
+    ],
+    externalLink: {
+      title: 'اسلامیات نوٹس - Google Drive',
+      url: 'https://drive.google.com/file/d/16bSCn4cj52YtCt-SbKOJ0ssZC6sLjrIb/view?usp=sharing'
+    }
   }
 };
 
@@ -90,6 +101,9 @@ const AcademicResources = ({ subjectId, subjectName }: AcademicResourcesProps) =
     document.body.removeChild(link);
   };
 
+  // Check if course content is a PDF
+  const isPdf = data.courseContent.toLowerCase().endsWith('.pdf');
+
   if (selectedView === 'course-content') {
     return (
       <div className="space-y-4">
@@ -100,29 +114,45 @@ const AcademicResources = ({ subjectId, subjectName }: AcademicResourcesProps) =
         
         <Card className="bg-card border-border">
           <CardHeader className="pb-4 border-b border-border">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <CardTitle className="text-lg text-foreground flex items-center gap-2">
                 <Image className="h-5 w-5 text-primary" />
                 Course Content - {subjectName}
               </CardTitle>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleDownload(data.courseContent, `${subjectName}-course-content.jpg`)}
-                className="gap-2"
-              >
-                <Download className="h-4 w-4" />
-                Download
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" asChild>
+                  <a href={data.courseContent} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Open
+                  </a>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleDownload(data.courseContent, `${subjectName}-course-content${isPdf ? '.pdf' : '.jpg'}`)}
+                  className="gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  Download
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="p-4">
             <div className="rounded-lg overflow-hidden border border-border">
-              <img 
-                src={data.courseContent} 
-                alt={`${subjectName} Course Content`}
-                className="w-full h-auto"
-              />
+              {isPdf ? (
+                <iframe 
+                  src={`${data.courseContent}#toolbar=1`}
+                  className="w-full h-[70vh] rounded-lg"
+                  title={`${subjectName} Course Content`}
+                />
+              ) : (
+                <img 
+                  src={data.courseContent} 
+                  alt={`${subjectName} Course Content`}
+                  className="w-full h-auto"
+                />
+              )}
             </div>
           </CardContent>
         </Card>
@@ -234,7 +264,7 @@ const AcademicResources = ({ subjectId, subjectName }: AcademicResourcesProps) =
         </div>
       </CardHeader>
       <CardContent className="p-4 md:p-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Course Content Card */}
           <Card 
             className="cursor-pointer hover:shadow-lg transition-all bg-accent border-border group hover:border-primary"
@@ -276,6 +306,29 @@ const AcademicResources = ({ subjectId, subjectName }: AcademicResourcesProps) =
               </p>
             </CardContent>
           </Card>
+
+          {/* External Link Card (for Islamic Studies Google Drive) */}
+          {data.externalLink && (
+            <Card 
+              className="cursor-pointer hover:shadow-lg transition-all bg-accent border-border group hover:border-primary"
+              onClick={() => window.open(data.externalLink!.url, '_blank')}
+            >
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="h-12 w-12 rounded-xl bg-emerald-600 flex items-center justify-center shrink-0">
+                    <ExternalLink className="h-6 w-6 text-white" />
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                </div>
+                <h3 className="font-semibold text-foreground text-lg mb-1 font-urdu" dir="rtl">
+                  {data.externalLink.title}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  External resource - opens in new tab
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </CardContent>
     </Card>

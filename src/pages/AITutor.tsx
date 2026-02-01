@@ -680,15 +680,27 @@ const AITutor = () => {
                     </div>
                   ))}
                   
-                  {/* Thinking Indicator - Modern ChatGPT style */}
+                  {/* Thinking Indicator - Beautiful Modern Style */}
                   {isLoading && messages[messages.length - 1]?.role === 'user' && (
-                    <div className="flex justify-start">
-                      <div className="flex items-center gap-3 px-4 py-3 bg-muted/50 rounded-2xl">
-                        <div className="relative flex items-center justify-center w-5 h-5">
-                          <div className="absolute w-5 h-5 border-2 border-primary/30 rounded-full" />
-                          <div className="absolute w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    <div className="flex justify-start animate-fade-in">
+                      <div className="flex items-center gap-4 px-5 py-4 bg-gradient-to-r from-muted/60 to-muted/30 backdrop-blur-sm rounded-2xl border border-border/50 shadow-sm">
+                        {/* Animated AI Icon */}
+                        <div className="relative flex items-center justify-center">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                            <div className="w-5 h-5 rounded-full bg-gradient-to-br from-primary to-primary/70 animate-pulse" />
+                          </div>
+                          <div className="absolute inset-0 w-8 h-8 rounded-full border-2 border-primary/30 animate-ping" style={{ animationDuration: '1.5s' }} />
                         </div>
-                        <span className="text-sm text-muted-foreground animate-pulse">Thinking...</span>
+                        
+                        {/* Animated Text with Dots */}
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm font-medium text-foreground/80">Thinking</span>
+                          <span className="flex gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms', animationDuration: '0.6s' }} />
+                            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms', animationDuration: '0.6s' }} />
+                            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms', animationDuration: '0.6s' }} />
+                          </span>
+                        </div>
                       </div>
                     </div>
                   )}

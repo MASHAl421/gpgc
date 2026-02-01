@@ -47,16 +47,40 @@ const SubjectivePaperDisplay = ({ config, shortCount, longCount, onBack }: Subje
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase function error:', error);
+        if (error.message?.includes('429') || error.message?.includes('rate limit')) {
+          toast.error('Rate limit exceeded. Please wait a moment and try again.');
+        } else if (error.message?.includes('402')) {
+          toast.error('Service temporarily unavailable. Please try again later.');
+        } else if (error.message?.includes('401') || error.message?.includes('Unauthorized')) {
+          toast.error('Please login to generate questions.');
+        } else {
+          toast.error('Failed to generate questions. Please try again.');
+        }
+        return;
+      }
       
-      if (data?.questions) {
+      if (data?.error) {
+        console.error('API error:', data.error);
+        toast.error(data.error);
+        return;
+      }
+      
+      if (data?.questions && Array.isArray(data.questions) && data.questions.length > 0) {
         setQuestions(data.questions);
       } else {
-        throw new Error('No questions generated');
+        console.error('No questions in response:', data);
+        toast.error('No questions were generated. Please try different topics.');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating questions:', error);
-      toast.error('Failed to generate questions. Please try again.');
+      const errorMessage = error?.message || 'Unknown error occurred';
+      if (errorMessage.includes('Failed to fetch') || errorMessage.includes('network')) {
+        toast.error('Network error. Please check your connection.');
+      } else {
+        toast.error('Failed to generate questions. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }

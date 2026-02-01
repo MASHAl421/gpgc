@@ -159,7 +159,21 @@ SUBJECT-SPECIFIC GUIDELINES:
    - Use simple, clear sentences
    - Avoid complex vocabulary
 
-3. **General Knowledge:**
+3. **Applied Physics (PHYS-103):**
+   - For "Electric Charge": Quantization (Q=ne), conservation, Coulomb's law
+   - For "Conductors/Insulators": Free electrons, resistivity, band gap
+   - For "Electric Field": E=kQ/r², field lines, superposition
+   - For "Electric Flux": Φ=EA cos θ, Gauss's law applications
+   - For "Electric Potential": V=kQ/r, potential difference, gradient
+   - For "Current/Resistance": Ohm's law, resistivity, power (P=VI)
+   - For "Magnetic Force": F=qvB, Lorentz force, cyclotron motion
+   - For "Biot-Savart/Ampere": B=μ₀I/2πr, solenoid, toroid
+   - For "Electromagnetic Induction": Faraday's law, Lenz's law, motional EMF
+   - For "Optics": Snell's law, TIR, interference, diffraction, polarization
+   - Use proper physics formulas and units
+   - Include numerical problems with simple calculations
+
+4. **General Knowledge:**
    - Pakistan geography, capitals, provinces
    - Basic current affairs
    - Simple science facts

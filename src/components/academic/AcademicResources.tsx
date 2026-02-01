@@ -67,6 +67,16 @@ const academicData: Record<string, {
       title: 'اسلامیات نوٹس - Google Drive',
       url: 'https://drive.google.com/file/d/16bSCn4cj52YtCt-SbKOJ0ssZC6sLjrIb/view?usp=sharing'
     }
+  },
+  'applied-physics': {
+    courseContent: '/academic/applied-physics-course-content.pdf',
+    notes: [
+      { id: '1', title: 'Complete Applied Physics Notes (All Chapters)', file_url: '/academic/notes/applied-physics-complete-notes.pdf' },
+    ],
+    externalLink: {
+      title: 'Applied Physics Notes - Google Drive',
+      url: 'https://drive.google.com/file/d/1kKLywgz9KAwSA_MxYJf_I-4ElFIC-cFF/view?usp=sharing'
+    }
   }
 };
 

@@ -20,6 +20,59 @@ export interface Subject {
 
 export const subjects: Subject[] = [
   {
+    id: 'applied-physics-bs',
+    name: 'Applied Physics',
+    grade: 'BS Level',
+    units: [
+      {
+        id: 'ap-unit-1',
+        name: 'Unit 1: Electrostatics',
+        topics: [
+          { id: 'ap-t1-1', name: 'Electric Charge', quizCount: 40, completed: false },
+          { id: 'ap-t1-2', name: 'Conductors and Insulators', quizCount: 35, completed: false },
+          { id: 'ap-t1-3', name: 'Charge in Isolated Conductors', quizCount: 30, completed: false },
+          { id: 'ap-t1-4', name: 'Electric Fields due to Point Charge', quizCount: 40, completed: false },
+          { id: 'ap-t1-5', name: 'Electric Flux', quizCount: 35, completed: false },
+          { id: 'ap-t1-6', name: 'Gauss Law and Applications', quizCount: 50, completed: false },
+          { id: 'ap-t1-7', name: 'Electric Potential', quizCount: 45, completed: false },
+          { id: 'ap-t1-8', name: 'Equipotential Surfaces', quizCount: 30, completed: false },
+          { id: 'ap-t1-9', name: 'Field and Potential Gradient', quizCount: 35, completed: false },
+        ],
+      },
+      {
+        id: 'ap-unit-2',
+        name: 'Unit 2: Current and Electricity',
+        topics: [
+          { id: 'ap-t2-1', name: 'Electric Current and Current Density', quizCount: 40, completed: false },
+          { id: 'ap-t2-2', name: 'Resistance and Resistivity', quizCount: 35, completed: false },
+          { id: 'ap-t2-3', name: 'Ohm Law', quizCount: 40, completed: false },
+          { id: 'ap-t2-4', name: 'Power in Electric Circuits', quizCount: 35, completed: false },
+          { id: 'ap-t2-5', name: 'Magnetic Force on Charge and Current', quizCount: 45, completed: false },
+          { id: 'ap-t2-6', name: 'Magnetic Field Lines and Biot-Savart Law', quizCount: 50, completed: false },
+          { id: 'ap-t2-7', name: 'Ampere Law - Solenoid and Toroid', quizCount: 45, completed: false },
+          { id: 'ap-t2-8', name: 'Faraday Law and Electromagnetic Induction', quizCount: 50, completed: false },
+          { id: 'ap-t2-9', name: 'Lenz Law and Motional EMF', quizCount: 40, completed: false },
+          { id: 'ap-t2-10', name: 'Displacement Current and Maxwell Equations', quizCount: 45, completed: false },
+        ],
+      },
+      {
+        id: 'ap-unit-3',
+        name: 'Unit 3: Optics',
+        topics: [
+          { id: 'ap-t3-1', name: 'Refraction of Light Waves', quizCount: 40, completed: false },
+          { id: 'ap-t3-2', name: 'Total Internal Reflection', quizCount: 35, completed: false },
+          { id: 'ap-t3-3', name: 'Interference of Light', quizCount: 45, completed: false },
+          { id: 'ap-t3-4', name: 'Young Double-Slit Experiment', quizCount: 50, completed: false },
+          { id: 'ap-t3-5', name: 'Thin Film Interference', quizCount: 40, completed: false },
+          { id: 'ap-t3-6', name: 'Diffraction and Wave Theory', quizCount: 35, completed: false },
+          { id: 'ap-t3-7', name: 'Single-Slit Diffraction', quizCount: 45, completed: false },
+          { id: 'ap-t3-8', name: 'Polarization of Light', quizCount: 40, completed: false },
+          { id: 'ap-t3-9', name: 'Polarizing Sheets and Malus Law', quizCount: 35, completed: false },
+        ],
+      },
+    ],
+  },
+  {
     id: 'physics-bs',
     name: 'Physics',
     grade: 'BS Level',

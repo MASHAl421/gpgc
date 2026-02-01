@@ -1,8 +1,27 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Amiri+Quran&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap");
+
+/* Jameel Noori Nastaleeq - Premium Urdu Font */
+@font-face {
+  font-family: 'Jameel Noori Nastaleeq';
+  src: url('https://cdn.jsdelivr.net/gh/AhadSoft/Urdu-Fonts/Jameel%20Noori%20Nastaleeq%20Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Al Qalam Quran Majeed - Arabic Quran Font */
+@font-face {
+  font-family: 'Al Qalam Quran Majeed';
+  src: url('https://cdn.jsdelivr.net/gh/AhadSoft/Arabic-Fonts/Al%20Qalam%20Quran%20Majeed.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -80,9 +99,9 @@ All colors MUST be HSL.
 
     --font-mono: 'Space Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
 
-    --font-urdu: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif;
+    --font-urdu: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif;
 
-    --font-arabic: 'Amiri Quran', 'Traditional Arabic', serif;
+    --font-arabic: 'Al Qalam Quran Majeed', 'Amiri', 'Traditional Arabic', serif;
     --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
 
     --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);

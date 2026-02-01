@@ -124,12 +124,13 @@ export default {
 				'monospace'
 			],
 			urdu: [
-				'Noto Nastaliq Urdu',
 				'Jameel Noori Nastaleeq',
+				'Noto Nastaliq Urdu',
 				'serif'
 			],
 			arabic: [
-				'Amiri Quran',
+				'Al Qalam Quran Majeed',
+				'Amiri',
 				'Traditional Arabic',
 				'serif'
 			]

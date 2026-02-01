@@ -1,19 +1,19 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-interface QuestionRequest {
-  subject: string;
-  topics: string[];
-  shortCount: number;
-  longCount: number;
-  questionTypes: string[];
-  difficultyLevels: string[];
-}
+import { corsHeaders, jsonResponse } from "./_shared/cors.ts";
+import type { QuestionRequest, SubjectiveQuestion } from "./_shared/types.ts";
+import {
+  sanitizeSubject,
+  sanitizeTopics,
+  validateCounts,
+  validateDifficultyLevels,
+  validateQuestionTypes,
+} from "./_shared/validate.ts";
+import {
+  generatePaperOnce,
+  PaymentRequiredError,
+  RateLimitError,
+} from "./_shared/ai.ts";
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -24,248 +24,72 @@ Deno.serve(async (req) => {
     // Authenticate user
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return jsonResponse({ error: "Unauthorized" }, { status: 401 });
     }
 
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      { global: { headers: { Authorization: authHeader } } }
+      { global: { headers: { Authorization: authHeader } } },
     );
 
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return jsonResponse({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { 
-      subject, 
-      topics, 
-      shortCount = 5, 
-      longCount = 3, 
-      questionTypes = ['exercise', 'conceptual'],
-      difficultyLevels = ['easy', 'medium', 'hard']
-    } = await req.json() as QuestionRequest;
+    const body = (await req.json()) as QuestionRequest;
 
-    // Input validation
-    if (!subject || typeof subject !== 'string') {
-      return new Response(
-        JSON.stringify({ error: "Invalid request: subject is required" }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    const subject = sanitizeSubject(body.subject);
+    const topics = sanitizeTopics(body.topics);
+    const { short, long } = validateCounts(body.shortCount, body.longCount);
+    const questionTypes = validateQuestionTypes(body.questionTypes);
+    const difficultyLevels = validateDifficultyLevels(body.difficultyLevels);
 
-    // Sanitize subject
-    const sanitizedSubject = subject.replace(/[^a-zA-Z0-9\s\-\+\(\)]/g, '').slice(0, 200);
-    if (sanitizedSubject.length === 0) {
-      return new Response(
-        JSON.stringify({ error: "Invalid subject" }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Validate and sanitize topics array
-    if (!Array.isArray(topics) || topics.length === 0) {
-      return new Response(
-        JSON.stringify({ error: "Invalid request: topics must be a non-empty array" }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    if (topics.length > 10) {
-      return new Response(
-        JSON.stringify({ error: "Too many topics: maximum 10 allowed" }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const sanitizedTopics = topics
-      .filter(t => typeof t === 'string')
-      .map(t => t.replace(/[^a-zA-Z0-9\s\-\+\(\)]/g, '').slice(0, 100))
-      .filter(t => t.length > 0);
-
-    if (sanitizedTopics.length === 0) {
-      return new Response(
-        JSON.stringify({ error: "No valid topics provided" }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Validate counts (max 20 each)
-    const validatedShortCount = Math.min(Math.max(1, Number(shortCount) || 5), 20);
-    const validatedLongCount = Math.min(Math.max(1, Number(longCount) || 3), 20);
-
-    // Validate question types
-    const validQuestionTypes = ['exercise', 'conceptual'];
-    const validatedQuestionTypes = (Array.isArray(questionTypes) ? questionTypes : [])
-      .filter(t => validQuestionTypes.includes(t));
-    if (validatedQuestionTypes.length === 0) {
-      validatedQuestionTypes.push('exercise', 'conceptual');
-    }
-
-    // Validate difficulty levels
-    const validDifficultyLevels = ['easy', 'medium', 'hard'];
-    const validatedDifficultyLevels = (Array.isArray(difficultyLevels) ? difficultyLevels : [])
-      .filter(d => validDifficultyLevels.includes(d));
-    if (validatedDifficultyLevels.length === 0) {
-      validatedDifficultyLevels.push('easy', 'medium', 'hard');
-    }
-
-    const topicsText = sanitizedTopics.join(', ');
-    const typesText = validatedQuestionTypes.join(' and ');
-    const difficultiesText = validatedDifficultyLevels.join(', ');
-
-    const systemPrompt = `You are an expert exam paper generator for BS Semester 1 students in Pakistan. Generate subjective questions with detailed answers.
-
-SUBJECT: ${sanitizedSubject}
-TOPICS: ${topicsText}
-QUESTION TYPES: ${typesText}
-DIFFICULTY LEVELS: ${difficultiesText}
-
-Generate exactly ${validatedShortCount} SHORT questions and ${validatedLongCount} LONG questions.
-
-GUIDELINES:
-1. **Short Questions** (2-4 lines answer):
-   - Define terms, explain concepts briefly
-   - "What is...", "Define...", "Differentiate between...", "List..."
-   - Answers should be 2-4 sentences
-
-2. **Long Questions** (detailed paragraph answer):
-   - Explain in detail, describe processes, compare and contrast
-   - "Explain in detail...", "Describe the process of...", "Discuss..."
-   - Answers should be 5-10 sentences with proper explanation
-
-3. **For Programming Fundamentals (C++):**
-   - Short: Define variable, explain operators, syntax questions
-   - Long: Write programs, explain algorithms, trace output with explanation
-
-4. **For Functional English:**
-   - Short: Grammar rules, definitions, identify parts of speech
-   - Long: Essay writing, paragraph construction, comprehension
-
-5. **Question Types:**
-   - Exercise: Practice problems, code writing, grammar exercises
-   - Conceptual: Theory, definitions, explanations
-
-6. **Difficulty Distribution:**
-   - Easy: Basic definitions, simple examples
-   - Medium: Application of concepts
-   - Hard: Complex problems, critical thinking
-
-RESPONSE FORMAT (JSON array only, no markdown):
-{
-  "questions": [
-    {
-      "id": "q-unique-id",
-      "question": "Question text here?",
-      "answer": "Detailed answer here...",
-      "type": "short" or "long",
-      "category": "exercise" or "conceptual",
-      "difficulty": "easy" or "medium" or "hard"
-    }
-  ]
-}
-
-Generate unique, educational questions with accurate answers. Each question must be different from others. For programming questions, include code examples where relevant.`;
-
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${Deno.env.get("LOVABLE_API_KEY")}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: "You are an expert academic question generator. Always respond with valid JSON only, no markdown code blocks. Generate educational questions with accurate, detailed answers." },
-          { role: "user", content: systemPrompt }
-        ],
-        temperature: 0.8,
-        max_tokens: 6000,
-      }),
+    const questions = await generatePaperOnce({
+      subject,
+      topics,
+      questionTypes,
+      difficultyLevels,
+      shortCount: short,
+      longCount: long,
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("AI API error:", errorText);
-      
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: "Rate limit exceeded. Please try again in a moment." 
-        }), {
-          status: 429,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: "Service temporarily unavailable. Please try again later." 
-        }), {
-          status: 402,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      
-      throw new Error(`AI API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    let content = data.choices?.[0]?.message?.content || "";
-    
-    // Clean up the response - remove markdown code blocks if present
-    content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-    
-    let result;
-    try {
-      result = JSON.parse(content);
-    } catch (parseError) {
-      console.error("Parse error, content:", content);
-      throw new Error("Failed to parse AI response");
-    }
-
-    // Validate and ensure proper format
-    if (!result.questions || !Array.isArray(result.questions)) {
-      throw new Error("Invalid response format");
-    }
-
-    // Add unique IDs if not present and validate structure
-    const formattedQuestions = result.questions.map((q: any, index: number) => ({
-      id: q.id || `q-${Date.now()}-${index}`,
-      question: q.question,
-      answer: q.answer,
-      type: q.type || (index < validatedShortCount ? 'short' : 'long'),
-      category: q.category || 'conceptual',
-      difficulty: q.difficulty || 'medium'
-    }));
-
-    return new Response(JSON.stringify({ 
-      success: true, 
-      questions: formattedQuestions,
-      subject: sanitizedSubject,
-      shortCount: formattedQuestions.filter((q: any) => q.type === 'short').length,
-      longCount: formattedQuestions.filter((q: any) => q.type === 'long').length
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    return jsonResponse({
+      success: true,
+      questions,
+      subject,
+      shortCount: (questions as SubjectiveQuestion[]).filter((q: SubjectiveQuestion) => q.type === "short").length,
+      longCount: (questions as SubjectiveQuestion[]).filter((q: SubjectiveQuestion) => q.type === "long").length,
+      totalCount: questions.length,
     });
-
   } catch (error: unknown) {
     console.error("Error generating subjective questions:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: errorMessage 
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+
+    if (error instanceof RateLimitError) {
+      return jsonResponse(
+        { success: false, error: "Rate limit exceeded. Please try again in a moment." },
+        { status: 429 },
+      );
+    }
+
+    if (error instanceof PaymentRequiredError) {
+      return jsonResponse(
+        { success: false, error: "Service temporarily unavailable. Please try again later." },
+        { status: 402 },
+      );
+    }
+
+    const message = error instanceof Error ? error.message : "Unknown error";
+    const isBadRequest =
+      message.toLowerCase().includes("invalid") ||
+      message.toLowerCase().includes("maximum") ||
+      message.toLowerCase().includes("please request") ||
+      message.toLowerCase().includes("too many");
+
+    return jsonResponse(
+      { success: false, error: message },
+      { status: isBadRequest ? 400 : 500 },
+    );
   }
 });

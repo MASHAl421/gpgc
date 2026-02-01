@@ -427,8 +427,8 @@ const Preparation = () => {
               {/* Show Academic Resources */}
               {selectedCategory === 'academic' ? (
                 <AcademicResources subjectId={selectedSubject.id} subjectName={selectedSubject.name} />
-              ) : selectedCategory === 'video' && selectedSubject.name.toLowerCase().includes('islamic') ? (
-                /* Islamic Studies - Show English message for video lectures */
+              ) : selectedCategory === 'video' ? (
+                /* Show English message for video lectures - all subjects */
                 <Card className="bg-card border-border">
                   <CardContent className="p-6 sm:p-8 text-center">
                     <PlayCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />

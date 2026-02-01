@@ -680,26 +680,14 @@ const AITutor = () => {
                     </div>
                   ))}
                   
-                  {/* Thinking Indicator - Beautiful Modern Style */}
+                  {/* Thinking Indicator - Simple & Professional */}
                   {isLoading && messages[messages.length - 1]?.role === 'user' && (
-                    <div className="flex justify-start animate-fade-in">
-                      <div className="flex items-center gap-4 px-5 py-4 bg-gradient-to-r from-muted/60 to-muted/30 backdrop-blur-sm rounded-2xl border border-border/50 shadow-sm">
-                        {/* Animated AI Icon */}
-                        <div className="relative flex items-center justify-center">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                            <div className="w-5 h-5 rounded-full bg-gradient-to-br from-primary to-primary/70 animate-pulse" />
-                          </div>
-                          <div className="absolute inset-0 w-8 h-8 rounded-full border-2 border-primary/30 animate-ping" style={{ animationDuration: '1.5s' }} />
-                        </div>
-                        
-                        {/* Animated Text with Dots */}
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-sm font-medium text-foreground/80">Thinking</span>
-                          <span className="flex gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms', animationDuration: '0.6s' }} />
-                            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms', animationDuration: '0.6s' }} />
-                            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms', animationDuration: '0.6s' }} />
-                          </span>
+                    <div className="flex justify-start">
+                      <div className="flex items-center gap-2 px-4 py-2.5 bg-muted/50 rounded-xl">
+                        <div className="flex gap-1">
+                          <span className="w-2 h-2 rounded-full bg-foreground/40 animate-pulse" style={{ animationDelay: '0ms' }} />
+                          <span className="w-2 h-2 rounded-full bg-foreground/40 animate-pulse" style={{ animationDelay: '200ms' }} />
+                          <span className="w-2 h-2 rounded-full bg-foreground/40 animate-pulse" style={{ animationDelay: '400ms' }} />
                         </div>
                       </div>
                     </div>

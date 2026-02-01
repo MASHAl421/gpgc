@@ -35,7 +35,23 @@ const SubjectivePaperDisplay = ({ config, shortCount, longCount, onBack }: Subje
 
   const generateQuestions = async () => {
     setIsLoading(true);
+    setQuestions([]);
+    
     try {
+      // Check if user is logged in
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Please login to generate questions.');
+        return;
+      }
+
+      console.log('Generating subjective questions:', {
+        subject: config.subjectName,
+        topics: config.topicNames,
+        shortCount,
+        longCount,
+      });
+
       const { data, error } = await supabase.functions.invoke('generate-subjective-questions', {
         body: {
           subject: config.subjectName,
@@ -47,13 +63,16 @@ const SubjectivePaperDisplay = ({ config, shortCount, longCount, onBack }: Subje
         }
       });
 
+      console.log('Response:', { data, error });
+
       if (error) {
         console.error('Supabase function error:', error);
-        if (error.message?.includes('429') || error.message?.includes('rate limit')) {
+        const errorMsg = error.message || '';
+        if (errorMsg.includes('429') || errorMsg.includes('rate limit')) {
           toast.error('Rate limit exceeded. Please wait a moment and try again.');
-        } else if (error.message?.includes('402')) {
+        } else if (errorMsg.includes('402')) {
           toast.error('Service temporarily unavailable. Please try again later.');
-        } else if (error.message?.includes('401') || error.message?.includes('Unauthorized')) {
+        } else if (errorMsg.includes('401') || errorMsg.includes('Unauthorized')) {
           toast.error('Please login to generate questions.');
         } else {
           toast.error('Failed to generate questions. Please try again.');
@@ -61,17 +80,19 @@ const SubjectivePaperDisplay = ({ config, shortCount, longCount, onBack }: Subje
         return;
       }
       
-      if (data?.error) {
+      // Check for success: false response
+      if (data?.success === false) {
         console.error('API error:', data.error);
-        toast.error(data.error);
+        toast.error(data.error || 'Failed to generate questions.');
         return;
       }
       
       if (data?.questions && Array.isArray(data.questions) && data.questions.length > 0) {
         setQuestions(data.questions);
+        toast.success(`Generated ${data.questions.length} questions successfully!`);
       } else {
         console.error('No questions in response:', data);
-        toast.error('No questions were generated. Please try different topics.');
+        toast.error('No questions were generated. Please try again.');
       }
     } catch (error: any) {
       console.error('Error generating questions:', error);

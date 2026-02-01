@@ -7,6 +7,7 @@ import { ArrowLeft, FileText, Loader2, RefreshCw, ChevronDown, ChevronUp } from 
 import { SubjectiveConfig } from './SubjectivePaperSelector';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { generateSubjectiveQuestionsBatched } from '@/lib/subjective/generateSubjectiveQuestionsBatched';
 
 interface SubjectivePaperDisplayProps {
   config: SubjectiveConfig;
@@ -52,55 +53,31 @@ const SubjectivePaperDisplay = ({ config, shortCount, longCount, onBack }: Subje
         longCount,
       });
 
-      const { data, error } = await supabase.functions.invoke('generate-subjective-questions', {
-        body: {
-          subject: config.subjectName,
-          topics: config.topicNames,
-          shortCount,
-          longCount,
-          questionTypes: config.questionTypes,
-          difficultyLevels: config.difficultyLevels,
-        }
+      const generated = await generateSubjectiveQuestionsBatched({
+        subject: config.subjectName,
+        topics: config.topicNames,
+        shortCount,
+        longCount,
+        questionTypes: config.questionTypes,
+        difficultyLevels: config.difficultyLevels,
       });
 
-      console.log('Response:', { data, error });
-
-      if (error) {
-        console.error('Supabase function error:', error);
-        const errorMsg = error.message || '';
-        if (errorMsg.includes('429') || errorMsg.includes('rate limit')) {
-          toast.error('Rate limit exceeded. Please wait a moment and try again.');
-        } else if (errorMsg.includes('402')) {
-          toast.error('Service temporarily unavailable. Please try again later.');
-        } else if (errorMsg.includes('401') || errorMsg.includes('Unauthorized')) {
-          toast.error('Please login to generate questions.');
-        } else {
-          toast.error('Failed to generate questions. Please try again.');
-        }
-        return;
-      }
-      
-      // Check for success: false response
-      if (data?.success === false) {
-        console.error('API error:', data.error);
-        toast.error(data.error || 'Failed to generate questions.');
-        return;
-      }
-      
-      if (data?.questions && Array.isArray(data.questions) && data.questions.length > 0) {
-        setQuestions(data.questions);
-        toast.success(`Generated ${data.questions.length} questions successfully!`);
-      } else {
-        console.error('No questions in response:', data);
-        toast.error('No questions were generated. Please try again.');
-      }
+      setQuestions(generated);
+      toast.success(`Generated ${generated.length} questions successfully!`);
     } catch (error: any) {
       console.error('Error generating questions:', error);
       const errorMessage = error?.message || 'Unknown error occurred';
       if (errorMessage.includes('Failed to fetch') || errorMessage.includes('network')) {
         toast.error('Network error. Please check your connection.');
+      } else if (errorMessage.includes('429') || errorMessage.toLowerCase().includes('rate limit')) {
+        toast.error('AI rate limit reached. Wait 1-2 minutes and generate again.');
+      } else if (errorMessage.includes('402')) {
+        toast.error('AI service temporarily unavailable. Please try later.');
+      } else if (errorMessage.includes('401') || errorMessage.toLowerCase().includes('unauthorized')) {
+        toast.error('Please login to generate questions.');
       } else {
-        toast.error('Failed to generate questions. Please try again.');
+        // Avoid generic “try again” message; show the real reason.
+        toast.error(`Could not generate paper: ${errorMessage}`);
       }
     } finally {
       setIsLoading(false);

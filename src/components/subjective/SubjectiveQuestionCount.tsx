@@ -16,12 +16,17 @@ const SubjectiveQuestionCount = ({ config, onBack, onStart }: SubjectiveQuestion
   const [shortCount, setShortCount] = useState<number>(5);
   const [longCount, setLongCount] = useState<number>(3);
 
+  // Keep these in sync with backend limits (generate-subjective-questions)
+  const MAX_SHORT = 80;
+  const MAX_LONG = 40;
+  const MAX_TOTAL = 100;
+
   const handleStart = () => {
     onStart(shortCount, longCount);
   };
 
-  const canStart = shortCount > 0 || longCount > 0;
   const totalQuestions = shortCount + longCount;
+  const canStart = totalQuestions > 0 && totalQuestions <= MAX_TOTAL;
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -73,9 +78,12 @@ const SubjectiveQuestionCount = ({ config, onBack, onStart }: SubjectiveQuestion
                 <Input
                   type="number"
                   min={0}
-                  max={20}
+                  max={MAX_SHORT}
                   value={shortCount}
-                  onChange={(e) => setShortCount(Math.max(0, parseInt(e.target.value) || 0))}
+                  onChange={(e) => {
+                    const next = Math.max(0, parseInt(e.target.value) || 0);
+                    setShortCount(Math.min(MAX_SHORT, next));
+                  }}
                   className="h-8 sm:h-9 w-16 sm:w-20 text-xs sm:text-sm text-primary"
                 />
               </div>
@@ -89,9 +97,12 @@ const SubjectiveQuestionCount = ({ config, onBack, onStart }: SubjectiveQuestion
                 <Input
                   type="number"
                   min={0}
-                  max={10}
+                  max={MAX_LONG}
                   value={longCount}
-                  onChange={(e) => setLongCount(Math.max(0, parseInt(e.target.value) || 0))}
+                  onChange={(e) => {
+                    const next = Math.max(0, parseInt(e.target.value) || 0);
+                    setLongCount(Math.min(MAX_LONG, next));
+                  }}
                   className="h-8 sm:h-9 w-16 sm:w-20 text-xs sm:text-sm text-primary"
                 />
               </div>
@@ -102,6 +113,13 @@ const SubjectiveQuestionCount = ({ config, onBack, onStart }: SubjectiveQuestion
           <div className="flex items-center justify-between text-xs sm:text-sm text-muted-foreground">
             <span>Total Questions: <span className="text-foreground font-medium">{totalQuestions}</span></span>
           </div>
+
+          {totalQuestions > MAX_TOTAL && (
+            <div className="rounded-lg border border-border bg-muted/50 p-3 text-xs sm:text-sm text-muted-foreground">
+              Maximum <span className="text-foreground font-medium">{MAX_TOTAL}</span> questions supported per paper.
+              Please reduce Short/Long counts.
+            </div>
+          )}
 
           {/* Start Button */}
           <div className="pt-2">
@@ -116,7 +134,9 @@ const SubjectiveQuestionCount = ({ config, onBack, onStart }: SubjectiveQuestion
             </Button>
             {!canStart && (
               <p className="text-xs sm:text-sm text-muted-foreground mt-2">
-                Please add at least 1 question.
+                {totalQuestions === 0
+                  ? 'Please add at least 1 question.'
+                  : `Please keep total questions within ${MAX_TOTAL}.`}
               </p>
             )}
           </div>

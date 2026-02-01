@@ -427,6 +427,27 @@ const Preparation = () => {
               {/* Show Academic Resources */}
               {selectedCategory === 'academic' ? (
                 <AcademicResources subjectId={selectedSubject.id} subjectName={selectedSubject.name} />
+              ) : (selectedCategory === 'keynotes' || selectedCategory === 'objective' || selectedCategory === 'subjective') && selectedSubject.name.toLowerCase().includes('islamic') ? (
+                /* Islamic Studies - Show Urdu message for keynotes, objective, subjective */
+                <Card className="bg-card border-border">
+                  <CardContent className="p-6 sm:p-8 text-center">
+                    <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-lg font-urdu text-foreground mb-2" dir="rtl">
+                      {selectedCategory === 'keynotes' ? 'کلیدی نوٹس' : selectedCategory === 'objective' ? 'معروضی پرچہ' : 'مضمونی پرچہ'} دستیاب نہیں ہیں
+                    </p>
+                    <p className="text-sm font-urdu text-muted-foreground" dir="rtl">
+                      آپ اکیڈمک ریسورسز سے نوٹس ڈاؤنلوڈ کر سکتے ہیں
+                    </p>
+                    <Button 
+                      variant="outline" 
+                      className="mt-4 gap-2"
+                      onClick={() => handleCategoryChange('academic')}
+                    >
+                      <BookOpen className="h-4 w-4" />
+                      اکیڈمک ریسورسز دیکھیں
+                    </Button>
+                  </CardContent>
+                </Card>
               ) : selectedCategory === 'objective' && quizConfig ? (
                 <ObjectiveQuiz config={quizConfig} onBack={handleBackFromQuiz} />
               ) : selectedCategory === 'objective' ? (

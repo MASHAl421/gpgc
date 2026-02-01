@@ -31,7 +31,11 @@ const academicData: Record<string, {
   },
   'programming-fundamentals': {
     courseContent: '/academic/programming-fundamentals-course-content.jpg',
-    notes: [] // Notes will be added later
+    notes: [],
+    externalLink: {
+      title: 'Programming Fundamentals Notes - Google Drive',
+      url: 'https://drive.google.com/file/d/11tj2KjO1K9v1io_P5RiKZ2nbk4FNzz6h/view?usp=drivesdk'
+    }
   },
   'civics-&-community-engagement': {
     courseContent: '/academic/civics-community-engagement-course-content.jpg',

@@ -466,19 +466,19 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
   const shouldShowExplanation = (!isExamMode && examSettings.showExplanations && isCurrentAnswered) || showAnswersInReview;
 
   return (
-    <div className="min-h-[calc(100vh-200px)] flex flex-col">
-      {/* Sticky Header */}
+    <div className="min-h-[calc(100vh-200px)] flex flex-col animate-in fade-in-0 duration-500">
+      {/* Sticky Header - Two rows on mobile */}
       <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border pb-3 mb-4">
         <div className="flex flex-col gap-3">
           {/* Top row: Exit, Subject, Mode badge */}
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
               <Button variant="ghost" size="sm" onClick={onBack} className="gap-1 px-2 sm:px-3 shrink-0">
                 <ArrowLeft className="h-4 w-4" />
                 <span className="hidden sm:inline">Exit</span>
               </Button>
               <div className="h-5 w-px bg-border hidden sm:block" />
-              <span className="text-sm font-medium text-foreground truncate max-w-[120px] sm:max-w-none">
+              <span className="text-sm font-medium text-foreground truncate flex-1">
                 {config.subjectName}
               </span>
               <Badge 
@@ -489,28 +489,48 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
               </Badge>
             </div>
             
-            {/* Timer and Progress */}
-            <div className="flex items-center gap-2 sm:gap-4">
-              {/* Enhanced Timer Display */}
+            {/* Desktop: Timer and Progress inline */}
+            <div className="hidden sm:flex items-center gap-3">
               {examSettings.timeLimit > 0 && !showAnswersInReview && (
-                <div className="flex items-center gap-2 sm:gap-3 bg-gradient-to-r from-primary/10 to-primary/5 rounded-xl px-3 sm:px-4 py-2 border border-primary/20 shadow-sm">
-                  <div className="flex items-center justify-center h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-primary/20">
-                    <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
+                <div className="flex items-center gap-2 bg-gradient-to-r from-primary/10 to-primary/5 rounded-xl px-4 py-2 border border-primary/20 shadow-sm animate-in slide-in-from-right-4 duration-300">
+                  <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary/20">
+                    <Clock className="h-4 w-4 text-primary animate-pulse" />
                   </div>
                   <ExamTimer
                     totalSeconds={examSettings.timeLimit * 60}
                     onTimeUp={handleTimeUp}
                     isPaused={showResults}
-                    className="!bg-transparent !p-0 text-base sm:text-lg font-bold text-primary"
+                    className="!bg-transparent !p-0 text-lg font-bold text-primary"
                   />
                 </div>
               )}
               
-              {/* Enhanced Progress Display */}
-              <div className="flex items-center gap-2 sm:gap-3 bg-gradient-to-r from-muted to-muted/50 rounded-xl px-3 sm:px-4 py-2 border border-border shadow-sm">
-                <div className="text-sm sm:text-base font-bold text-foreground">{answeredCount}<span className="text-muted-foreground">/{questions.length}</span></div>
-                <Progress value={(answeredCount / questions.length) * 100} className="w-14 sm:w-20 h-2" />
+              <div className="flex items-center gap-3 bg-gradient-to-r from-muted to-muted/50 rounded-xl px-4 py-2 border border-border shadow-sm">
+                <div className="text-base font-bold text-foreground">{answeredCount}<span className="text-muted-foreground">/{questions.length}</span></div>
+                <Progress value={(answeredCount / questions.length) * 100} className="w-20 h-2" />
               </div>
+            </div>
+          </div>
+          
+          {/* Mobile: Timer and Progress on separate row */}
+          <div className="flex sm:hidden items-center justify-between gap-2">
+            {examSettings.timeLimit > 0 && !showAnswersInReview ? (
+              <div className="flex items-center gap-2 bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg px-3 py-1.5 border border-primary/20 shadow-sm flex-1">
+                <div className="flex items-center justify-center h-6 w-6 rounded-full bg-primary/20">
+                  <Clock className="h-3 w-3 text-primary animate-pulse" />
+                </div>
+                <ExamTimer
+                  totalSeconds={examSettings.timeLimit * 60}
+                  onTimeUp={handleTimeUp}
+                  isPaused={showResults}
+                  className="!bg-transparent !p-0 text-sm font-bold text-primary"
+                />
+              </div>
+            ) : <div />}
+            
+            <div className="flex items-center gap-2 bg-gradient-to-r from-muted to-muted/50 rounded-lg px-3 py-1.5 border border-border shadow-sm">
+              <div className="text-sm font-bold text-foreground">{answeredCount}<span className="text-muted-foreground">/{questions.length}</span></div>
+              <Progress value={(answeredCount / questions.length) * 100} className="w-12 h-1.5" />
             </div>
           </div>
         </div>

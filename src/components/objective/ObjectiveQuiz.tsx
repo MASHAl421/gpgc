@@ -199,10 +199,19 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
     // In exam mode, allow changing answers; in practice mode after answer is locked, don't allow
     if (!isExamMode && selectedAnswers[questionId]) return;
     
+    const isNewAnswer = !selectedAnswers[questionId];
+    
     setSelectedAnswers(prev => ({
       ...prev,
       [questionId]: option,
     }));
+    
+    // Auto-advance to next question after selection (with small delay for visual feedback)
+    if (isNewAnswer && currentQuestionIndex < questions.length - 1) {
+      setTimeout(() => {
+        setCurrentQuestionIndex(prev => prev + 1);
+      }, 300);
+    }
   };
 
   const toggleFlag = (index: number) => {
@@ -501,32 +510,21 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
 
       {/* Main Content - Responsive Layout */}
       <div className="flex-1 flex flex-col lg:flex-row gap-4">
-        {/* Question Navigator - Desktop sidebar */}
-        <div className="hidden lg:block lg:w-64 shrink-0">
-          <div className="sticky top-24">
-            <QuestionNavigator
-              totalQuestions={questions.length}
-              currentQuestion={currentQuestionIndex}
-              questionStatuses={questionStatuses}
-              onNavigate={setCurrentQuestionIndex}
-            />
-            
-            {/* Desktop Submit Button */}
-            {isExamMode && !showAnswersInReview && (
+        {/* Question Card - Full Width (Navigator removed) */}
+        <div className="flex-1 flex flex-col min-w-0 max-w-4xl mx-auto w-full">
+          {/* Submit Button - Top right for exam mode */}
+          {isExamMode && !showAnswersInReview && (
+            <div className="flex justify-end mb-4">
               <Button 
                 onClick={() => setShowSummary(true)} 
-                className="w-full mt-4 gap-2"
-                size="lg"
+                className="gap-2"
               >
                 <Send className="h-4 w-4" />
                 Review & Submit
               </Button>
-            )}
-          </div>
-        </div>
-
-        {/* Question Card - Main Area */}
-        <div className="flex-1 flex flex-col min-w-0">
+            </div>
+          )}
+          
           <Card className="bg-card border-border flex-1 flex flex-col overflow-hidden shadow-sm">
             {/* Question Header */}
             <div className="bg-gradient-to-r from-primary/5 to-primary/10 p-4 sm:p-6 border-b border-border">
@@ -630,7 +628,7 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
                     <Button 
                       onClick={() => setShowSummary(true)} 
                       size="sm" 
-                      className="gap-2 lg:hidden"
+                      className="gap-2"
                     >
                       <Send className="h-4 w-4" />
                       Submit
@@ -651,26 +649,6 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
               </div>
             </div>
           </Card>
-
-          {/* Mobile Question Navigator - Collapsible */}
-          <div className="lg:hidden mt-4">
-            <details className="group">
-              <summary className="flex items-center justify-between p-3 bg-muted rounded-lg cursor-pointer list-none">
-                <span className="text-sm font-medium">Question Navigator</span>
-                <span className="text-xs text-muted-foreground">
-                  {answeredCount} answered • {flaggedQuestions.size} flagged
-                </span>
-              </summary>
-              <div className="mt-2">
-                <QuestionNavigator
-                  totalQuestions={questions.length}
-                  currentQuestion={currentQuestionIndex}
-                  questionStatuses={questionStatuses}
-                  onNavigate={setCurrentQuestionIndex}
-                />
-              </div>
-            </details>
-          </div>
 
           {/* Practice Mode: Completion Card */}
           {!isExamMode && answeredCount === questions.length && !showAnswersInReview && (

@@ -386,15 +386,15 @@ const PhysicsSimulations = ({ subjectName }: PhysicsSimulationsProps) => {
 
       {/* Simulation Viewer Dialog - Full screen responsive */}
       <Dialog open={!!selectedSimulation} onOpenChange={() => setSelectedSimulation(null)}>
-        <DialogContent className="max-w-[95vw] sm:max-w-[90vw] lg:max-w-6xl w-full h-[95vh] sm:h-[90vh] p-0 gap-0 flex flex-col overflow-hidden">
+        <DialogContent className="max-w-[95vw] sm:max-w-[90vw] lg:max-w-6xl w-full h-[95vh] sm:h-[90vh] p-0 gap-0 flex flex-col overflow-hidden [&>button]:top-2 [&>button]:right-2 [&>button]:z-50">
           {/* Header */}
-          <div className="flex items-center justify-between p-3 sm:p-4 border-b border-border bg-card shrink-0">
+          <div className="flex items-center p-3 sm:p-4 border-b border-border bg-card shrink-0 pr-12 sm:pr-14">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
               <div className={`h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-gradient-to-br ${selectedCategory.color} flex items-center justify-center shrink-0`}>
                 <Lightbulb className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
               </div>
               <div className="min-w-0 flex-1">
-                <h2 className="font-semibold text-foreground text-sm sm:text-base md:text-lg truncate">
+                <h2 className="font-semibold text-foreground text-sm sm:text-base md:text-lg truncate pr-2">
                   {selectedSimulation?.name}
                 </h2>
                 <p className="text-xs sm:text-sm text-muted-foreground line-clamp-1 hidden sm:block">
@@ -402,11 +402,10 @@ const PhysicsSimulations = ({ subjectName }: PhysicsSimulationsProps) => {
                 </p>
               </div>
             </div>
-            <Button variant="outline" size="sm" asChild className="shrink-0 ml-2">
+            <Button variant="outline" size="sm" asChild className="shrink-0 hidden sm:flex">
               <a href={selectedSimulation?.url} target="_blank" rel="noopener noreferrer">
                 <ExternalLink className="h-4 w-4 mr-1.5" />
-                <span className="hidden sm:inline">Open in PhET</span>
-                <span className="sm:hidden">PhET</span>
+                Open in PhET
               </a>
             </Button>
           </div>
@@ -431,15 +430,26 @@ const PhysicsSimulations = ({ subjectName }: PhysicsSimulationsProps) => {
             )}
           </div>
 
-          {/* Footer with related topics */}
+          {/* Footer with related topics and mobile PhET link */}
           <div className="p-3 sm:p-4 border-t border-border bg-card shrink-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs sm:text-sm text-muted-foreground font-medium">Related Topics:</span>
-              {selectedSimulation?.topics.map((topic, idx) => (
-                <Badge key={idx} variant="secondary" className="text-xs sm:text-sm">
-                  {topic}
-                </Badge>
-              ))}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              {/* Mobile PhET button */}
+              <Button variant="default" size="sm" asChild className="sm:hidden w-full">
+                <a href={selectedSimulation?.url} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Open in PhET Website
+                </a>
+              </Button>
+              
+              {/* Related topics */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs sm:text-sm text-muted-foreground font-medium">Related Topics:</span>
+                {selectedSimulation?.topics.map((topic, idx) => (
+                  <Badge key={idx} variant="secondary" className="text-xs sm:text-sm">
+                    {topic}
+                  </Badge>
+                ))}
+              </div>
             </div>
           </div>
         </DialogContent>

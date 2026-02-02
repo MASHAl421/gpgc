@@ -19,9 +19,10 @@ interface ExamModeSelectorProps {
   settings: ExamSettings;
   onSettingsChange: (settings: ExamSettings) => void;
   totalQuestions: number;
+  hideTimeLimit?: boolean; // Hide when entrance exam controls time
 }
 
-export const ExamModeSelector = ({ settings, onSettingsChange, totalQuestions }: ExamModeSelectorProps) => {
+export const ExamModeSelector = ({ settings, onSettingsChange, totalQuestions, hideTimeLimit = false }: ExamModeSelectorProps) => {
   const timeLimitOptions = [
     { value: 0, label: 'No Limit' },
     { value: 15, label: '15 minutes' },
@@ -79,37 +80,39 @@ export const ExamModeSelector = ({ settings, onSettingsChange, totalQuestions }:
           />
         </div>
 
-        {/* Time Limit */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <Label className="flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              Time Limit
-            </Label>
-            {totalQuestions > 0 && (
-              <span className="text-xs text-muted-foreground">
-                Recommended: ~{recommendedTime} min for {totalQuestions} questions
-              </span>
-            )}
+        {/* Time Limit - Hide when controlled by entrance exam */}
+        {!hideTimeLimit && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                Time Limit
+              </Label>
+              {totalQuestions > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  Recommended: ~{recommendedTime} min for {totalQuestions} questions
+                </span>
+              )}
+            </div>
+            <Select
+              value={settings.timeLimit.toString()}
+              onValueChange={(value) => 
+                onSettingsChange({ ...settings, timeLimit: parseInt(value) })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {timeLimitOptions.map(option => (
+                  <SelectItem key={option.value} value={option.value.toString()}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <Select
-            value={settings.timeLimit.toString()}
-            onValueChange={(value) => 
-              onSettingsChange({ ...settings, timeLimit: parseInt(value) })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {timeLimitOptions.map(option => (
-                <SelectItem key={option.value} value={option.value.toString()}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        )}
 
         {/* Negative Marking - Only show in Exam mode */}
         {settings.mode === 'exam' && (

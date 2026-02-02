@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, ArrowLeft, ArrowRight, CheckCircle2, XCircle, BookOpen, Coins, Flag, Eye, EyeOff, Send } from 'lucide-react';
+import { Loader2, ArrowLeft, CheckCircle2, XCircle, BookOpen, Coins, Flag, Eye, EyeOff, Send, Clock, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { QuizConfig } from './ObjectivePaperSelector';
@@ -491,17 +491,25 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
             
             {/* Timer and Progress */}
             <div className="flex items-center gap-2 sm:gap-4">
+              {/* Enhanced Timer Display */}
               {examSettings.timeLimit > 0 && !showAnswersInReview && (
-                <ExamTimer
-                  totalSeconds={examSettings.timeLimit * 60}
-                  onTimeUp={handleTimeUp}
-                  isPaused={showResults}
-                  className="text-sm sm:text-base px-2 sm:px-4 py-1 sm:py-2"
-                />
+                <div className="flex items-center gap-2 sm:gap-3 bg-gradient-to-r from-primary/10 to-primary/5 rounded-xl px-3 sm:px-4 py-2 border border-primary/20 shadow-sm">
+                  <div className="flex items-center justify-center h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-primary/20">
+                    <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
+                  </div>
+                  <ExamTimer
+                    totalSeconds={examSettings.timeLimit * 60}
+                    onTimeUp={handleTimeUp}
+                    isPaused={showResults}
+                    className="!bg-transparent !p-0 text-base sm:text-lg font-bold text-primary"
+                  />
+                </div>
               )}
-              <div className="flex items-center gap-2 bg-muted rounded-lg px-2 sm:px-3 py-1.5">
-                <span className="text-xs sm:text-sm font-medium">{answeredCount}/{questions.length}</span>
-                <Progress value={(answeredCount / questions.length) * 100} className="w-12 sm:w-20 h-1.5 sm:h-2" />
+              
+              {/* Enhanced Progress Display */}
+              <div className="flex items-center gap-2 sm:gap-3 bg-gradient-to-r from-muted to-muted/50 rounded-xl px-3 sm:px-4 py-2 border border-border shadow-sm">
+                <div className="text-sm sm:text-base font-bold text-foreground">{answeredCount}<span className="text-muted-foreground">/{questions.length}</span></div>
+                <Progress value={(answeredCount / questions.length) * 100} className="w-14 sm:w-20 h-2" />
               </div>
             </div>
           </div>
@@ -525,26 +533,34 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
             </div>
           )}
           
-          <Card className="bg-card border-border flex-1 flex flex-col overflow-hidden shadow-sm">
-            {/* Question Header */}
-            <div className="bg-gradient-to-r from-primary/5 to-primary/10 p-4 sm:p-6 border-b border-border">
-              <div className="flex items-start justify-between gap-3">
+          {/* Question Card with Animation */}
+          <Card 
+            key={currentQuestion.id}
+            className="bg-card border-border flex-1 flex flex-col overflow-hidden shadow-lg animate-in fade-in-0 slide-in-from-right-4 duration-300"
+          >
+            {/* Enhanced Question Header */}
+            <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-5 sm:p-7 border-b border-border relative overflow-hidden">
+              {/* Decorative element */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+              
+              <div className="flex items-start justify-between gap-4 relative">
                 <div className="flex-1 min-w-0">
-                  <div className="flex flex-wrap items-center gap-2 mb-3">
-                    <span className="inline-flex items-center justify-center h-7 px-3 rounded-full bg-primary text-primary-foreground text-sm font-bold">
+                  <div className="flex flex-wrap items-center gap-2 mb-4">
+                    <span className="inline-flex items-center justify-center h-9 px-4 rounded-full bg-gradient-to-r from-primary to-primary/80 text-primary-foreground text-sm font-bold shadow-md">
+                      <Sparkles className="h-3.5 w-3.5 mr-1.5" />
                       {currentQuestionIndex + 1}/{questions.length}
                     </span>
                     <Badge 
                       variant="outline" 
-                      className={cn("text-xs capitalize", getDifficultyColor(currentQuestion.difficulty || 'medium'))}
+                      className={cn("text-xs capitalize px-3 py-1", getDifficultyColor(currentQuestion.difficulty || 'medium'))}
                     >
                       {currentQuestion.difficulty || 'Medium'}
                     </Badge>
-                    <Badge variant="outline" className="capitalize text-xs">
+                    <Badge variant="outline" className="capitalize text-xs px-3 py-1 bg-background/50">
                       {currentQuestion.question_type || 'Exercise'}
                     </Badge>
                   </div>
-                  <p className="text-foreground text-base sm:text-lg leading-relaxed font-medium">
+                  <p className="text-foreground text-lg sm:text-xl leading-relaxed font-semibold">
                     {currentQuestion.question_text}
                   </p>
                 </div>
@@ -554,100 +570,68 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
                     size="icon"
                     onClick={() => toggleFlag(currentQuestionIndex)}
                     className={cn(
-                      "h-9 w-9 sm:h-10 sm:w-10",
-                      isCurrentFlagged && 'bg-yellow-500 hover:bg-yellow-600 border-yellow-500'
+                      "h-10 w-10 sm:h-11 sm:w-11 rounded-xl transition-all duration-200",
+                      isCurrentFlagged && 'bg-yellow-500 hover:bg-yellow-600 border-yellow-500 shadow-lg shadow-yellow-500/30'
                     )}
                   >
                     <Flag className="h-4 w-4" />
                   </Button>
                   {showAnswersInReview && (
                     isCurrentAnswered && normalizeOption(selectedAnswers[currentQuestion.id]) === normalizeOption(currentQuestion.correct_option)
-                      ? <CheckCircle2 className="h-6 w-6 sm:h-7 sm:w-7 text-success" />
-                      : <XCircle className="h-6 w-6 sm:h-7 sm:w-7 text-destructive" />
+                      ? <CheckCircle2 className="h-7 w-7 sm:h-8 sm:w-8 text-success" />
+                      : <XCircle className="h-7 w-7 sm:h-8 sm:w-8 text-destructive" />
                   )}
                 </div>
               </div>
             </div>
 
-            {/* Options Grid */}
-            <div className="flex-1 p-4 sm:p-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                {currentQuestion.shuffledOptions.map((opt) => (
+            {/* Enhanced Options Grid */}
+            <div className="flex-1 p-5 sm:p-7">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {currentQuestion.shuffledOptions.map((opt, idx) => (
                   <div
                     key={opt.label}
                     onClick={() => !showAnswersInReview && handleSelectAnswer(currentQuestion.id, opt.key)}
                     className={cn(
-                      'p-4 sm:p-5 rounded-xl border-2 transition-all relative group',
+                      'p-5 sm:p-6 rounded-2xl border-2 transition-all duration-200 relative group animate-in fade-in-0 slide-in-from-bottom-2',
                       getOptionClass(currentQuestion.id, opt.key, currentQuestion.correct_option),
-                      showAnswersInReview ? 'cursor-default' : 'active:scale-[0.98]'
+                      showAnswersInReview ? 'cursor-default' : 'hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer'
                     )}
+                    style={{ animationDelay: `${idx * 50}ms` }}
                   >
-                    <div className="flex items-start gap-3">
-                      <span className="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-muted text-foreground font-bold text-sm shrink-0">
+                    <div className="flex items-start gap-4">
+                      <span className="inline-flex items-center justify-center h-10 w-10 rounded-xl bg-gradient-to-br from-muted to-muted/50 text-foreground font-bold text-base shrink-0 shadow-sm">
                         {opt.label}
                       </span>
-                      <span className="text-sm sm:text-base pt-1">{opt.text}</span>
+                      <span className="text-base sm:text-lg pt-1.5 font-medium">{opt.text}</span>
                     </div>
                   </div>
                 ))}
               </div>
 
-              {/* Explanation */}
+              {/* Enhanced Explanation */}
               {shouldShowExplanation && currentQuestion.explanation && (
-                <div className="mt-4 sm:mt-6 p-4 rounded-xl bg-primary/10 border border-primary/20">
-                  <p className="text-sm font-semibold text-primary mb-2 flex items-center gap-2">
-                    <BookOpen className="h-4 w-4" />
+                <div className="mt-6 sm:mt-8 p-5 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 shadow-sm animate-in fade-in-0 slide-in-from-bottom-4 duration-300">
+                  <p className="text-base font-semibold text-primary mb-3 flex items-center gap-2">
+                    <BookOpen className="h-5 w-5" />
                     Explanation
                   </p>
-                  <p className="text-sm text-foreground leading-relaxed">{currentQuestion.explanation}</p>
+                  <p className="text-base text-foreground leading-relaxed">{currentQuestion.explanation}</p>
                 </div>
               )}
             </div>
 
-            {/* Navigation Footer */}
-            <div className="border-t border-border p-4 bg-muted/30">
-              <div className="flex items-center justify-between gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
-                  disabled={currentQuestionIndex === 0}
-                  className="gap-1 sm:gap-2"
-                  size="sm"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  <span className="hidden xs:inline">Previous</span>
-                </Button>
-
-                <div className="flex items-center gap-2">
-                  {showAnswersInReview ? (
-                    <Button onClick={() => setShowResults(true)} size="sm" className="gap-2">
-                      <Eye className="h-4 w-4" />
-                      <span className="hidden sm:inline">Back to</span> Results
-                    </Button>
-                  ) : isExamMode && (
-                    <Button 
-                      onClick={() => setShowSummary(true)} 
-                      size="sm" 
-                      className="gap-2"
-                    >
-                      <Send className="h-4 w-4" />
-                      Submit
-                    </Button>
-                  )}
+            {/* Minimal Footer - Only for Review Mode */}
+            {showAnswersInReview && (
+              <div className="border-t border-border p-4 bg-muted/30">
+                <div className="flex items-center justify-center">
+                  <Button onClick={() => setShowResults(true)} className="gap-2">
+                    <Eye className="h-4 w-4" />
+                    Back to Results
+                  </Button>
                 </div>
-
-                <Button
-                  variant="outline"
-                  onClick={() => setCurrentQuestionIndex(prev => Math.min(questions.length - 1, prev + 1))}
-                  disabled={currentQuestionIndex === questions.length - 1}
-                  className="gap-1 sm:gap-2"
-                  size="sm"
-                >
-                  <span className="hidden xs:inline">Next</span>
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
               </div>
-            </div>
+            )}
           </Card>
 
           {/* Practice Mode: Completion Card */}

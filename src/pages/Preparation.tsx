@@ -12,7 +12,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
-import { BookOpen, PlayCircle, FileText, Beaker, ClipboardList, PenTool, Files, TestTube, ChevronRight, GraduationCap, Loader2, ArrowLeft, Code, Atom, Users, Monitor, Download, ExternalLink, Library } from 'lucide-react';
+import { BookOpen, PlayCircle, FileText, Beaker, ClipboardList, PenTool, Files, TestTube, ChevronRight, GraduationCap, Loader2, ArrowLeft, Code, Atom, Users, Monitor, Download, ExternalLink, Library, FlaskConical } from 'lucide-react';
 import ObjectivePaperSelector, { QuizConfig } from '@/components/objective/ObjectivePaperSelector';
 import ObjectiveQuiz from '@/components/objective/ObjectiveQuiz';
 import AcademicResources from '@/components/academic/AcademicResources';
@@ -20,6 +20,7 @@ import MobileCategoryMenu from '@/components/preparation/MobileCategoryMenu';
 import { useIsMobile } from '@/hooks/use-mobile';
 import SubjectivePaperSelector, { SubjectiveConfig } from '@/components/subjective/SubjectivePaperSelector';
 import SubjectiveQuestionCount from '@/components/subjective/SubjectiveQuestionCount';
+import PhysicsSimulations from '@/components/preparation/PhysicsSimulations';
 import SubjectivePaperDisplay from '@/components/subjective/SubjectivePaperDisplay';
 
 interface KeyNote {
@@ -71,6 +72,11 @@ const preparationCategories = [{
   icon: FileText,
   color: 'bg-amber-500'
 }, {
+  id: 'simulations',
+  name: 'Simulations',
+  icon: FlaskConical,
+  color: 'bg-cyan-500'
+}, {
   id: 'objective',
   name: 'Objective Paper',
   icon: ClipboardList,
@@ -100,7 +106,8 @@ const iconMap: Record<string, React.ComponentType<{
   Code,
   Atom,
   Users,
-  Monitor
+  Monitor,
+  FlaskConical
 };
 const Preparation = () => {
   const isMobile = useIsMobile();
@@ -440,6 +447,23 @@ const Preparation = () => {
                     </p>
                   </CardContent>
                 </Card>
+              ) : selectedCategory === 'simulations' ? (
+                /* Show Simulations - only for Applied Physics */
+                selectedSubject.name.toLowerCase().includes('physics') ? (
+                  <PhysicsSimulations subjectName={selectedSubject.name} />
+                ) : (
+                  <Card className="bg-card border-border">
+                    <CardContent className="p-6 sm:p-8 text-center">
+                      <FlaskConical className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                      <p className="text-lg text-foreground mb-2">
+                        Simulations are coming soon for this subject
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Currently available for Applied Physics only
+                      </p>
+                    </CardContent>
+                  </Card>
+                )
               ) : (selectedCategory === 'keynotes' || selectedCategory === 'objective' || selectedCategory === 'subjective') && selectedSubject.name.toLowerCase().includes('islamic') ? (
                 /* Islamic Studies - Show Urdu message for keynotes, objective, subjective */
                 <Card className="bg-card border-border">

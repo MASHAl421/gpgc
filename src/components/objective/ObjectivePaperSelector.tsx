@@ -65,8 +65,8 @@ const ObjectivePaperSelector = ({ subject, onStartQuiz }: ObjectivePaperSelector
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [expandedUnits, setExpandedUnits] = useState<string[]>([]);
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
-  const [questionCount, setQuestionCount] = useState<number>(20);
-  const [customTimeMinutes, setCustomTimeMinutes] = useState<number>(30);
+  const [questionCountInput, setQuestionCountInput] = useState<string>('20');
+  const [customTimeInput, setCustomTimeInput] = useState<string>('30');
   const [examSettings, setExamSettings] = useState<ExamSettings>({
     mode: 'practice',
     timeLimit: 0,
@@ -157,6 +157,10 @@ const ObjectivePaperSelector = ({ subject, onStartQuiz }: ObjectivePaperSelector
     );
   };
 
+  // Get numeric values from string inputs
+  const questionCount = parseInt(questionCountInput) || 20;
+  const customTimeMinutes = parseInt(customTimeInput) || 30;
+
   // Auto-enable entrance exam settings when toggle is on
   useEffect(() => {
     if (isEntranceExam) {
@@ -180,6 +184,19 @@ const ObjectivePaperSelector = ({ subject, onStartQuiz }: ObjectivePaperSelector
       }));
     }
   }, [customTimeMinutes, isEntranceExam]);
+
+  // Validate inputs on blur
+  const handleQuestionCountBlur = () => {
+    const num = parseInt(questionCountInput) || 20;
+    const validated = Math.max(5, Math.min(100, num));
+    setQuestionCountInput(validated.toString());
+  };
+
+  const handleTimeBlur = () => {
+    const num = parseInt(customTimeInput) || 30;
+    const validated = Math.max(5, Math.min(180, num));
+    setCustomTimeInput(validated.toString());
+  };
 
   const handleStartQuiz = () => {
     const config: QuizConfig = {
@@ -235,8 +252,9 @@ const ObjectivePaperSelector = ({ subject, onStartQuiz }: ObjectivePaperSelector
                     type="number"
                     min={5}
                     max={100}
-                    value={questionCount}
-                    onChange={(e) => setQuestionCount(Math.max(5, Math.min(100, parseInt(e.target.value) || 20)))}
+                    value={questionCountInput}
+                    onChange={(e) => setQuestionCountInput(e.target.value)}
+                    onBlur={handleQuestionCountBlur}
                     className="w-24 h-9"
                   />
                   <span className="text-sm text-muted-foreground">MCQs</span>
@@ -256,8 +274,9 @@ const ObjectivePaperSelector = ({ subject, onStartQuiz }: ObjectivePaperSelector
                     type="number"
                     min={5}
                     max={180}
-                    value={customTimeMinutes}
-                    onChange={(e) => setCustomTimeMinutes(Math.max(5, Math.min(180, parseInt(e.target.value) || 30)))}
+                    value={customTimeInput}
+                    onChange={(e) => setCustomTimeInput(e.target.value)}
+                    onBlur={handleTimeBlur}
                     className="w-24 h-9"
                   />
                   <span className="text-sm text-muted-foreground">minutes</span>

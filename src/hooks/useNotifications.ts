@@ -169,14 +169,22 @@ export const useNotifications = () => {
 };
 
 // Helper function to create notifications
+// IMPORTANT: actorId is now REQUIRED and must be the current user's ID
+// This prevents notification spam attacks
 export const createNotification = async (
   userId: string,
   type: string,
   title: string,
   message: string,
-  referenceId?: string,
-  actorId?: string
+  referenceId: string | undefined,
+  actorId: string // Required - must be auth.uid()
 ) => {
+  // Prevent self-notifications (also enforced by RLS)
+  if (userId === actorId) {
+    console.warn('Cannot create notification for yourself');
+    return;
+  }
+
   try {
     await supabase.from('notifications').insert({
       user_id: userId,
@@ -184,7 +192,7 @@ export const createNotification = async (
       title,
       message,
       reference_id: referenceId || null,
-      actor_id: actorId || null,
+      actor_id: actorId, // Required for RLS policy
     });
   } catch (error) {
     console.error('Error creating notification:', error);

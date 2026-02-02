@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { ClipboardList, ChevronRight, Play, Settings } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { ClipboardList, ChevronRight, Play, Settings, Clock, Hash } from 'lucide-react';
 import { ExamModeSelector, ExamSettings } from '@/components/exam';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
@@ -42,6 +43,7 @@ export interface QuizConfig {
   selectedUnits: string[];
   selectedTopics: string[];
   examSettings: ExamSettings;
+  questionCount?: number;
 }
 
 const questionTypeOptions = [
@@ -63,6 +65,8 @@ const ObjectivePaperSelector = ({ subject, onStartQuiz }: ObjectivePaperSelector
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [expandedUnits, setExpandedUnits] = useState<string[]>([]);
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+  const [questionCount, setQuestionCount] = useState<number>(20);
+  const [customTimeMinutes, setCustomTimeMinutes] = useState<number>(30);
   const [examSettings, setExamSettings] = useState<ExamSettings>({
     mode: 'practice',
     timeLimit: 0,
@@ -159,13 +163,23 @@ const ObjectivePaperSelector = ({ subject, onStartQuiz }: ObjectivePaperSelector
       setExamSettings(prev => ({
         ...prev,
         mode: 'exam',
-        timeLimit: 60, // Default 1 hour for entrance exams
+        timeLimit: customTimeMinutes,
         negativeMarking: true,
         negativeMarkingValue: 0.25,
       }));
       setShowAdvancedSettings(true);
     }
   }, [isEntranceExam]);
+
+  // Sync custom time with exam settings
+  useEffect(() => {
+    if (isEntranceExam) {
+      setExamSettings(prev => ({
+        ...prev,
+        timeLimit: customTimeMinutes,
+      }));
+    }
+  }, [customTimeMinutes, isEntranceExam]);
 
   const handleStartQuiz = () => {
     const config: QuizConfig = {
@@ -177,6 +191,7 @@ const ObjectivePaperSelector = ({ subject, onStartQuiz }: ObjectivePaperSelector
       selectedUnits,
       selectedTopics,
       examSettings,
+      questionCount: isEntranceExam ? questionCount : undefined,
     };
     onStartQuiz(config);
   };
@@ -194,7 +209,7 @@ const ObjectivePaperSelector = ({ subject, onStartQuiz }: ObjectivePaperSelector
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Entrance Exam Toggle */}
-          <div className="flex flex-wrap gap-8">
+          <div className="flex flex-wrap gap-6 lg:gap-8">
             <div className="space-y-2">
               <Label className="text-primary font-semibold">Select Entrance Exam</Label>
               <div className="flex items-center gap-4">
@@ -207,6 +222,48 @@ const ObjectivePaperSelector = ({ subject, onStartQuiz }: ObjectivePaperSelector
                 </div>
               </div>
             </div>
+
+            {/* Question Count - Only for Entrance Exam */}
+            {isEntranceExam && (
+              <div className="space-y-2">
+                <Label className="text-primary font-semibold flex items-center gap-2">
+                  <Hash className="h-4 w-4" />
+                  Number of Questions
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min={5}
+                    max={100}
+                    value={questionCount}
+                    onChange={(e) => setQuestionCount(Math.max(5, Math.min(100, parseInt(e.target.value) || 20)))}
+                    className="w-24 h-9"
+                  />
+                  <span className="text-sm text-muted-foreground">MCQs</span>
+                </div>
+              </div>
+            )}
+
+            {/* Custom Time - Only for Entrance Exam */}
+            {isEntranceExam && (
+              <div className="space-y-2">
+                <Label className="text-primary font-semibold flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Time Limit
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min={5}
+                    max={180}
+                    value={customTimeMinutes}
+                    onChange={(e) => setCustomTimeMinutes(Math.max(5, Math.min(180, parseInt(e.target.value) || 30)))}
+                    className="w-24 h-9"
+                  />
+                  <span className="text-sm text-muted-foreground">minutes</span>
+                </div>
+              </div>
+            )}
 
             {/* Question Type Selection */}
             <div className="space-y-2">
@@ -360,7 +417,13 @@ const ObjectivePaperSelector = ({ subject, onStartQuiz }: ObjectivePaperSelector
                 Please select at least one topic, question type, and difficulty level.
               </p>
             )}
-            {canStart && examSettings.mode === 'exam' && examSettings.timeLimit > 0 && (
+            {canStart && isEntranceExam && (
+              <p className="text-sm text-muted-foreground mt-2">
+                📝 {questionCount} questions • ⏱️ {customTimeMinutes} minutes
+                {examSettings.negativeMarking && ` • ⚠️ Negative marking: -${examSettings.negativeMarkingValue}`}
+              </p>
+            )}
+            {canStart && !isEntranceExam && examSettings.mode === 'exam' && examSettings.timeLimit > 0 && (
               <p className="text-sm text-muted-foreground mt-2">
                 ⏱️ Time limit: {examSettings.timeLimit} minutes
                 {examSettings.negativeMarking && ` • ⚠️ Negative marking: -${examSettings.negativeMarkingValue} per wrong answer`}

@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { Flag, Check, Circle } from 'lucide-react';
+import { Flag, Check } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 
@@ -22,29 +22,17 @@ export const QuestionNavigator = ({
 }: QuestionNavigatorProps) => {
   const getStatusColor = (status: QuestionStatus | undefined, isCurrent: boolean) => {
     if (isCurrent) {
-      return "ring-2 ring-primary ring-offset-2";
+      return "ring-2 ring-primary ring-offset-2 ring-offset-background bg-primary text-primary-foreground";
     }
     switch (status) {
       case 'answered':
-        return "bg-emerald-500 text-white hover:bg-emerald-600";
+        return "bg-emerald-500 text-white hover:bg-emerald-600 border-emerald-500";
       case 'flagged':
-        return "bg-yellow-500 text-white hover:bg-yellow-600";
+        return "bg-yellow-500 text-white hover:bg-yellow-600 border-yellow-500";
       case 'answered-flagged':
-        return "bg-emerald-500 text-white ring-2 ring-yellow-500 hover:bg-emerald-600";
+        return "bg-emerald-500 text-white ring-2 ring-yellow-500 ring-offset-1 hover:bg-emerald-600";
       default:
-        return "bg-muted hover:bg-muted/80";
-    }
-  };
-
-  const getStatusIcon = (status: QuestionStatus | undefined) => {
-    switch (status) {
-      case 'answered':
-      case 'answered-flagged':
-        return <Check className="h-3 w-3" />;
-      case 'flagged':
-        return <Flag className="h-3 w-3" />;
-      default:
-        return null;
+        return "bg-background hover:bg-muted border-border";
     }
   };
 
@@ -54,28 +42,28 @@ export const QuestionNavigator = ({
   const unanswered = totalQuestions - answered;
 
   return (
-    <div className={cn("border rounded-lg p-4 bg-card", className)}>
-      <h3 className="font-semibold mb-3 text-sm">Question Navigator</h3>
+    <div className={cn("border rounded-xl p-4 bg-card shadow-sm", className)}>
+      <h3 className="font-semibold mb-3 text-sm text-foreground">Question Navigator</h3>
       
-      {/* Stats */}
-      <div className="flex gap-3 mb-4 text-xs">
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded bg-emerald-500" />
-          <span>Answered: {answered}</span>
+      {/* Stats - Compact pills */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-medium">
+          <div className="w-2 h-2 rounded-full bg-emerald-500" />
+          <span>{answered}</span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded bg-yellow-500" />
-          <span>Flagged: {flagged}</span>
+        <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 text-xs font-medium">
+          <Flag className="w-3 h-3" />
+          <span>{flagged}</span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded bg-muted border" />
-          <span>Unanswered: {unanswered}</span>
+        <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted text-muted-foreground text-xs font-medium">
+          <div className="w-2 h-2 rounded-full bg-muted-foreground/50" />
+          <span>{unanswered}</span>
         </div>
       </div>
 
       {/* Question Grid */}
-      <ScrollArea className="h-[200px]">
-        <div className="grid grid-cols-5 gap-2">
+      <ScrollArea className="h-[180px] lg:h-[240px]">
+        <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
           {Array.from({ length: totalQuestions }, (_, i) => {
             const status = questionStatuses[i];
             const isCurrent = i === currentQuestion;
@@ -86,14 +74,14 @@ export const QuestionNavigator = ({
                 variant="outline"
                 size="sm"
                 className={cn(
-                  "w-10 h-10 p-0 font-medium relative",
+                  "h-9 w-9 sm:h-10 sm:w-10 p-0 font-medium text-xs sm:text-sm relative transition-all",
                   getStatusColor(status, isCurrent)
                 )}
                 onClick={() => onNavigate(i)}
               >
                 {i + 1}
                 {(status === 'flagged' || status === 'answered-flagged') && (
-                  <Flag className="h-2.5 w-2.5 absolute -top-1 -right-1 text-yellow-500" />
+                  <Flag className="h-2 w-2 sm:h-2.5 sm:w-2.5 absolute -top-0.5 -right-0.5 text-yellow-500 fill-yellow-500" />
                 )}
               </Button>
             );

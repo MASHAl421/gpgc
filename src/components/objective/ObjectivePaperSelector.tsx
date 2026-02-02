@@ -416,6 +416,7 @@ const ObjectivePaperSelector = ({ subject, onStartQuiz }: ObjectivePaperSelector
                 settings={examSettings}
                 onSettingsChange={setExamSettings}
                 totalQuestions={selectedTopics.length * 10} // Estimate
+                hideTimeLimit={isEntranceExam} // Hide time limit when entrance exam controls it
               />
             </CollapsibleContent>
           </Collapsible>

@@ -182,6 +182,11 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
         enrichedQuestions = shuffleArray(enrichedQuestions, Date.now());
       }
 
+      // Limit questions for entrance exam mode
+      if (config.questionCount && config.questionCount > 0 && enrichedQuestions.length > config.questionCount) {
+        enrichedQuestions = enrichedQuestions.slice(0, config.questionCount);
+      }
+
       setQuestions(enrichedQuestions);
     } catch (error) {
       console.error('Error fetching questions:', error);

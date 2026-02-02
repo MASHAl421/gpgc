@@ -13,7 +13,8 @@ import {
   Lightbulb,
   Magnet,
   CircuitBoard,
-  Waves
+  Waves,
+  X
 } from 'lucide-react';
 
 interface Simulation {
@@ -386,15 +387,15 @@ const PhysicsSimulations = ({ subjectName }: PhysicsSimulationsProps) => {
 
       {/* Simulation Viewer Dialog - Full screen responsive */}
       <Dialog open={!!selectedSimulation} onOpenChange={() => setSelectedSimulation(null)}>
-        <DialogContent className="max-w-[95vw] sm:max-w-[90vw] lg:max-w-6xl w-full h-[95vh] sm:h-[90vh] p-0 gap-0 flex flex-col overflow-hidden [&>button]:top-2 [&>button]:right-2 [&>button]:z-50">
-          {/* Header */}
-          <div className="flex items-center p-3 sm:p-4 border-b border-border bg-card shrink-0 pr-12 sm:pr-14">
+        <DialogContent className="max-w-[95vw] sm:max-w-[90vw] lg:max-w-6xl w-full h-[95vh] sm:h-[90vh] p-0 gap-0 flex flex-col overflow-hidden [&>button]:hidden">
+          {/* Header - Compact with icon buttons */}
+          <div className="flex items-center justify-between p-3 sm:p-4 border-b border-border bg-card shrink-0">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
               <div className={`h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-gradient-to-br ${selectedCategory.color} flex items-center justify-center shrink-0`}>
                 <Lightbulb className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
               </div>
               <div className="min-w-0 flex-1">
-                <h2 className="font-semibold text-foreground text-sm sm:text-base md:text-lg truncate pr-2">
+                <h2 className="font-semibold text-foreground text-sm sm:text-base md:text-lg truncate">
                   {selectedSimulation?.name}
                 </h2>
                 <p className="text-xs sm:text-sm text-muted-foreground line-clamp-1 hidden sm:block">
@@ -402,27 +403,38 @@ const PhysicsSimulations = ({ subjectName }: PhysicsSimulationsProps) => {
                 </p>
               </div>
             </div>
-            <Button variant="outline" size="sm" asChild className="shrink-0 hidden sm:flex">
-              <a href={selectedSimulation?.url} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="h-4 w-4 mr-1.5" />
-                Open in PhET
-              </a>
-            </Button>
+            
+            {/* Action buttons - Open external & Close */}
+            <div className="flex items-center gap-2 shrink-0">
+              <Button variant="outline" size="icon" asChild className="h-9 w-9">
+                <a href={selectedSimulation?.url} target="_blank" rel="noopener noreferrer" title="Open in PhET">
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              </Button>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                onClick={() => setSelectedSimulation(null)}
+                className="h-9 w-9"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
           
-          {/* Mobile description */}
+          {/* Mobile description - Compact */}
           <div className="px-3 py-2 bg-muted/30 border-b border-border sm:hidden">
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground line-clamp-2">
               {selectedSimulation?.description}
             </p>
           </div>
 
-          {/* Simulation iframe - takes remaining space */}
-          <div className="flex-1 min-h-0 bg-background">
+          {/* Simulation iframe - Expanded to fill space */}
+          <div className="flex-1 min-h-0 bg-background relative">
             {selectedSimulation && (
               <iframe
                 src={selectedSimulation.embedUrl}
-                className="w-full h-full border-0"
+                className="absolute inset-0 w-full h-full border-0"
                 title={selectedSimulation.name}
                 allowFullScreen
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -430,26 +442,15 @@ const PhysicsSimulations = ({ subjectName }: PhysicsSimulationsProps) => {
             )}
           </div>
 
-          {/* Footer with related topics and mobile PhET link */}
-          <div className="p-3 sm:p-4 border-t border-border bg-card shrink-0">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-              {/* Mobile PhET button */}
-              <Button variant="default" size="sm" asChild className="sm:hidden w-full">
-                <a href={selectedSimulation?.url} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  Open in PhET Website
-                </a>
-              </Button>
-              
-              {/* Related topics */}
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs sm:text-sm text-muted-foreground font-medium">Related Topics:</span>
-                {selectedSimulation?.topics.map((topic, idx) => (
-                  <Badge key={idx} variant="secondary" className="text-xs sm:text-sm">
-                    {topic}
-                  </Badge>
-                ))}
-              </div>
+          {/* Footer with related topics - Desktop only, mobile hides to maximize space */}
+          <div className="hidden sm:block p-3 sm:p-4 border-t border-border bg-card shrink-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs sm:text-sm text-muted-foreground font-medium">Related Topics:</span>
+              {selectedSimulation?.topics.map((topic, idx) => (
+                <Badge key={idx} variant="secondary" className="text-xs sm:text-sm">
+                  {topic}
+                </Badge>
+              ))}
             </div>
           </div>
         </DialogContent>

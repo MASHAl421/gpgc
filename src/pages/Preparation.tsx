@@ -386,48 +386,60 @@ const Preparation = () => {
         ) : (
           /* Subject Detail View */
           <div className="space-y-3 sm:space-y-0 sm:grid lg:grid-cols-12 sm:gap-4 md:gap-6">
-            {/* Mobile: Dropdown Menu for Categories */}
-            {isMobile && (
-              <div className="lg:hidden">
-                <MobileCategoryMenu
-                  categories={preparationCategories}
-                  selectedCategory={selectedCategory}
-                  onCategoryChange={handleCategoryChange}
-                />
-              </div>
-            )}
+            {/* Filter categories - show simulations only for Applied Physics */}
+            {(() => {
+              const isPhysics = selectedSubject.name.toLowerCase().includes('physics');
+              const filteredCategories = isPhysics 
+                ? preparationCategories 
+                : preparationCategories.filter(c => c.id !== 'simulations');
+              
+              return (
+                <>
+                  {/* Mobile: Dropdown Menu for Categories */}
+                  {isMobile && (
+                    <div className="lg:hidden">
+                      <MobileCategoryMenu
+                        categories={filteredCategories}
+                        selectedCategory={selectedCategory}
+                        onCategoryChange={handleCategoryChange}
+                      />
+                    </div>
+                  )}
 
-            {/* Desktop: Categories Sidebar */}
-            <div className="hidden lg:block lg:col-span-3">
-              <Card className="bg-card border-border sticky top-4">
-                <CardContent className="p-3 md:p-4">
-                  <div className="flex flex-col gap-1">
-                    {preparationCategories.map(category => {
-                      const CategoryIcon = category.icon;
-                      const isActive = selectedCategory === category.id;
-                      return (
-                        <button 
-                          key={category.id} 
-                          className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all text-left w-full ${
-                            isActive 
-                              ? 'bg-primary/10 border-l-4 border-primary' 
-                              : 'hover:bg-muted border-l-4 border-transparent'
-                          }`} 
-                          onClick={() => handleCategoryChange(category.id)}
-                        >
-                          <div className={`h-9 w-9 rounded-lg ${category.color} flex items-center justify-center shrink-0`}>
-                            <CategoryIcon className="h-5 w-5 text-white" />
-                          </div>
-                          <span className={`text-sm font-medium ${isActive ? 'text-primary' : 'text-foreground'}`}>
-                            {category.name}
-                          </span>
-                        </button>
-                      );
-                    })}
+                  {/* Desktop: Categories Sidebar */}
+                  <div className="hidden lg:block lg:col-span-3">
+                    <Card className="bg-card border-border sticky top-4">
+                      <CardContent className="p-3 md:p-4">
+                        <div className="flex flex-col gap-1">
+                          {filteredCategories.map(category => {
+                            const CategoryIcon = category.icon;
+                            const isActive = selectedCategory === category.id;
+                            return (
+                              <button 
+                                key={category.id} 
+                                className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all text-left w-full ${
+                                  isActive 
+                                    ? 'bg-primary/10 border-l-4 border-primary' 
+                                    : 'hover:bg-muted border-l-4 border-transparent'
+                                }`} 
+                                onClick={() => handleCategoryChange(category.id)}
+                              >
+                                <div className={`h-9 w-9 rounded-lg ${category.color} flex items-center justify-center shrink-0`}>
+                                  <CategoryIcon className="h-5 w-5 text-white" />
+                                </div>
+                                <span className={`text-sm font-medium ${isActive ? 'text-primary' : 'text-foreground'}`}>
+                                  {category.name}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </CardContent>
+                    </Card>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
+                </>
+              );
+            })()}
 
             {/* Topics Content */}
             <div className="lg:col-span-9">

@@ -457,108 +457,138 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
   const shouldShowExplanation = (!isExamMode && examSettings.showExplanations && isCurrentAnswered) || showAnswersInReview;
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row gap-4">
-        {/* Left: Back button and info */}
-        <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={onBack} className="gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            Exit
-          </Button>
-          <div className="text-sm">
-            <span className="text-muted-foreground">Subject: </span>
-            <strong className="text-foreground">{config.subjectName}</strong>
-          </div>
-          <Badge variant={isExamMode ? 'destructive' : 'secondary'}>
-            {isExamMode ? 'Exam Mode' : 'Practice Mode'}
-          </Badge>
-        </div>
-
-        {/* Right: Timer and Progress */}
-        <div className="flex items-center gap-4 lg:ml-auto">
-          {examSettings.timeLimit > 0 && !showAnswersInReview && (
-            <ExamTimer
-              totalSeconds={examSettings.timeLimit * 60}
-              onTimeUp={handleTimeUp}
-              isPaused={showResults}
-            />
-          )}
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground">{answeredCount}/{questions.length}</span>
-            <Progress value={(answeredCount / questions.length) * 100} className="w-24 h-2" />
+    <div className="min-h-[calc(100vh-200px)] flex flex-col">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border pb-3 mb-4">
+        <div className="flex flex-col gap-3">
+          {/* Top row: Exit, Subject, Mode badge */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <Button variant="ghost" size="sm" onClick={onBack} className="gap-1 px-2 sm:px-3 shrink-0">
+                <ArrowLeft className="h-4 w-4" />
+                <span className="hidden sm:inline">Exit</span>
+              </Button>
+              <div className="h-5 w-px bg-border hidden sm:block" />
+              <span className="text-sm font-medium text-foreground truncate max-w-[120px] sm:max-w-none">
+                {config.subjectName}
+              </span>
+              <Badge 
+                variant={isExamMode ? 'destructive' : 'secondary'} 
+                className="shrink-0 text-xs"
+              >
+                {isExamMode ? 'Exam' : 'Practice'}
+              </Badge>
+            </div>
+            
+            {/* Timer and Progress */}
+            <div className="flex items-center gap-2 sm:gap-4">
+              {examSettings.timeLimit > 0 && !showAnswersInReview && (
+                <ExamTimer
+                  totalSeconds={examSettings.timeLimit * 60}
+                  onTimeUp={handleTimeUp}
+                  isPaused={showResults}
+                  className="text-sm sm:text-base px-2 sm:px-4 py-1 sm:py-2"
+                />
+              )}
+              <div className="flex items-center gap-2 bg-muted rounded-lg px-2 sm:px-3 py-1.5">
+                <span className="text-xs sm:text-sm font-medium">{answeredCount}/{questions.length}</span>
+                <Progress value={(answeredCount / questions.length) * 100} className="w-12 sm:w-20 h-1.5 sm:h-2" />
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        {/* Question Navigator (Desktop) */}
-        <div className="hidden lg:block">
-          <QuestionNavigator
-            totalQuestions={questions.length}
-            currentQuestion={currentQuestionIndex}
-            questionStatuses={questionStatuses}
-            onNavigate={setCurrentQuestionIndex}
-          />
+      {/* Main Content - Responsive Layout */}
+      <div className="flex-1 flex flex-col lg:flex-row gap-4">
+        {/* Question Navigator - Desktop sidebar */}
+        <div className="hidden lg:block lg:w-64 shrink-0">
+          <div className="sticky top-24">
+            <QuestionNavigator
+              totalQuestions={questions.length}
+              currentQuestion={currentQuestionIndex}
+              questionStatuses={questionStatuses}
+              onNavigate={setCurrentQuestionIndex}
+            />
+            
+            {/* Desktop Submit Button */}
+            {isExamMode && !showAnswersInReview && (
+              <Button 
+                onClick={() => setShowSummary(true)} 
+                className="w-full mt-4 gap-2"
+                size="lg"
+              >
+                <Send className="h-4 w-4" />
+                Review & Submit
+              </Button>
+            )}
+          </div>
         </div>
 
-        {/* Question Card */}
-        <div className="lg:col-span-3 space-y-4">
-          <Card className="bg-card border-border">
-            <CardContent className="p-0">
-              {/* Question Header */}
-              <div className="bg-muted/50 p-4 border-b border-border">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-sm font-semibold text-muted-foreground">
-                        Question {currentQuestionIndex + 1} of {questions.length}
-                      </span>
-                      <Badge variant="outline" className={getDifficultyColor(currentQuestion.difficulty || 'medium')}>
-                        {currentQuestion.difficulty || 'Medium'}
-                      </Badge>
-                      <Badge variant="outline" className="capitalize">
-                        {currentQuestion.question_type || 'Exercise'}
-                      </Badge>
-                    </div>
-                    <p className="text-foreground text-base leading-relaxed">
-                      {currentQuestion.question_text}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant={isCurrentFlagged ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => toggleFlag(currentQuestionIndex)}
-                      className={isCurrentFlagged ? 'bg-yellow-500 hover:bg-yellow-600' : ''}
+        {/* Question Card - Main Area */}
+        <div className="flex-1 flex flex-col min-w-0">
+          <Card className="bg-card border-border flex-1 flex flex-col overflow-hidden shadow-sm">
+            {/* Question Header */}
+            <div className="bg-gradient-to-r from-primary/5 to-primary/10 p-4 sm:p-6 border-b border-border">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                    <span className="inline-flex items-center justify-center h-7 px-3 rounded-full bg-primary text-primary-foreground text-sm font-bold">
+                      {currentQuestionIndex + 1}/{questions.length}
+                    </span>
+                    <Badge 
+                      variant="outline" 
+                      className={cn("text-xs capitalize", getDifficultyColor(currentQuestion.difficulty || 'medium'))}
                     >
-                      <Flag className="h-4 w-4" />
-                    </Button>
-                    {showAnswersInReview && (
-                      isCurrentAnswered && normalizeOption(selectedAnswers[currentQuestion.id]) === normalizeOption(currentQuestion.correct_option)
-                        ? <CheckCircle2 className="h-6 w-6 text-success" />
-                        : <XCircle className="h-6 w-6 text-destructive" />
-                    )}
+                      {currentQuestion.difficulty || 'Medium'}
+                    </Badge>
+                    <Badge variant="outline" className="capitalize text-xs">
+                      {currentQuestion.question_type || 'Exercise'}
+                    </Badge>
                   </div>
+                  <p className="text-foreground text-base sm:text-lg leading-relaxed font-medium">
+                    {currentQuestion.question_text}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    variant={isCurrentFlagged ? 'default' : 'outline'}
+                    size="icon"
+                    onClick={() => toggleFlag(currentQuestionIndex)}
+                    className={cn(
+                      "h-9 w-9 sm:h-10 sm:w-10",
+                      isCurrentFlagged && 'bg-yellow-500 hover:bg-yellow-600 border-yellow-500'
+                    )}
+                  >
+                    <Flag className="h-4 w-4" />
+                  </Button>
+                  {showAnswersInReview && (
+                    isCurrentAnswered && normalizeOption(selectedAnswers[currentQuestion.id]) === normalizeOption(currentQuestion.correct_option)
+                      ? <CheckCircle2 className="h-6 w-6 sm:h-7 sm:w-7 text-success" />
+                      : <XCircle className="h-6 w-6 sm:h-7 sm:w-7 text-destructive" />
+                  )}
                 </div>
               </div>
+            </div>
 
-              {/* Options */}
-              <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+            {/* Options Grid */}
+            <div className="flex-1 p-4 sm:p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 {currentQuestion.shuffledOptions.map((opt) => (
                   <div
                     key={opt.label}
                     onClick={() => !showAnswersInReview && handleSelectAnswer(currentQuestion.id, opt.key)}
                     className={cn(
-                      'p-4 rounded-lg border-2 transition-all relative',
+                      'p-4 sm:p-5 rounded-xl border-2 transition-all relative group',
                       getOptionClass(currentQuestion.id, opt.key, currentQuestion.correct_option),
-                      showAnswersInReview ? 'cursor-default' : ''
+                      showAnswersInReview ? 'cursor-default' : 'active:scale-[0.98]'
                     )}
                   >
                     <div className="flex items-start gap-3">
-                      <span className="font-bold text-lg shrink-0">{opt.label}.</span>
-                      <span className="text-sm">{opt.text}</span>
+                      <span className="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-muted text-foreground font-bold text-sm shrink-0">
+                        {opt.label}
+                      </span>
+                      <span className="text-sm sm:text-base pt-1">{opt.text}</span>
                     </div>
                   </div>
                 ))}
@@ -566,71 +596,85 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
 
               {/* Explanation */}
               {shouldShowExplanation && currentQuestion.explanation && (
-                <div className="mx-4 mb-4 p-4 rounded-lg bg-primary/10 border border-primary/20">
-                  <p className="text-sm font-semibold text-primary mb-1">Explanation:</p>
-                  <p className="text-sm text-foreground">{currentQuestion.explanation}</p>
+                <div className="mt-4 sm:mt-6 p-4 rounded-xl bg-primary/10 border border-primary/20">
+                  <p className="text-sm font-semibold text-primary mb-2 flex items-center gap-2">
+                    <BookOpen className="h-4 w-4" />
+                    Explanation
+                  </p>
+                  <p className="text-sm text-foreground leading-relaxed">{currentQuestion.explanation}</p>
                 </div>
               )}
-            </CardContent>
-          </Card>
-
-          {/* Navigation Buttons */}
-          <div className="flex items-center justify-between">
-            <Button
-              variant="outline"
-              onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
-              disabled={currentQuestionIndex === 0}
-              className="gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Previous
-            </Button>
-
-            <div className="flex items-center gap-2">
-              {/* Mobile Navigator */}
-              <div className="lg:hidden">
-                <span className="text-sm text-muted-foreground">
-                  {currentQuestionIndex + 1} / {questions.length}
-                </span>
-              </div>
-
-              {showAnswersInReview ? (
-                <Button onClick={() => setShowResults(true)} className="gap-2">
-                  <Eye className="h-4 w-4" />
-                  Back to Results
-                </Button>
-              ) : isExamMode && currentQuestionIndex === questions.length - 1 ? (
-                <Button onClick={() => setShowSummary(true)} className="gap-2">
-                  <Send className="h-4 w-4" />
-                  Review & Submit
-                </Button>
-              ) : null}
             </div>
 
-            <Button
-              variant="outline"
-              onClick={() => setCurrentQuestionIndex(prev => Math.min(questions.length - 1, prev + 1))}
-              disabled={currentQuestionIndex === questions.length - 1}
-              className="gap-2"
-            >
-              Next
-              <ArrowRight className="h-4 w-4" />
-            </Button>
+            {/* Navigation Footer */}
+            <div className="border-t border-border p-4 bg-muted/30">
+              <div className="flex items-center justify-between gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
+                  disabled={currentQuestionIndex === 0}
+                  className="gap-1 sm:gap-2"
+                  size="sm"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  <span className="hidden xs:inline">Previous</span>
+                </Button>
+
+                <div className="flex items-center gap-2">
+                  {showAnswersInReview ? (
+                    <Button onClick={() => setShowResults(true)} size="sm" className="gap-2">
+                      <Eye className="h-4 w-4" />
+                      <span className="hidden sm:inline">Back to</span> Results
+                    </Button>
+                  ) : isExamMode && (
+                    <Button 
+                      onClick={() => setShowSummary(true)} 
+                      size="sm" 
+                      className="gap-2 lg:hidden"
+                    >
+                      <Send className="h-4 w-4" />
+                      Submit
+                    </Button>
+                  )}
+                </div>
+
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentQuestionIndex(prev => Math.min(questions.length - 1, prev + 1))}
+                  disabled={currentQuestionIndex === questions.length - 1}
+                  className="gap-1 sm:gap-2"
+                  size="sm"
+                >
+                  <span className="hidden xs:inline">Next</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </Card>
+
+          {/* Mobile Question Navigator - Collapsible */}
+          <div className="lg:hidden mt-4">
+            <details className="group">
+              <summary className="flex items-center justify-between p-3 bg-muted rounded-lg cursor-pointer list-none">
+                <span className="text-sm font-medium">Question Navigator</span>
+                <span className="text-xs text-muted-foreground">
+                  {answeredCount} answered • {flaggedQuestions.size} flagged
+                </span>
+              </summary>
+              <div className="mt-2">
+                <QuestionNavigator
+                  totalQuestions={questions.length}
+                  currentQuestion={currentQuestionIndex}
+                  questionStatuses={questionStatuses}
+                  onNavigate={setCurrentQuestionIndex}
+                />
+              </div>
+            </details>
           </div>
 
-          {/* Mobile Question Navigator */}
-          <div className="lg:hidden">
-            <QuestionNavigator
-              totalQuestions={questions.length}
-              currentQuestion={currentQuestionIndex}
-              questionStatuses={questionStatuses}
-              onNavigate={setCurrentQuestionIndex}
-            />
-          </div>
-
-          {/* Practice Mode: Auto-complete message */}
+          {/* Practice Mode: Completion Card */}
           {!isExamMode && answeredCount === questions.length && !showAnswersInReview && (
-            <Card className="bg-primary/5 border-primary/20">
+            <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20 mt-4">
               <CardContent className="py-6 text-center">
                 <h3 className="text-xl font-bold text-foreground mb-2">Practice Completed!</h3>
                 <p className="text-muted-foreground mb-4">

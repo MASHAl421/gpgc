@@ -540,23 +540,10 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
       <div className="flex-1 flex flex-col lg:flex-row gap-4">
         {/* Question Card - Full Width (Navigator removed) */}
         <div className="flex-1 flex flex-col min-w-0 max-w-4xl mx-auto w-full">
-          {/* Submit Button - Top right for exam mode */}
-          {isExamMode && !showAnswersInReview && (
-            <div className="flex justify-end mb-4">
-              <Button 
-                onClick={() => setShowSummary(true)} 
-                className="gap-2"
-              >
-                <Send className="h-4 w-4" />
-                Review & Submit
-              </Button>
-            </div>
-          )}
-          
           {/* Question Card with Animation */}
           <Card 
             key={currentQuestion.id}
-            className="bg-card border-border flex-1 flex flex-col overflow-hidden shadow-lg animate-in fade-in-0 slide-in-from-right-4 duration-300"
+            className="bg-card border-border flex-1 flex flex-col overflow-hidden shadow-xl rounded-2xl sm:rounded-3xl animate-in fade-in-0 slide-in-from-right-4 duration-300"
           >
             {/* Enhanced Question Header */}
             <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-5 sm:p-7 border-b border-border relative overflow-hidden">
@@ -606,24 +593,24 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
             </div>
 
             {/* Enhanced Options Grid */}
-            <div className="flex-1 p-5 sm:p-7">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex-1 p-4 sm:p-6 lg:p-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 {currentQuestion.shuffledOptions.map((opt, idx) => (
                   <div
                     key={opt.label}
                     onClick={() => !showAnswersInReview && handleSelectAnswer(currentQuestion.id, opt.key)}
                     className={cn(
-                      'p-5 sm:p-6 rounded-2xl border-2 transition-all duration-200 relative group animate-in fade-in-0 slide-in-from-bottom-2',
+                      'p-4 sm:p-5 lg:p-6 rounded-xl sm:rounded-2xl border-2 transition-all duration-300 relative group animate-in fade-in-0 slide-in-from-bottom-2',
                       getOptionClass(currentQuestion.id, opt.key, currentQuestion.correct_option),
-                      showAnswersInReview ? 'cursor-default' : 'hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer'
+                      showAnswersInReview ? 'cursor-default' : 'hover:shadow-xl hover:-translate-y-1 hover:border-primary/50 active:scale-[0.98] cursor-pointer'
                     )}
-                    style={{ animationDelay: `${idx * 50}ms` }}
+                    style={{ animationDelay: `${idx * 75}ms` }}
                   >
-                    <div className="flex items-start gap-4">
-                      <span className="inline-flex items-center justify-center h-10 w-10 rounded-xl bg-gradient-to-br from-muted to-muted/50 text-foreground font-bold text-base shrink-0 shadow-sm">
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <span className="inline-flex items-center justify-center h-9 w-9 sm:h-11 sm:w-11 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-bold text-sm sm:text-base shrink-0 shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-200">
                         {opt.label}
                       </span>
-                      <span className="text-base sm:text-lg pt-1.5 font-medium">{opt.text}</span>
+                      <span className="text-sm sm:text-base lg:text-lg font-medium leading-snug">{opt.text}</span>
                     </div>
                   </div>
                 ))}
@@ -631,12 +618,26 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
 
               {/* Enhanced Explanation */}
               {shouldShowExplanation && currentQuestion.explanation && (
-                <div className="mt-6 sm:mt-8 p-5 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 shadow-sm animate-in fade-in-0 slide-in-from-bottom-4 duration-300">
-                  <p className="text-base font-semibold text-primary mb-3 flex items-center gap-2">
-                    <BookOpen className="h-5 w-5" />
+                <div className="mt-5 sm:mt-6 lg:mt-8 p-4 sm:p-5 rounded-xl sm:rounded-2xl bg-gradient-to-br from-success/10 via-success/5 to-transparent border border-success/20 shadow-sm animate-in fade-in-0 slide-in-from-bottom-4 duration-500">
+                  <p className="text-sm sm:text-base font-semibold text-success mb-2 sm:mb-3 flex items-center gap-2">
+                    <BookOpen className="h-4 w-4 sm:h-5 sm:w-5" />
                     Explanation
                   </p>
-                  <p className="text-base text-foreground leading-relaxed">{currentQuestion.explanation}</p>
+                  <p className="text-sm sm:text-base text-foreground leading-relaxed">{currentQuestion.explanation}</p>
+                </div>
+              )}
+              
+              {/* Submit Button - Below Options */}
+              {isExamMode && !showAnswersInReview && (
+                <div className="mt-6 sm:mt-8 flex justify-center animate-in fade-in-0 slide-in-from-bottom-4 duration-500" style={{ animationDelay: '200ms' }}>
+                  <Button 
+                    onClick={() => setShowSummary(true)} 
+                    size="lg"
+                    className="gap-2 sm:gap-3 px-6 sm:px-8 py-5 sm:py-6 text-base sm:text-lg font-semibold rounded-xl sm:rounded-2xl bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl hover:shadow-primary/25 transition-all duration-300 hover:-translate-y-0.5"
+                  >
+                    <Send className="h-4 w-4 sm:h-5 sm:w-5" />
+                    Review & Submit
+                  </Button>
                 </div>
               )}
             </div>

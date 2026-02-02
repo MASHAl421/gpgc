@@ -1072,6 +1072,16 @@ export type Database = {
         }
         Returns: number
       }
+      add_forum_points: {
+        Args: {
+          _description?: string
+          _points: number
+          _reference_id?: string
+          _transaction_type: string
+          _user_id: string
+        }
+        Returns: number
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

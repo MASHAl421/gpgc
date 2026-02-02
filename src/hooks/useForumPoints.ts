@@ -140,29 +140,19 @@ export const useForumPoints = () => {
     if (!user) return false;
 
     try {
-      // Insert transaction
-      const { error: txError } = await supabase
-        .from('forum_point_transactions')
-        .insert({
-          user_id: user.id,
-          points,
-          transaction_type: transactionType,
-          reference_id: referenceId || null,
-          description: description || null,
-        });
+      // Use atomic RPC function to prevent race conditions
+      const { data: newBalance, error } = await supabase.rpc('add_forum_points', {
+        _user_id: user.id,
+        _points: points,
+        _transaction_type: transactionType,
+        _description: description || null,
+        _reference_id: referenceId || null,
+      });
 
-      if (txError) throw txError;
+      if (error) throw error;
 
-      // Update profile forum_points
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ forum_points: stats.forumPoints + points })
-        .eq('id', user.id);
-
-      if (updateError) throw updateError;
-
-      // Check and award badges
-      await checkAndAwardBadges(stats.forumPoints + points, stats.totalReplies);
+      // Check and award badges with the new balance
+      await checkAndAwardBadges(newBalance, stats.totalReplies);
 
       // Refresh stats
       await fetchUserStats();

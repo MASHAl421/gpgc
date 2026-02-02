@@ -4,7 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { ClipboardList, ChevronRight, Play } from 'lucide-react';
+import { ClipboardList, ChevronRight, Play, Settings } from 'lucide-react';
+import { ExamModeSelector, ExamSettings } from '@/components/exam';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface Topic {
   id: string;
@@ -39,6 +41,7 @@ export interface QuizConfig {
   difficultyLevels: string[];
   selectedUnits: string[];
   selectedTopics: string[];
+  examSettings: ExamSettings;
 }
 
 const questionTypeOptions = [
@@ -59,7 +62,16 @@ const ObjectivePaperSelector = ({ subject, onStartQuiz }: ObjectivePaperSelector
   const [selectedUnits, setSelectedUnits] = useState<string[]>([]);
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [expandedUnits, setExpandedUnits] = useState<string[]>([]);
-
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+  const [examSettings, setExamSettings] = useState<ExamSettings>({
+    mode: 'practice',
+    timeLimit: 0,
+    negativeMarking: false,
+    negativeMarkingValue: 0.25,
+    showExplanations: true,
+    shuffleQuestions: true,
+    shuffleOptions: true,
+  });
   const allUnitsSelected = selectedUnits.length === subject.units.length;
 
   const handleToggleAllUnits = () => {
@@ -141,6 +153,20 @@ const ObjectivePaperSelector = ({ subject, onStartQuiz }: ObjectivePaperSelector
     );
   };
 
+  // Auto-enable entrance exam settings when toggle is on
+  useEffect(() => {
+    if (isEntranceExam) {
+      setExamSettings(prev => ({
+        ...prev,
+        mode: 'exam',
+        timeLimit: 60, // Default 1 hour for entrance exams
+        negativeMarking: true,
+        negativeMarkingValue: 0.25,
+      }));
+      setShowAdvancedSettings(true);
+    }
+  }, [isEntranceExam]);
+
   const handleStartQuiz = () => {
     const config: QuizConfig = {
       subjectId: subject.id,
@@ -150,6 +176,7 @@ const ObjectivePaperSelector = ({ subject, onStartQuiz }: ObjectivePaperSelector
       difficultyLevels,
       selectedUnits,
       selectedTopics,
+      examSettings,
     };
     onStartQuiz(config);
   };
@@ -299,6 +326,24 @@ const ObjectivePaperSelector = ({ subject, onStartQuiz }: ObjectivePaperSelector
             </div>
           </div>
 
+          {/* Advanced Exam Settings */}
+          <Collapsible open={showAdvancedSettings} onOpenChange={setShowAdvancedSettings}>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" className="w-full gap-2">
+                <Settings className="h-4 w-4" />
+                {showAdvancedSettings ? 'Hide' : 'Show'} Exam Settings
+                <ChevronRight className={`h-4 w-4 transition-transform ${showAdvancedSettings ? 'rotate-90' : ''}`} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-4">
+              <ExamModeSelector 
+                settings={examSettings}
+                onSettingsChange={setExamSettings}
+                totalQuestions={selectedTopics.length * 10} // Estimate
+              />
+            </CollapsibleContent>
+          </Collapsible>
+
           {/* Start Button */}
           <div className="pt-4 border-t border-border">
             <Button 
@@ -308,11 +353,17 @@ const ObjectivePaperSelector = ({ subject, onStartQuiz }: ObjectivePaperSelector
               size="lg"
             >
               <Play className="h-4 w-4" />
-              Start Preparation
+              {examSettings.mode === 'exam' ? 'Start Exam' : 'Start Practice'}
             </Button>
             {!canStart && (
               <p className="text-sm text-muted-foreground mt-2">
                 Please select at least one topic, question type, and difficulty level.
+              </p>
+            )}
+            {canStart && examSettings.mode === 'exam' && examSettings.timeLimit > 0 && (
+              <p className="text-sm text-muted-foreground mt-2">
+                ⏱️ Time limit: {examSettings.timeLimit} minutes
+                {examSettings.negativeMarking && ` • ⚠️ Negative marking: -${examSettings.negativeMarkingValue} per wrong answer`}
               </p>
             )}
           </div>

@@ -15,7 +15,7 @@ import {
 import { NavLink } from '@/components/NavLink';
 import {
   Home,
-  Bot,
+  Sparkles,
   BookOpen,
   Trophy,
   Coins,
@@ -30,7 +30,7 @@ import { NotificationDropdown } from '@/components/NotificationDropdown';
 
 const menuItems = [
   { title: 'Home', url: '/home', icon: Home },
-  { title: 'AI Tutor', url: '/ai-tutor', icon: Bot },
+  { title: 'AI Workspace', url: '/ai-tutor', icon: Sparkles },
   { title: 'Preparation', url: '/preparation', icon: BookOpen },
   { title: 'Competition Tests', url: '/competition', icon: Trophy },
   { title: 'Coins Earned', url: '/coins', icon: Coins },

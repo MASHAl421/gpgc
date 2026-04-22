@@ -1,17 +1,25 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { 
-  Plus, Send, Loader2, 
-  MessageSquare, Trash2, Search, ChevronDown, X,
-  Copy, Check, Paperclip, Image as ImageIcon, FileText,
-  ThumbsUp, ThumbsDown, Share2, Volume2, VolumeX, RotateCcw
+import {
+  Plus, ArrowUp, Loader2,
+  MessageSquare, Trash2, Search, X,
+  Copy, Check, Image as ImageIcon, FileText,
+  ThumbsUp, ThumbsDown, Share2, Volume2, VolumeX, RotateCcw,
+  PanelLeft, Edit3, ImagePlus, Pencil, Globe, Sparkles, FileUp,
+  MoreHorizontal,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useChatHistory } from '@/hooks/useChatHistory';
 import { useTextToSpeech } from '@/hooks/useTextToSpeech';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
@@ -37,14 +45,14 @@ const MessageActions = ({ text, onRetry, speak, stop, isSpeaking, isSupported }:
   const [copied, setCopied] = useState(false);
   const [liked, setLiked] = useState<boolean | null>(null);
   const { toast } = useToast();
-  
+
   const handleCopy = async () => {
     await navigator.clipboard.writeText(text);
     setCopied(true);
     toast({ title: 'Copied to clipboard' });
     setTimeout(() => setCopied(false), 2000);
   };
-  
+
   const handleShare = async () => {
     if (navigator.share) {
       try {
@@ -56,42 +64,42 @@ const MessageActions = ({ text, onRetry, speak, stop, isSpeaking, isSupported }:
       toast({ title: 'Copied to clipboard (sharing not supported)' });
     }
   };
-  
+
   const handleSpeak = () => {
     if (isSpeaking) stop();
     else speak(text);
   };
-  
+
   const handleLike = () => {
     setLiked(liked === true ? null : true);
     if (liked !== true) toast({ title: 'Thanks for your feedback!' });
   };
-  
+
   const handleDislike = () => {
     setLiked(liked === false ? null : false);
     if (liked !== false) toast({ title: 'Thanks for your feedback!' });
   };
-  
+
   return (
-    <div className="flex items-center gap-1 mt-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-wrap">
-      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleCopy} title="Copy">
+    <div className="flex items-center gap-0.5 mt-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-wrap">
+      <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg text-muted-foreground hover:text-foreground" onClick={handleCopy} title="Copy">
         {copied ? <Check className="h-3.5 w-3.5 text-primary" /> : <Copy className="h-3.5 w-3.5" />}
       </Button>
-      <Button variant="ghost" size="icon" className={`h-7 w-7 ${liked === true ? 'text-primary bg-primary/10' : ''}`} onClick={handleLike} title="Like">
+      <Button variant="ghost" size="icon" className={`h-7 w-7 rounded-lg ${liked === true ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'}`} onClick={handleLike} title="Good response">
         <ThumbsUp className="h-3.5 w-3.5" />
       </Button>
-      <Button variant="ghost" size="icon" className={`h-7 w-7 ${liked === false ? 'text-destructive bg-destructive/10' : ''}`} onClick={handleDislike} title="Dislike">
+      <Button variant="ghost" size="icon" className={`h-7 w-7 rounded-lg ${liked === false ? 'text-destructive bg-destructive/10' : 'text-muted-foreground hover:text-foreground'}`} onClick={handleDislike} title="Bad response">
         <ThumbsDown className="h-3.5 w-3.5" />
       </Button>
       {isSupported && (
-        <Button variant="ghost" size="icon" className={`h-7 w-7 ${isSpeaking ? 'text-primary bg-primary/10' : ''}`} onClick={handleSpeak} title={isSpeaking ? "Stop speaking" : "Read aloud"}>
+        <Button variant="ghost" size="icon" className={`h-7 w-7 rounded-lg ${isSpeaking ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'}`} onClick={handleSpeak} title={isSpeaking ? "Stop" : "Read aloud"}>
           {isSpeaking ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
         </Button>
       )}
-      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleShare} title="Share">
+      <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg text-muted-foreground hover:text-foreground" onClick={handleShare} title="Share">
         <Share2 className="h-3.5 w-3.5" />
       </Button>
-      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onRetry} title="Retry">
+      <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg text-muted-foreground hover:text-foreground" onClick={onRetry} title="Regenerate">
         <RotateCcw className="h-3.5 w-3.5" />
       </Button>
     </div>
@@ -106,7 +114,8 @@ export const MeshChat = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const [lastUserMessage, setLastUserMessage] = useState<{ content: string; imageData?: string; imageName?: string } | null>(null);
-  
+  const [searchQuery, setSearchQuery] = useState('');
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -115,8 +124,8 @@ export const MeshChat = () => {
   const { isAuthenticated, user, session } = useAuth();
   const isMobile = useIsMobile();
   const { speak, stop, isSpeaking, isSupported } = useTextToSpeech();
-  
-  const { 
+
+  const {
     chatSessions, currentSessionId, isLoading: historyLoading,
     fetchChatHistory, createNewSession, updateSession, deleteSession,
     loadSession, setCurrentSessionId
@@ -153,7 +162,6 @@ export const MeshChat = () => {
     const ta = textareaRef.current;
     if (!ta) return;
     if (!question) {
-      // Reset to single-line height when empty (fixes oversized empty textarea on mobile)
       ta.style.height = '';
       return;
     }
@@ -182,8 +190,9 @@ export const MeshChat = () => {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleSend = async () => {
-    if ((!question.trim() && !attachedFile) || isLoading) return;
+  const handleSend = async (overrideText?: string) => {
+    const textToSend = overrideText ?? question;
+    if ((!textToSend.trim() && !attachedFile) || isLoading) return;
 
     const getValidAccessToken = async (): Promise<string | null> => {
       const { data } = await supabase.auth.getSession();
@@ -202,14 +211,14 @@ export const MeshChat = () => {
       return;
     }
 
-    const userMsg: Message = { 
-      role: 'user', 
-      content: question || (attachedFile ? `Analyze this ${attachedFile.type.startsWith('image') ? 'image' : 'document'}` : ''),
+    const userMsg: Message = {
+      role: 'user',
+      content: textToSend || (attachedFile ? `Analyze this ${attachedFile.type.startsWith('image') ? 'image' : 'document'}` : ''),
       imageData: attachedFile?.data,
       imageName: attachedFile?.name,
     };
     setLastUserMessage({ content: userMsg.content, imageData: userMsg.imageData, imageName: userMsg.imageName });
-    const questionText = question || attachedFile?.name || 'File analysis';
+    const questionText = textToSend || attachedFile?.name || 'File analysis';
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
     setQuestion('');
@@ -346,150 +355,205 @@ export const MeshChat = () => {
     }
   };
 
-  return (
-    <div className="h-full flex overflow-hidden">
-      {/* Sidebar */}
-      <div className={`${sidebarOpen ? 'w-64' : 'w-0'} flex-shrink-0 border-r border-border bg-muted/30 transition-all duration-300 overflow-hidden`}>
-        <div className="w-64 h-full flex flex-col">
-          <div className="p-3 flex items-center justify-between flex-shrink-0">
-            <Button variant="outline" className="flex-1 justify-start gap-2" onClick={handleNewChat}>
-              <Plus className="h-4 w-4" />
-              New chat
-            </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 ml-2" onClick={() => setSidebarOpen(false)}>
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+  const filteredSessions = chatSessions.filter(s =>
+    !searchQuery || (s.title || '').toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-          <div className="px-3 pb-2 flex-shrink-0">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Search chats"
-                className="w-full pl-9 pr-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-            </div>
-          </div>
+  // Quick action chips (ChatGPT mobile-style)
+  const quickActions = [
+    { icon: ImagePlus, label: 'Create an image', prompt: 'Create an image of ' },
+    { icon: Pencil, label: 'Write or edit', prompt: 'Help me write ' },
+    { icon: Globe, label: 'Look something up', prompt: 'Look up information about ' },
+    { icon: Sparkles, label: 'Explain a concept', prompt: 'Explain the concept of ' },
+  ];
 
-          <div className="flex-1 flex flex-col min-h-0">
-            <div className="px-3 py-2 flex-shrink-0">
-              <p className="text-xs font-medium text-muted-foreground">Your chats</p>
-            </div>
-            <div className="flex-1 overflow-y-auto px-2 space-y-1">
-              {historyLoading ? (
-                <div className="p-4 text-center">
-                  <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
-                </div>
-              ) : chatSessions.length === 0 ? (
-                <div className="p-4 text-center text-muted-foreground text-sm">No chats yet</div>
-              ) : (
-                chatSessions.map((session) => (
-                  <div
-                    key={session.id}
-                    className={`group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-                      currentSessionId === session.id ? 'bg-accent text-accent-foreground' : 'hover:bg-muted'
-                    }`}
-                    onClick={() => handleLoadSession(session.id)}
-                  >
-                    <MessageSquare className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                    <span className="flex-1 text-sm truncate">{session.title || 'New Chat'}</span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 opacity-0 group-hover:opacity-100"
-                      onClick={(e) => { e.stopPropagation(); deleteSession(session.id); }}
-                    >
-                      <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
-                    </Button>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
+  /* ---------- Sidebar content (shared between desktop + mobile drawer) ---------- */
+  const SidebarContent = ({ onClose }: { onClose?: () => void }) => (
+    <div className="h-full flex flex-col bg-muted/30">
+      <div className="p-3 flex items-center gap-2 flex-shrink-0">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 rounded-full hover:bg-muted"
+          onClick={onClose}
+          title="Close sidebar"
+        >
+          <PanelLeft className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          className="flex-1 justify-start gap-2 h-9 rounded-full hover:bg-muted font-medium"
+          onClick={handleNewChat}
+        >
+          <Edit3 className="h-4 w-4" />
+          New chat
+        </Button>
+      </div>
 
-          {user && (
-            <div className="p-3 border-t border-border flex-shrink-0">
-              <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-muted cursor-pointer">
-                <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-medium">
-                  {user.email?.charAt(0).toUpperCase() || 'U'}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{user.email?.split('@')[0] || 'User'}</p>
-                </div>
+      <div className="px-3 pb-2 flex-shrink-0">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search chats"
+            className="w-full pl-9 pr-3 py-2 text-sm bg-background border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-ring/40"
+          />
+        </div>
+      </div>
+
+      <div className="flex-1 flex flex-col min-h-0">
+        <div className="px-4 py-2 flex-shrink-0">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Your chats</p>
+        </div>
+        <div className="flex-1 overflow-y-auto px-2 space-y-0.5 pb-2 scrollbar-thin">
+          {historyLoading ? (
+            <div className="p-4 text-center">
+              <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
+            </div>
+          ) : filteredSessions.length === 0 ? (
+            <div className="p-4 text-center text-muted-foreground text-sm">
+              {searchQuery ? 'No matches' : 'No chats yet'}
+            </div>
+          ) : (
+            filteredSessions.map((s) => (
+              <div
+                key={s.id}
+                className={`group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+                  currentSessionId === s.id ? 'bg-accent text-accent-foreground' : 'hover:bg-muted'
+                }`}
+                onClick={() => handleLoadSession(s.id)}
+              >
+                <span className="flex-1 text-sm truncate">{s.title || 'New Chat'}</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-background"
+                  onClick={(e) => { e.stopPropagation(); deleteSession(s.id); }}
+                >
+                  <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
+                </Button>
               </div>
-            </div>
+            ))
           )}
         </div>
       </div>
 
+      {user && (
+        <div className="p-2 border-t border-border flex-shrink-0">
+          <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-muted cursor-pointer">
+            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-primary-foreground text-sm font-semibold flex-shrink-0">
+              {user.email?.charAt(0).toUpperCase() || 'U'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{user.email?.split('@')[0] || 'User'}</p>
+              <p className="text-[11px] text-muted-foreground truncate">Free plan</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="h-full flex overflow-hidden bg-background">
+      {/* Desktop Sidebar */}
+      {!isMobile && (
+        <div className={`${sidebarOpen ? 'w-64' : 'w-0'} flex-shrink-0 border-r border-border transition-all duration-300 overflow-hidden`}>
+          <div className="w-64 h-full">
+            <SidebarContent onClose={() => setSidebarOpen(false)} />
+          </div>
+        </div>
+      )}
+
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSidebarOpen(!sidebarOpen)}>
-              <MessageSquare className="h-4 w-4" />
+      <div className="flex-1 flex flex-col min-w-0 relative">
+        {/* Top Header — pill-shaped buttons floating */}
+        <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 flex-shrink-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 rounded-full bg-muted/60 hover:bg-muted shadow-sm"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            title="Open sidebar"
+          >
+            <PanelLeft className="h-4 w-4" />
+          </Button>
+
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <Button
+              variant="ghost"
+              className="h-9 px-3 rounded-full bg-muted/60 hover:bg-muted shadow-sm gap-1.5 text-xs sm:text-sm font-medium"
+              onClick={handleNewChat}
+              title="New chat"
+            >
+              <Edit3 className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">New</span>
             </Button>
-            <span className="font-medium">Mesh Chat</span>
-            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 rounded-full bg-muted/60 hover:bg-muted shadow-sm"
+                  title="More"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={handleNewChat}>
+                  <Edit3 className="h-4 w-4 mr-2" /> New chat
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSidebarOpen(true)}>
+                  <MessageSquare className="h-4 w-4 mr-2" /> Show history
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
+        {/* Scroll area */}
         <div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
-          <div className="max-w-3xl mx-auto px-3 sm:px-4 py-4">
+          <div className="max-w-3xl mx-auto px-3 sm:px-6 pt-2 pb-6">
             {messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center min-h-[50vh] sm:min-h-[60vh] text-center px-2">
-                <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4 sm:mb-6">
-                  <MessageSquare className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
+              <div className="flex flex-col items-center justify-center min-h-[55vh] text-center px-2 animate-in fade-in duration-500">
+                <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-5 border border-primary/20">
+                  <Sparkles className="h-7 w-7 sm:h-8 sm:w-8 text-primary" />
                 </div>
-                <h1 className="text-xl sm:text-2xl font-semibold mb-2">How can I help you today?</h1>
-                <p className="text-muted-foreground mb-6 sm:mb-8 max-w-md text-sm sm:text-base">
-                  Ask me anything about Programming Fundamentals, Functional English, or any topic from your syllabus.
+                <h1 className="text-xl sm:text-3xl font-semibold mb-2 tracking-tight">
+                  How can I help you today?
+                </h1>
+                <p className="text-muted-foreground text-sm sm:text-base max-w-md">
+                  Ask anything from your syllabus — Mesh Chat understands text, images, and PDFs.
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 w-full max-w-lg">
-                  {[
-                    "Explain loops in C++",
-                    "What are parts of speech?",
-                    "Write a simple array program",
-                    "Explain tenses with examples"
-                  ].map((suggestion, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setQuestion(suggestion)}
-                      className="text-left p-3 sm:p-4 rounded-xl border border-border hover:bg-muted/50 active:bg-muted transition-colors"
-                    >
-                      <span className="text-xs sm:text-sm">{suggestion}</span>
-                    </button>
-                  ))}
-                </div>
               </div>
             ) : (
-              <div className="space-y-4 sm:space-y-6">
+              <div className="space-y-5 sm:space-y-7 pt-2">
                 {messages.map((message, index) => (
-                  <div key={index} className={`group flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[90%] sm:max-w-[85%]`}>
+                  <div key={index} className={`group flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
+                    <div className={message.role === 'user' ? 'max-w-[88%] sm:max-w-[80%]' : 'w-full sm:max-w-[90%]'}>
                       {message.role === 'user' ? (
-                        <div className="relative">
-                          <div className="bg-primary text-primary-foreground px-3 sm:px-4 py-2.5 sm:py-3 rounded-2xl rounded-br-md text-sm sm:text-base">
-                            {message.imageName && (
-                              <div className="flex items-center gap-2 mb-2 pb-2 border-b border-primary-foreground/20">
-                                {message.imageData?.startsWith('data:image') ? (
-                                  <ImageIcon className="h-4 w-4" />
-                                ) : (
-                                  <FileText className="h-4 w-4" />
-                                )}
-                                <span className="text-xs sm:text-sm truncate">{message.imageName}</span>
-                              </div>
-                            )}
-                            {message.imageData?.startsWith('data:image') && (
-                              <img src={message.imageData} alt="Uploaded" className="max-w-full max-h-32 sm:max-h-48 rounded-lg mb-2" />
-                            )}
-                            <p className="whitespace-pre-wrap">{message.content}</p>
-                          </div>
+                        <div className="bg-muted text-foreground px-4 py-2.5 sm:py-3 rounded-3xl rounded-br-lg text-[15px] sm:text-base">
+                          {message.imageName && (
+                            <div className="flex items-center gap-2 mb-2 pb-2 border-b border-border/40">
+                              {message.imageData?.startsWith('data:image') ? (
+                                <ImageIcon className="h-4 w-4" />
+                              ) : (
+                                <FileText className="h-4 w-4" />
+                              )}
+                              <span className="text-xs sm:text-sm truncate">{message.imageName}</span>
+                            </div>
+                          )}
+                          {message.imageData?.startsWith('data:image') && (
+                            <img src={message.imageData} alt="Uploaded" className="max-w-full max-h-40 sm:max-h-56 rounded-xl mb-2" />
+                          )}
+                          <p className="whitespace-pre-wrap break-words">{message.content}</p>
                         </div>
                       ) : (
                         <div className="relative group">
-                          <div className="prose prose-sm dark:prose-invert max-w-none">
+                          <div className="prose prose-sm sm:prose-base dark:prose-invert max-w-none prose-pre:my-2 prose-p:my-2 prose-headings:mt-4 prose-headings:mb-2">
                             <ReactMarkdown
                               remarkPlugins={[remarkMath]}
                               rehypePlugins={[rehypeKatex]}
@@ -501,13 +565,13 @@ export const MeshChat = () => {
                                       style={oneDark}
                                       language={match[1]}
                                       PreTag="div"
-                                      customStyle={{ borderRadius: '12px', fontSize: '0.85em', margin: '1em 0' }}
+                                      customStyle={{ borderRadius: '14px', fontSize: '0.85em', margin: '0.75em 0' }}
                                       {...props}
                                     >
                                       {String(children).replace(/\n$/, '')}
                                     </SyntaxHighlighter>
                                   ) : (
-                                    <code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono" {...props}>
+                                    <code className="bg-muted px-1.5 py-0.5 rounded-md text-[0.85em] font-mono" {...props}>
                                       {children}
                                     </code>
                                   );
@@ -517,8 +581,8 @@ export const MeshChat = () => {
                               {message.content}
                             </ReactMarkdown>
                           </div>
-                          <MessageActions 
-                            text={message.content} 
+                          <MessageActions
+                            text={message.content}
                             onRetry={handleRetry}
                             speak={speak}
                             stop={stop}
@@ -530,15 +594,13 @@ export const MeshChat = () => {
                     </div>
                   </div>
                 ))}
-                
+
                 {isLoading && messages[messages.length - 1]?.role === 'user' && (
-                  <div className="flex justify-start">
-                    <div className="flex items-center gap-2 px-4 py-2.5 bg-muted/50 rounded-xl">
-                      <div className="flex gap-1">
-                        <span className="w-2 h-2 rounded-full bg-foreground/40 animate-pulse" style={{ animationDelay: '0ms' }} />
-                        <span className="w-2 h-2 rounded-full bg-foreground/40 animate-pulse" style={{ animationDelay: '200ms' }} />
-                        <span className="w-2 h-2 rounded-full bg-foreground/40 animate-pulse" style={{ animationDelay: '400ms' }} />
-                      </div>
+                  <div className="flex justify-start animate-in fade-in duration-300">
+                    <div className="flex items-center gap-1.5 px-4 py-3 bg-muted/60 rounded-2xl">
+                      <span className="w-2 h-2 rounded-full bg-foreground/50 animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <span className="w-2 h-2 rounded-full bg-foreground/50 animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <span className="w-2 h-2 rounded-full bg-foreground/50 animate-bounce" style={{ animationDelay: '300ms' }} />
                     </div>
                   </div>
                 )}
@@ -548,25 +610,47 @@ export const MeshChat = () => {
           </div>
         </div>
 
-        <div className="border-t border-border p-2 sm:p-4 safe-area-bottom">
+        {/* Bottom Input Area — ChatGPT-style pill */}
+        <div className="px-3 sm:px-6 pb-3 sm:pb-5 pt-1 safe-area-bottom flex-shrink-0">
           <div className="max-w-3xl mx-auto">
+            {/* Quick action chips — only show on empty state */}
+            {messages.length === 0 && !attachedFile && (
+              <div className="flex flex-wrap gap-2 justify-center mb-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                {quickActions.slice(0, isMobile ? 3 : 4).map((action, i) => (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      setQuestion(action.prompt);
+                      textareaRef.current?.focus();
+                    }}
+                    className="flex items-center gap-2 px-3 py-2 rounded-full bg-muted/60 hover:bg-muted active:scale-95 transition-all text-xs sm:text-sm border border-border/50"
+                  >
+                    <action.icon className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="font-medium">{action.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Attached file preview */}
             {attachedFile && (
-              <div className="mb-2 p-2 bg-muted rounded-lg flex items-center gap-2">
+              <div className="mb-2 p-2 bg-muted rounded-2xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-1 duration-200">
                 {attachedFile.type.startsWith('image') ? (
-                  <img src={attachedFile.data} alt="Preview" className="h-10 w-10 sm:h-12 sm:w-12 object-cover rounded" />
+                  <img src={attachedFile.data} alt="Preview" className="h-12 w-12 object-cover rounded-xl" />
                 ) : (
-                  <div className="h-10 w-10 sm:h-12 sm:w-12 bg-primary/10 rounded flex items-center justify-center">
-                    <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+                  <div className="h-12 w-12 bg-primary/10 rounded-xl flex items-center justify-center">
+                    <FileText className="h-5 w-5 text-primary" />
                   </div>
                 )}
                 <span className="flex-1 text-xs sm:text-sm truncate">{attachedFile.name}</span>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setAttachedFile(null)}>
+                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={() => setAttachedFile(null)}>
                   <X className="h-4 w-4" />
                 </Button>
               </div>
             )}
-            
-            <div className="relative flex items-end gap-1 sm:gap-2 bg-muted/50 rounded-2xl border border-border p-1.5 sm:p-2">
+
+            {/* Input pill */}
+            <div className="relative flex items-end gap-1.5 sm:gap-2 bg-muted/70 hover:bg-muted/90 focus-within:bg-muted rounded-[28px] border border-border/60 shadow-sm transition-colors p-1.5 sm:p-2">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -574,17 +658,31 @@ export const MeshChat = () => {
                 onChange={handleFileSelect}
                 className="hidden"
               />
-              
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 sm:h-9 sm:w-9 flex-shrink-0"
-                onClick={() => fileInputRef.current?.click()}
-                title="Attach image or PDF"
-              >
-                <Paperclip className="h-4 w-4 sm:h-5 sm:w-5" />
-              </Button>
-              
+
+              {/* Attach button (Plus icon like ChatGPT) */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 rounded-full hover:bg-background/60 flex-shrink-0"
+                    title="Add"
+                  >
+                    <Plus className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" side="top" className="w-52 mb-2">
+                  <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                    <ImagePlus className="h-4 w-4 mr-2" />
+                    Upload image
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                    <FileUp className="h-4 w-4 mr-2" />
+                    Upload PDF
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
               <Textarea
                 ref={textareaRef}
                 placeholder={attachedFile ? "Add a message..." : "Ask anything"}
@@ -597,104 +695,45 @@ export const MeshChat = () => {
                   }
                 }}
                 style={{ height: question ? undefined : (isMobile ? '36px' : '40px') }}
-                className="flex-1 !min-h-[36px] sm:!min-h-[40px] max-h-[140px] sm:max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 py-2 sm:py-2.5 px-1 text-sm sm:text-base leading-relaxed overflow-y-auto scrollbar-thin"
+                className="flex-1 !min-h-[36px] sm:!min-h-[40px] max-h-[140px] sm:max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 py-2 sm:py-2.5 px-1 text-[15px] sm:text-base leading-relaxed overflow-y-auto scrollbar-thin placeholder:text-muted-foreground/70"
                 rows={1}
                 disabled={isLoading}
               />
 
+              {/* Send button */}
               <Button
-                variant="default"
                 size="icon"
-                className="h-8 w-8 sm:h-9 sm:w-9 rounded-full flex-shrink-0"
+                className="h-9 w-9 rounded-full flex-shrink-0 bg-foreground text-background hover:bg-foreground/90 disabled:bg-muted-foreground/40 disabled:text-background transition-all"
                 onClick={() => handleSend()}
                 disabled={isLoading || (!question.trim() && !attachedFile)}
+                title="Send"
               >
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <ArrowUp className="h-4 w-4" strokeWidth={2.5} />
+                )}
               </Button>
             </div>
-            <p className="text-[10px] sm:text-xs text-center text-muted-foreground mt-1.5 sm:mt-2">
+
+            <p className="text-[10px] sm:text-xs text-center text-muted-foreground mt-2">
               Mesh Chat can make mistakes. Verify important information.
             </p>
           </div>
         </div>
       </div>
 
+      {/* Mobile Drawer Sidebar */}
       {isMobile && sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 animate-in fade-in duration-200"
+        <div
+          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 animate-in fade-in duration-200"
           onClick={() => setSidebarOpen(false)}
         >
-          <div 
-            className="absolute left-0 top-0 h-full w-[85%] max-w-[320px] bg-card border-r border-border shadow-2xl animate-in slide-in-from-left duration-300"
+          <div
+            className="absolute left-0 top-0 h-full w-[85%] max-w-[320px] shadow-2xl animate-in slide-in-from-left duration-300"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="h-full flex flex-col">
-              <div className="p-3 flex items-center justify-between flex-shrink-0 border-b border-border">
-                <Button variant="outline" className="flex-1 justify-start gap-2" onClick={handleNewChat}>
-                  <Plus className="h-4 w-4" />
-                  New chat
-                </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 ml-2" onClick={() => setSidebarOpen(false)}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-
-              <div className="px-3 py-2 flex-shrink-0">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <input
-                    type="text"
-                    placeholder="Search chats"
-                    className="w-full pl-9 pr-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
-                  />
-                </div>
-              </div>
-
-              <div className="px-3 py-1 flex-shrink-0">
-                <p className="text-xs font-medium text-muted-foreground">Your chats</p>
-              </div>
-              <div className="flex-1 overflow-y-auto px-2 space-y-1 pb-2">
-                {historyLoading ? (
-                  <div className="p-4 text-center">
-                    <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
-                  </div>
-                ) : chatSessions.length === 0 ? (
-                  <div className="p-4 text-center text-muted-foreground text-sm">No chats yet</div>
-                ) : (
-                  chatSessions.map((session) => (
-                    <div
-                      key={session.id}
-                      className={`group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-                        currentSessionId === session.id ? 'bg-accent text-accent-foreground' : 'hover:bg-muted active:bg-muted'
-                      }`}
-                      onClick={() => handleLoadSession(session.id)}
-                    >
-                      <MessageSquare className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                      <span className="flex-1 text-sm truncate">{session.title || 'New Chat'}</span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 opacity-60 hover:opacity-100"
-                        onClick={(e) => { e.stopPropagation(); deleteSession(session.id); }}
-                      >
-                        <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
-                      </Button>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              {user && (
-                <div className="p-3 border-t border-border flex-shrink-0 bg-card">
-                  <div className="flex items-center gap-3 px-2 py-2 rounded-lg">
-                    <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-medium flex-shrink-0">
-                      {user.email?.charAt(0).toUpperCase() || 'U'}
-                    </div>
-                    <p className="text-sm font-medium truncate">{user.email?.split('@')[0] || 'User'}</p>
-                  </div>
-                </div>
-              )}
-            </div>
+            <SidebarContent onClose={() => setSidebarOpen(false)} />
           </div>
         </div>
       )}

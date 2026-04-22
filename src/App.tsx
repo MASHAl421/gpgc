@@ -7,7 +7,7 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Login from "./pages/Login";
 import Home from "./pages/Home";
 import Preparation from "./pages/Preparation";
-import AITutor from "./pages/AITutor";
+import AIWorkspace from "./pages/AITutor";
 import Competition from "./pages/Competition";
 import Coins from "./pages/Coins";
 import HowItWorks from "./pages/HowItWorks";
@@ -75,7 +75,7 @@ const AppRoutes = () => {
       <Route path="/" element={isAuthenticated ? <Navigate to="/home" replace /> : <Login />} />
       <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
       <Route path="/preparation" element={<ProtectedRoute><Preparation /></ProtectedRoute>} />
-      <Route path="/ai-tutor" element={<ProtectedRoute><AITutor /></ProtectedRoute>} />
+      <Route path="/ai-tutor" element={<ProtectedRoute><AIWorkspace /></ProtectedRoute>} />
       <Route path="/competition" element={<ProtectedRoute><Competition /></ProtectedRoute>} />
       <Route path="/coins" element={<ProtectedRoute><Coins /></ProtectedRoute>} />
       <Route path="/how-it-works" element={<ProtectedRoute><HowItWorks /></ProtectedRoute>} />

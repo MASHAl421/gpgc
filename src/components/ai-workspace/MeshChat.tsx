@@ -591,12 +591,13 @@ export const MeshChat = () => {
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
+                  if (e.key === 'Enter' && !e.shiftKey && !isMobile) {
                     e.preventDefault();
                     handleSend();
                   }
                 }}
-                className="flex-1 min-h-[36px] sm:min-h-[40px] max-h-[150px] sm:max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 py-2 sm:py-2.5 px-0 text-sm sm:text-base"
+                style={{ height: question ? undefined : (isMobile ? '36px' : '40px') }}
+                className="flex-1 !min-h-[36px] sm:!min-h-[40px] max-h-[140px] sm:max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 py-2 sm:py-2.5 px-1 text-sm sm:text-base leading-relaxed overflow-y-auto scrollbar-thin"
                 rows={1}
                 disabled={isLoading}
               />

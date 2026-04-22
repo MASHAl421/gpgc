@@ -73,7 +73,7 @@ const MessageActions = ({ text, onRetry, speak, stop, isSpeaking, isSupported }:
   };
   
   return (
-    <div className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+    <div className="flex items-center gap-1 mt-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-wrap">
       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleCopy} title="Copy">
         {copied ? <Check className="h-3.5 w-3.5 text-primary" /> : <Copy className="h-3.5 w-3.5" />}
       </Button>
@@ -150,11 +150,17 @@ export const MeshChat = () => {
   }, [messages, shouldAutoScroll, isLoading]);
 
   useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 200) + 'px';
+    const ta = textareaRef.current;
+    if (!ta) return;
+    if (!question) {
+      // Reset to single-line height when empty (fixes oversized empty textarea on mobile)
+      ta.style.height = '';
+      return;
     }
-  }, [question]);
+    ta.style.height = 'auto';
+    const maxH = isMobile ? 140 : 200;
+    ta.style.height = Math.min(ta.scrollHeight, maxH) + 'px';
+  }, [question, isMobile]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -585,12 +591,13 @@ export const MeshChat = () => {
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
+                  if (e.key === 'Enter' && !e.shiftKey && !isMobile) {
                     e.preventDefault();
                     handleSend();
                   }
                 }}
-                className="flex-1 min-h-[36px] sm:min-h-[40px] max-h-[150px] sm:max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 py-2 sm:py-2.5 px-0 text-sm sm:text-base"
+                style={{ height: question ? undefined : (isMobile ? '36px' : '40px') }}
+                className="flex-1 !min-h-[36px] sm:!min-h-[40px] max-h-[140px] sm:max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 py-2 sm:py-2.5 px-1 text-sm sm:text-base leading-relaxed overflow-y-auto scrollbar-thin"
                 rows={1}
                 disabled={isLoading}
               />
@@ -614,41 +621,73 @@ export const MeshChat = () => {
 
       {isMobile && sidebarOpen && (
         <div 
-          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40"
+          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 animate-in fade-in duration-200"
           onClick={() => setSidebarOpen(false)}
         >
           <div 
-            className="absolute left-0 top-0 h-full w-64 bg-card border-r border-border shadow-xl"
+            className="absolute left-0 top-0 h-full w-[85%] max-w-[320px] bg-card border-r border-border shadow-2xl animate-in slide-in-from-left duration-300"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="h-full flex flex-col">
-              <div className="p-3 flex-shrink-0">
-                <Button variant="outline" className="w-full justify-start gap-2" onClick={handleNewChat}>
+              <div className="p-3 flex items-center justify-between flex-shrink-0 border-b border-border">
+                <Button variant="outline" className="flex-1 justify-start gap-2" onClick={handleNewChat}>
                   <Plus className="h-4 w-4" />
                   New chat
                 </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 ml-2" onClick={() => setSidebarOpen(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
+
               <div className="px-3 py-2 flex-shrink-0">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Search chats"
+                    className="w-full pl-9 pr-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+              </div>
+
+              <div className="px-3 py-1 flex-shrink-0">
                 <p className="text-xs font-medium text-muted-foreground">Your chats</p>
               </div>
-              <div className="flex-1 overflow-y-auto px-2 space-y-1">
-                {chatSessions.map((session) => (
-                  <div
-                    key={session.id}
-                    className={`group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer ${
-                      currentSessionId === session.id ? 'bg-accent' : 'hover:bg-muted'
-                    }`}
-                    onClick={() => handleLoadSession(session.id)}
-                  >
-                    <MessageSquare className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                    <span className="flex-1 text-sm truncate">{session.title || 'New Chat'}</span>
+              <div className="flex-1 overflow-y-auto px-2 space-y-1 pb-2">
+                {historyLoading ? (
+                  <div className="p-4 text-center">
+                    <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
                   </div>
-                ))}
+                ) : chatSessions.length === 0 ? (
+                  <div className="p-4 text-center text-muted-foreground text-sm">No chats yet</div>
+                ) : (
+                  chatSessions.map((session) => (
+                    <div
+                      key={session.id}
+                      className={`group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+                        currentSessionId === session.id ? 'bg-accent text-accent-foreground' : 'hover:bg-muted active:bg-muted'
+                      }`}
+                      onClick={() => handleLoadSession(session.id)}
+                    >
+                      <MessageSquare className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                      <span className="flex-1 text-sm truncate">{session.title || 'New Chat'}</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 opacity-60 hover:opacity-100"
+                        onClick={(e) => { e.stopPropagation(); deleteSession(session.id); }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
+                      </Button>
+                    </div>
+                  ))
+                )}
               </div>
+
               {user && (
-                <div className="p-3 border-t border-border flex-shrink-0">
+                <div className="p-3 border-t border-border flex-shrink-0 bg-card">
                   <div className="flex items-center gap-3 px-2 py-2 rounded-lg">
-                    <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-medium">
+                    <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-medium flex-shrink-0">
                       {user.email?.charAt(0).toUpperCase() || 'U'}
                     </div>
                     <p className="text-sm font-medium truncate">{user.email?.split('@')[0] || 'User'}</p>

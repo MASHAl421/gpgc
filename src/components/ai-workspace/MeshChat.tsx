@@ -150,11 +150,17 @@ export const MeshChat = () => {
   }, [messages, shouldAutoScroll, isLoading]);
 
   useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 200) + 'px';
+    const ta = textareaRef.current;
+    if (!ta) return;
+    if (!question) {
+      // Reset to single-line height when empty (fixes oversized empty textarea on mobile)
+      ta.style.height = '';
+      return;
     }
-  }, [question]);
+    ta.style.height = 'auto';
+    const maxH = isMobile ? 140 : 200;
+    ta.style.height = Math.min(ta.scrollHeight, maxH) + 'px';
+  }, [question, isMobile]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

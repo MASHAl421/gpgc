@@ -698,20 +698,32 @@ export const MeshChat = () => {
               </div>
             )}
 
-            {/* Attached file preview */}
+            {/* Attached file preview — transparent, clean */}
             {attachedFile && (
-              <div className="mb-2 p-2 bg-muted rounded-2xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-1 duration-200">
-                {attachedFile.type.startsWith('image') ? (
-                  <img src={attachedFile.data} alt="Preview" className="h-12 w-12 object-cover rounded-xl" />
-                ) : (
-                  <div className="h-12 w-12 bg-primary/10 rounded-xl flex items-center justify-center">
-                    <FileText className="h-5 w-5 text-primary" />
-                  </div>
-                )}
-                <span className="flex-1 text-xs sm:text-sm truncate">{attachedFile.name}</span>
-                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={() => setAttachedFile(null)}>
-                  <X className="h-4 w-4" />
-                </Button>
+              <div className="mb-2 inline-flex items-center gap-2 animate-in fade-in slide-in-from-bottom-1 duration-200">
+                <div className="relative">
+                  {attachedFile.type.startsWith('image') ? (
+                    <img
+                      src={attachedFile.data}
+                      alt="Preview"
+                      className="h-16 w-16 sm:h-20 sm:w-20 object-cover rounded-xl border border-border/60"
+                    />
+                  ) : (
+                    <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-xl border border-border/60 flex flex-col items-center justify-center bg-transparent">
+                      <FileText className="h-5 w-5 text-primary mb-1" />
+                      <span className="text-[9px] font-semibold text-muted-foreground">PDF</span>
+                    </div>
+                  )}
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full shadow-sm border border-border bg-background hover:bg-muted"
+                    onClick={() => setAttachedFile(null)}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+                <span className="text-xs text-muted-foreground truncate max-w-[180px] sm:max-w-[260px]">{attachedFile.name}</span>
               </div>
             )}
 

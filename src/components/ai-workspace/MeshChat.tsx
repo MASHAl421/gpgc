@@ -594,21 +594,28 @@ export const MeshChat = () => {
                   <div key={index} className={`group flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
                     <div className={message.role === 'user' ? 'max-w-[88%] sm:max-w-[80%]' : 'w-full sm:max-w-[90%]'}>
                       {message.role === 'user' ? (
-                        <div className="bg-muted text-foreground px-4 py-2.5 sm:py-3 rounded-3xl rounded-br-lg text-[15px] sm:text-base">
-                          {message.imageName && (
-                            <div className="flex items-center gap-2 mb-2 pb-2 border-b border-border/40">
-                              {message.imageData?.startsWith('data:image') ? (
-                                <ImageIcon className="h-4 w-4" />
-                              ) : (
-                                <FileText className="h-4 w-4" />
-                              )}
-                              <span className="text-xs sm:text-sm truncate">{message.imageName}</span>
+                        <div className="flex flex-col items-end gap-2">
+                          {/* Image — bare, transparent, no bubble/shadow */}
+                          {message.imageData?.startsWith('data:image') && (
+                            <img
+                              src={message.imageData}
+                              alt={message.imageName || 'Uploaded'}
+                              className="max-w-[260px] sm:max-w-[320px] max-h-64 sm:max-h-80 rounded-2xl object-contain"
+                            />
+                          )}
+                          {/* PDF chip — transparent border-only style */}
+                          {message.imageData && !message.imageData.startsWith('data:image') && message.imageName && (
+                            <div className="flex items-center gap-2 px-3 py-2 rounded-2xl border border-border/60 bg-transparent">
+                              <FileText className="h-4 w-4 text-primary" />
+                              <span className="text-xs sm:text-sm truncate max-w-[200px]">{message.imageName}</span>
                             </div>
                           )}
-                          {message.imageData?.startsWith('data:image') && (
-                            <img src={message.imageData} alt="Uploaded" className="max-w-full max-h-40 sm:max-h-56 rounded-xl mb-2" />
+                          {/* Text message — only render bubble if there's actual user text */}
+                          {message.content && message.content.trim() && message.content !== `Analyze this image` && message.content !== `Analyze this document` && (
+                            <div className="bg-muted text-foreground px-4 py-2.5 sm:py-3 rounded-3xl rounded-br-lg text-[15px] sm:text-base max-w-full">
+                              <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                            </div>
                           )}
-                          <p className="whitespace-pre-wrap break-words">{message.content}</p>
                         </div>
                       ) : (
                         <div className="relative group">

@@ -14,7 +14,7 @@ const ComingSoon = ({ icon: Icon, title, description }: { icon: any; title: stri
     </h2>
     <p className="text-muted-foreground max-w-md text-sm sm:text-base mb-6">{description}</p>
     <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium">
-      <Sparkles className="h-4 w-4 animate-pulse" />
+      <div className="thinking-text">Thinking</div>
       Coming Soon
     </div>
   </div>

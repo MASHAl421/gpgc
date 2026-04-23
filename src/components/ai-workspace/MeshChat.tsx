@@ -575,7 +575,7 @@ export const MeshChat = () => {
 
         {/* Scroll area */}
         <div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
-          <div className="max-w-3xl mx-auto px-3 sm:px-6 pt-2 pb-6">
+          <div className="max-w-3xl mx-auto px-3 sm:px-6 pt-2 pb-2">
             {messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center min-h-[55vh] text-center px-2 animate-in fade-in duration-500">
                 <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-5 border border-primary/20">

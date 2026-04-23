@@ -136,6 +136,19 @@ export const MeshChat = () => {
     if (isAuthenticated) fetchChatHistory();
   }, [isAuthenticated, fetchChatHistory]);
 
+  // Fetch user's semester for personalized study suggestions
+  useEffect(() => {
+    if (!user?.id) return;
+    (async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('semester')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (data?.semester) setUserSemester(data.semester);
+    })();
+  }, [user?.id]);
+
   useEffect(() => {
     if (isMobile) setSidebarOpen(false);
   }, [isMobile]);

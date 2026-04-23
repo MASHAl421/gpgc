@@ -730,8 +730,8 @@ export const MeshChat = () => {
               </div>
             )}
 
-            {/* Input pill */}
-            <div className="relative flex items-end gap-1.5 sm:gap-2 bg-muted/70 hover:bg-muted/90 focus-within:bg-muted rounded-[28px] border border-border/60 shadow-sm transition-colors p-1.5 sm:p-2">
+            {/* Input pill — professional white box with dark text */}
+            <div className="relative flex items-end gap-1.5 sm:gap-2 bg-card text-card-foreground rounded-[28px] border border-border shadow-[0_2px_12px_hsl(var(--foreground)/0.06)] hover:shadow-[0_4px_16px_hsl(var(--foreground)/0.08)] focus-within:shadow-[0_4px_20px_hsl(var(--foreground)/0.1)] transition-all p-1.5 sm:p-2">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -746,7 +746,7 @@ export const MeshChat = () => {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-9 w-9 rounded-full hover:bg-background/60 flex-shrink-0"
+                    className="h-9 w-9 rounded-full text-card-foreground/70 hover:text-card-foreground hover:bg-muted/40 flex-shrink-0"
                     title="Add"
                   >
                     <Plus className="h-5 w-5" />
@@ -776,7 +776,7 @@ export const MeshChat = () => {
                   }
                 }}
                 style={{ height: question ? undefined : (isMobile ? '36px' : '40px') }}
-                className="flex-1 !min-h-[36px] sm:!min-h-[40px] max-h-[140px] sm:max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 py-2 sm:py-2.5 px-1 text-[15px] sm:text-base leading-relaxed overflow-y-auto scrollbar-thin placeholder:text-muted-foreground/70"
+                className="flex-1 !min-h-[36px] sm:!min-h-[40px] max-h-[140px] sm:max-h-[200px] resize-none border-0 bg-transparent text-card-foreground focus-visible:ring-0 focus-visible:ring-offset-0 py-2 sm:py-2.5 px-1 text-[15px] sm:text-base leading-relaxed overflow-y-auto scrollbar-thin placeholder:text-card-foreground/50"
                 rows={1}
                 disabled={isLoading}
               />

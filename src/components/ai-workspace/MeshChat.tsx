@@ -577,17 +577,17 @@ export const MeshChat = () => {
         </div>
 
         {/* Scroll area */}
-        <div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
-          <div className="max-w-3xl mx-auto px-3 sm:px-6 pt-1 pb-1">
+        <div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 min-h-0 overflow-y-auto scrollbar-thin flex flex-col">
+          <div className="max-w-3xl mx-auto w-full px-3 sm:px-6 pt-1 pb-1 flex-1 flex flex-col">
             {messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center min-h-[40vh] sm:min-h-[45vh] text-center px-2 animate-in fade-in duration-500">
-                <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-3 sm:mb-4 border border-primary/20">
-                  <Sparkles className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
+              <div className="flex flex-col items-center justify-end flex-1 text-center px-2 pb-2 animate-in fade-in duration-500">
+                <div className="h-11 w-11 sm:h-14 sm:w-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-2 sm:mb-3 border border-primary/20">
+                  <Sparkles className="h-5 w-5 sm:h-7 sm:w-7 text-primary" />
                 </div>
-                <h1 className="text-lg sm:text-2xl font-semibold mb-1.5 tracking-tight">
+                <h1 className="text-base sm:text-2xl font-semibold mb-1 tracking-tight">
                   How can I help you today?
                 </h1>
-                <p className="text-muted-foreground text-xs sm:text-sm max-w-md">
+                <p className="text-muted-foreground text-[11px] sm:text-sm max-w-md">
                   Ask anything from your syllabus — Mesh Chat understands text, images, and PDFs.
                 </p>
               </div>

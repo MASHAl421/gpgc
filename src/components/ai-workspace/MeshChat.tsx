@@ -677,7 +677,7 @@ export const MeshChat = () => {
         </div>
 
         {/* Bottom Input Area — ChatGPT-style pill */}
-        <div className="px-3 sm:px-6 pb-3 sm:pb-5 pt-1 safe-area-bottom flex-shrink-0">
+        <div className="px-3 sm:px-6 pb-2 sm:pb-3 pt-0 safe-area-bottom flex-shrink-0">
           <div className="max-w-3xl mx-auto">
             {/* Quick action chips — only show on empty state */}
             {messages.length === 0 && !attachedFile && (

@@ -730,8 +730,8 @@ export const MeshChat = () => {
               </div>
             )}
 
-            {/* Input pill — professional white box with black text */}
-            <div className="relative flex items-end gap-1.5 sm:gap-2 bg-white dark:bg-zinc-900 rounded-[28px] border border-zinc-200 dark:border-zinc-700 shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] focus-within:border-zinc-300 dark:focus-within:border-zinc-600 focus-within:shadow-[0_4px_20px_rgba(0,0,0,0.1)] transition-all p-1.5 sm:p-2">
+            {/* Input pill — professional white box with dark text */}
+            <div className="relative flex items-end gap-1.5 sm:gap-2 bg-card text-card-foreground rounded-[28px] border border-border shadow-[0_2px_12px_hsl(var(--foreground)/0.06)] hover:shadow-[0_4px_16px_hsl(var(--foreground)/0.08)] focus-within:shadow-[0_4px_20px_hsl(var(--foreground)/0.1)] transition-all p-1.5 sm:p-2">
               <input
                 ref={fileInputRef}
                 type="file"

@@ -794,7 +794,7 @@ export const MeshChat = () => {
               </Button>
             </div>
 
-            <p className="text-[10px] sm:text-xs text-center text-muted-foreground mt-2">
+            <p className="text-[10px] sm:text-[11px] text-center text-muted-foreground mt-1.5">
               Mesh Chat can make mistakes. Verify important information.
             </p>
           </div>

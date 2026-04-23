@@ -7,7 +7,7 @@ import {
   Copy, Check, Image as ImageIcon, FileText,
   ThumbsUp, ThumbsDown, Share2, Volume2, VolumeX, RotateCcw,
   PanelLeft, Edit3, ImagePlus, Pencil, Globe, Sparkles, FileUp,
-  MoreHorizontal,
+  MoreHorizontal, BookOpen, Calculator, Atom, Code2, Languages, FlaskConical,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -115,6 +115,7 @@ export const MeshChat = () => {
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const [lastUserMessage, setLastUserMessage] = useState<{ content: string; imageData?: string; imageName?: string } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [userSemester, setUserSemester] = useState<number | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -134,6 +135,19 @@ export const MeshChat = () => {
   useEffect(() => {
     if (isAuthenticated) fetchChatHistory();
   }, [isAuthenticated, fetchChatHistory]);
+
+  // Fetch user's semester for personalized study suggestions
+  useEffect(() => {
+    if (!user?.id) return;
+    (async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('semester')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (data?.semester) setUserSemester(data.semester);
+    })();
+  }, [user?.id]);
 
   useEffect(() => {
     if (isMobile) setSidebarOpen(false);
@@ -359,13 +373,58 @@ export const MeshChat = () => {
     !searchQuery || (s.title || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Quick action chips (ChatGPT mobile-style)
-  const quickActions = [
-    { icon: ImagePlus, label: 'Create an image', prompt: 'Create an image of ' },
-    { icon: Pencil, label: 'Write or edit', prompt: 'Help me write ' },
-    { icon: Globe, label: 'Look something up', prompt: 'Look up information about ' },
-    { icon: Sparkles, label: 'Explain a concept', prompt: 'Explain the concept of ' },
-  ];
+  // Semester-aware quick study suggestions for BS students
+  const getQuickActions = () => {
+    const sem = userSemester ?? 1;
+    if (sem === 1) {
+      return [
+        { icon: Atom, label: 'Electrostatics', prompt: 'Explain Coulomb\'s law and electric field intensity with examples for BS Semester 1 Applied Physics.' },
+        { icon: Code2, label: 'C++ loops', prompt: 'Explain for, while and do-while loops in C++ with simple BS-level examples.' },
+        { icon: Calculator, label: 'Calculus limits', prompt: 'Explain limits and continuity in Calculus with step-by-step solved examples for BS Semester 1.' },
+        { icon: Languages, label: 'Parts of speech', prompt: 'Explain all 8 parts of speech in Functional English with examples and usage rules.' },
+      ];
+    }
+    if (sem === 2) {
+      return [
+        { icon: Atom, label: 'Heat & thermodynamics', prompt: 'Explain laws of thermodynamics and heat transfer for BS Semester 2 Physics.' },
+        { icon: Code2, label: 'OOP in C++', prompt: 'Explain classes, objects, inheritance and polymorphism in C++ with code examples.' },
+        { icon: Calculator, label: 'Differentiation rules', prompt: 'Explain product, quotient and chain rule in calculus with solved examples.' },
+        { icon: FlaskConical, label: 'Chemical bonding', prompt: 'Explain ionic, covalent and metallic bonds with examples for BS Chemistry.' },
+      ];
+    }
+    if (sem === 3) {
+      return [
+        { icon: Atom, label: 'Wave mechanics', prompt: 'Explain wave-particle duality, de Broglie wavelength and Schrodinger equation basics.' },
+        { icon: Code2, label: 'Data structures', prompt: 'Explain arrays, linked lists and stacks with C++ implementations for BS Semester 3.' },
+        { icon: Calculator, label: 'Integration techniques', prompt: 'Explain integration by parts and substitution with step-by-step solved examples.' },
+        { icon: BookOpen, label: 'Past paper help', prompt: 'Help me prepare for my upcoming midterm — give me the most important topics to revise.' },
+      ];
+    }
+    if (sem === 4) {
+      return [
+        { icon: Atom, label: 'Modern physics', prompt: 'Explain relativity, photoelectric effect and atomic models for BS Semester 4 Physics.' },
+        { icon: Code2, label: 'Algorithms', prompt: 'Explain sorting algorithms (bubble, merge, quick) with complexity analysis and C++ code.' },
+        { icon: Calculator, label: 'Linear algebra', prompt: 'Explain matrices, determinants and eigenvalues with solved examples.' },
+        { icon: BookOpen, label: 'Research project tips', prompt: 'How should I structure a BS research report? Give me a clear outline and best practices.' },
+      ];
+    }
+    if (sem && sem >= 5) {
+      return [
+        { icon: BookOpen, label: 'FYP planning', prompt: 'Help me plan my Final Year Project — how do I pick a topic, write a proposal and manage timeline?' },
+        { icon: Code2, label: 'Advanced coding', prompt: 'Explain advanced topics like OOP design patterns, databases and APIs for senior BS students.' },
+        { icon: Calculator, label: 'Numerical methods', prompt: 'Explain numerical methods (Newton-Raphson, Simpson\'s rule) with solved examples.' },
+        { icon: Sparkles, label: 'Career guidance', prompt: 'I\'m in final year BS — what career paths and skills should I focus on for jobs in Pakistan?' },
+      ];
+    }
+    // Fallback (no semester selected)
+    return [
+      { icon: BookOpen, label: 'Explain a concept', prompt: 'Explain the concept of ' },
+      { icon: Pencil, label: 'Write or edit', prompt: 'Help me write ' },
+      { icon: Calculator, label: 'Solve a problem', prompt: 'Solve this problem step by step: ' },
+      { icon: Sparkles, label: 'Study tips', prompt: 'Give me effective study tips for ' },
+    ];
+  };
+  const quickActions = getQuickActions();
 
   /* ---------- Sidebar content (shared between desktop + mobile drawer) ---------- */
   const SidebarContent = ({ onClose }: { onClose?: () => void }) => (
@@ -516,7 +575,7 @@ export const MeshChat = () => {
 
         {/* Scroll area */}
         <div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
-          <div className="max-w-3xl mx-auto px-3 sm:px-6 pt-2 pb-6">
+          <div className="max-w-3xl mx-auto px-3 sm:px-6 pt-2 pb-2">
             {messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center min-h-[55vh] text-center px-2 animate-in fade-in duration-500">
                 <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-5 border border-primary/20">
@@ -535,21 +594,28 @@ export const MeshChat = () => {
                   <div key={index} className={`group flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
                     <div className={message.role === 'user' ? 'max-w-[88%] sm:max-w-[80%]' : 'w-full sm:max-w-[90%]'}>
                       {message.role === 'user' ? (
-                        <div className="bg-muted text-foreground px-4 py-2.5 sm:py-3 rounded-3xl rounded-br-lg text-[15px] sm:text-base">
-                          {message.imageName && (
-                            <div className="flex items-center gap-2 mb-2 pb-2 border-b border-border/40">
-                              {message.imageData?.startsWith('data:image') ? (
-                                <ImageIcon className="h-4 w-4" />
-                              ) : (
-                                <FileText className="h-4 w-4" />
-                              )}
-                              <span className="text-xs sm:text-sm truncate">{message.imageName}</span>
+                        <div className="flex flex-col items-end gap-2">
+                          {/* Image — bare, transparent, no bubble/shadow */}
+                          {message.imageData?.startsWith('data:image') && (
+                            <img
+                              src={message.imageData}
+                              alt={message.imageName || 'Uploaded'}
+                              className="max-w-[260px] sm:max-w-[320px] max-h-64 sm:max-h-80 rounded-2xl object-contain"
+                            />
+                          )}
+                          {/* PDF chip — transparent border-only style */}
+                          {message.imageData && !message.imageData.startsWith('data:image') && message.imageName && (
+                            <div className="flex items-center gap-2 px-3 py-2 rounded-2xl border border-border/60 bg-transparent">
+                              <FileText className="h-4 w-4 text-primary" />
+                              <span className="text-xs sm:text-sm truncate max-w-[200px]">{message.imageName}</span>
                             </div>
                           )}
-                          {message.imageData?.startsWith('data:image') && (
-                            <img src={message.imageData} alt="Uploaded" className="max-w-full max-h-40 sm:max-h-56 rounded-xl mb-2" />
+                          {/* Text message — only render bubble if there's actual user text */}
+                          {message.content && message.content.trim() && message.content !== `Analyze this image` && message.content !== `Analyze this document` && (
+                            <div className="bg-muted text-foreground px-4 py-2.5 sm:py-3 rounded-3xl rounded-br-lg text-[15px] sm:text-base max-w-full">
+                              <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                            </div>
                           )}
-                          <p className="whitespace-pre-wrap break-words">{message.content}</p>
                         </div>
                       ) : (
                         <div className="relative group">
@@ -611,7 +677,7 @@ export const MeshChat = () => {
         </div>
 
         {/* Bottom Input Area — ChatGPT-style pill */}
-        <div className="px-3 sm:px-6 pb-3 sm:pb-5 pt-1 safe-area-bottom flex-shrink-0">
+        <div className="px-3 sm:px-6 pb-2 sm:pb-3 pt-0 safe-area-bottom flex-shrink-0">
           <div className="max-w-3xl mx-auto">
             {/* Quick action chips — only show on empty state */}
             {messages.length === 0 && !attachedFile && (
@@ -632,20 +698,32 @@ export const MeshChat = () => {
               </div>
             )}
 
-            {/* Attached file preview */}
+            {/* Attached file preview — transparent, clean */}
             {attachedFile && (
-              <div className="mb-2 p-2 bg-muted rounded-2xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-1 duration-200">
-                {attachedFile.type.startsWith('image') ? (
-                  <img src={attachedFile.data} alt="Preview" className="h-12 w-12 object-cover rounded-xl" />
-                ) : (
-                  <div className="h-12 w-12 bg-primary/10 rounded-xl flex items-center justify-center">
-                    <FileText className="h-5 w-5 text-primary" />
-                  </div>
-                )}
-                <span className="flex-1 text-xs sm:text-sm truncate">{attachedFile.name}</span>
-                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={() => setAttachedFile(null)}>
-                  <X className="h-4 w-4" />
-                </Button>
+              <div className="mb-2 inline-flex items-center gap-2 animate-in fade-in slide-in-from-bottom-1 duration-200">
+                <div className="relative">
+                  {attachedFile.type.startsWith('image') ? (
+                    <img
+                      src={attachedFile.data}
+                      alt="Preview"
+                      className="h-16 w-16 sm:h-20 sm:w-20 object-cover rounded-xl border border-border/60"
+                    />
+                  ) : (
+                    <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-xl border border-border/60 flex flex-col items-center justify-center bg-transparent">
+                      <FileText className="h-5 w-5 text-primary mb-1" />
+                      <span className="text-[9px] font-semibold text-muted-foreground">PDF</span>
+                    </div>
+                  )}
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full shadow-sm border border-border bg-background hover:bg-muted"
+                    onClick={() => setAttachedFile(null)}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+                <span className="text-xs text-muted-foreground truncate max-w-[180px] sm:max-w-[260px]">{attachedFile.name}</span>
               </div>
             )}
 
@@ -716,7 +794,7 @@ export const MeshChat = () => {
               </Button>
             </div>
 
-            <p className="text-[10px] sm:text-xs text-center text-muted-foreground mt-2">
+            <p className="text-[10px] sm:text-[11px] text-center text-muted-foreground mt-1.5">
               Mesh Chat can make mistakes. Verify important information.
             </p>
           </div>

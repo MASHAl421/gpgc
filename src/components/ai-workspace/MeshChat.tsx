@@ -373,13 +373,58 @@ export const MeshChat = () => {
     !searchQuery || (s.title || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Quick action chips (ChatGPT mobile-style)
-  const quickActions = [
-    { icon: ImagePlus, label: 'Create an image', prompt: 'Create an image of ' },
-    { icon: Pencil, label: 'Write or edit', prompt: 'Help me write ' },
-    { icon: Globe, label: 'Look something up', prompt: 'Look up information about ' },
-    { icon: Sparkles, label: 'Explain a concept', prompt: 'Explain the concept of ' },
-  ];
+  // Semester-aware quick study suggestions for BS students
+  const getQuickActions = () => {
+    const sem = userSemester ?? 1;
+    if (sem === 1) {
+      return [
+        { icon: Atom, label: 'Electrostatics', prompt: 'Explain Coulomb\'s law and electric field intensity with examples for BS Semester 1 Applied Physics.' },
+        { icon: Code2, label: 'C++ loops', prompt: 'Explain for, while and do-while loops in C++ with simple BS-level examples.' },
+        { icon: Calculator, label: 'Calculus limits', prompt: 'Explain limits and continuity in Calculus with step-by-step solved examples for BS Semester 1.' },
+        { icon: Languages, label: 'Parts of speech', prompt: 'Explain all 8 parts of speech in Functional English with examples and usage rules.' },
+      ];
+    }
+    if (sem === 2) {
+      return [
+        { icon: Atom, label: 'Heat & thermodynamics', prompt: 'Explain laws of thermodynamics and heat transfer for BS Semester 2 Physics.' },
+        { icon: Code2, label: 'OOP in C++', prompt: 'Explain classes, objects, inheritance and polymorphism in C++ with code examples.' },
+        { icon: Calculator, label: 'Differentiation rules', prompt: 'Explain product, quotient and chain rule in calculus with solved examples.' },
+        { icon: FlaskConical, label: 'Chemical bonding', prompt: 'Explain ionic, covalent and metallic bonds with examples for BS Chemistry.' },
+      ];
+    }
+    if (sem === 3) {
+      return [
+        { icon: Atom, label: 'Wave mechanics', prompt: 'Explain wave-particle duality, de Broglie wavelength and Schrodinger equation basics.' },
+        { icon: Code2, label: 'Data structures', prompt: 'Explain arrays, linked lists and stacks with C++ implementations for BS Semester 3.' },
+        { icon: Calculator, label: 'Integration techniques', prompt: 'Explain integration by parts and substitution with step-by-step solved examples.' },
+        { icon: BookOpen, label: 'Past paper help', prompt: 'Help me prepare for my upcoming midterm — give me the most important topics to revise.' },
+      ];
+    }
+    if (sem === 4) {
+      return [
+        { icon: Atom, label: 'Modern physics', prompt: 'Explain relativity, photoelectric effect and atomic models for BS Semester 4 Physics.' },
+        { icon: Code2, label: 'Algorithms', prompt: 'Explain sorting algorithms (bubble, merge, quick) with complexity analysis and C++ code.' },
+        { icon: Calculator, label: 'Linear algebra', prompt: 'Explain matrices, determinants and eigenvalues with solved examples.' },
+        { icon: BookOpen, label: 'Research project tips', prompt: 'How should I structure a BS research report? Give me a clear outline and best practices.' },
+      ];
+    }
+    if (sem && sem >= 5) {
+      return [
+        { icon: BookOpen, label: 'FYP planning', prompt: 'Help me plan my Final Year Project — how do I pick a topic, write a proposal and manage timeline?' },
+        { icon: Code2, label: 'Advanced coding', prompt: 'Explain advanced topics like OOP design patterns, databases and APIs for senior BS students.' },
+        { icon: Calculator, label: 'Numerical methods', prompt: 'Explain numerical methods (Newton-Raphson, Simpson\'s rule) with solved examples.' },
+        { icon: Sparkles, label: 'Career guidance', prompt: 'I\'m in final year BS — what career paths and skills should I focus on for jobs in Pakistan?' },
+      ];
+    }
+    // Fallback (no semester selected)
+    return [
+      { icon: BookOpen, label: 'Explain a concept', prompt: 'Explain the concept of ' },
+      { icon: Pencil, label: 'Write or edit', prompt: 'Help me write ' },
+      { icon: Calculator, label: 'Solve a problem', prompt: 'Solve this problem step by step: ' },
+      { icon: Sparkles, label: 'Study tips', prompt: 'Give me effective study tips for ' },
+    ];
+  };
+  const quickActions = getQuickActions();
 
   /* ---------- Sidebar content (shared between desktop + mobile drawer) ---------- */
   const SidebarContent = ({ onClose }: { onClose?: () => void }) => (

@@ -188,3 +188,41 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+.thinking-text {
+  font-weight: 600;
+  font-size: 14px;
+  color: white;
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+}
+
+/* Gradient laser effect */
+.thinking-text::after {
+  content: "Thinking";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  color: transparent;
+  background: linear-gradient(
+    120deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.9) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: shimmer 1.5s infinite linear;
+}
+
+/* Animation */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}

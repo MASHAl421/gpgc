@@ -197,7 +197,15 @@ All colors MUST be HSL.
   overflow: hidden;
 }
 
-/* Gradient laser effect */
+.thinking-text {
+  font-weight: 600;
+  font-size: 14px;
+  color: white;
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+}
+
 .thinking-text::after {
   content: "Thinking";
   position: absolute;
@@ -217,12 +225,7 @@ All colors MUST be HSL.
   animation: shimmer 1.5s infinite linear;
 }
 
-/* Animation */
 @keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }

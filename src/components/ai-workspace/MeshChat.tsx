@@ -115,6 +115,7 @@ export const MeshChat = () => {
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const [lastUserMessage, setLastUserMessage] = useState<{ content: string; imageData?: string; imageName?: string } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [userSemester, setUserSemester] = useState<number | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);

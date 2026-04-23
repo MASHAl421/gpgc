@@ -7,7 +7,7 @@ import {
   Copy, Check, Image as ImageIcon, FileText,
   ThumbsUp, ThumbsDown, Share2, Volume2, VolumeX, RotateCcw,
   PanelLeft, Edit3, ImagePlus, Pencil, Globe, Sparkles, FileUp,
-  MoreHorizontal,
+  MoreHorizontal, BookOpen, Calculator, Atom, Code2, Languages, FlaskConical,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';

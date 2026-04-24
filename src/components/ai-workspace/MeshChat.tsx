@@ -781,7 +781,7 @@ export const MeshChat = () => {
                         </div>
                       ) : (
                         <div className="relative group">
-                          <div className="prose prose-sm sm:prose-base dark:prose-invert max-w-none prose-pre:my-2 prose-p:my-2 prose-headings:mt-4 prose-headings:mb-2">
+                          <div className={`prose prose-sm sm:prose-base dark:prose-invert max-w-none prose-pre:my-2 prose-p:my-2.5 prose-headings:mt-4 prose-headings:mb-2 prose-headings:font-semibold prose-li:my-1 prose-ul:my-2 prose-ol:my-2 leading-relaxed ${isStreaming && index === messages.length - 1 ? 'stream-caret' : ''}`}>
                             <ReactMarkdown
                               remarkPlugins={[remarkMath]}
                               rehypePlugins={[rehypeKatex]}
@@ -809,14 +809,17 @@ export const MeshChat = () => {
                               {message.content}
                             </ReactMarkdown>
                           </div>
-                          <MessageActions
-                            text={message.content}
-                            onRetry={handleRetry}
-                            speak={speak}
-                            stop={stop}
-                            isSpeaking={isSpeaking}
-                            isSupported={isSupported}
-                          />
+                          {!(isStreaming && index === messages.length - 1) && (
+                            <MessageActions
+                              text={message.content}
+                              onRetry={handleRetry}
+                              onExport={handleExportPDF}
+                              speak={speak}
+                              stop={stop}
+                              isSpeaking={isSpeaking}
+                              isSupported={isSupported}
+                            />
+                          )}
                         </div>
                       )}
                     </div>

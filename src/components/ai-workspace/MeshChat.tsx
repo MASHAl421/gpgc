@@ -111,6 +111,7 @@ export const MeshChat = () => {
   const [question, setQuestion] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const [attachedFile, setAttachedFile] = useState<{ data: string; name: string; type: string } | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
@@ -122,6 +123,10 @@ export const MeshChat = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // Typewriter buffer refs
+  const targetContentRef = useRef<string>('');
+  const displayedLengthRef = useRef<number>(0);
+  const typewriterRafRef = useRef<number | null>(null);
   const { toast } = useToast();
   const { isAuthenticated, user, session } = useAuth();
   const isMobile = useIsMobile();

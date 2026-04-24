@@ -191,29 +191,91 @@ All colors MUST be HSL.
 
 .thinking-shimmer {
   font-weight: 600;
-  font-size: 14px;
-
   background: linear-gradient(
     90deg,
-    #888 0%,
-    #fff 50%,
-    #888 100%
+    hsl(var(--muted-foreground)) 0%,
+    hsl(var(--foreground)) 50%,
+    hsl(var(--muted-foreground)) 100%
   );
-
   background-size: 200% auto;
-
   color: transparent;
   background-clip: text;
   -webkit-background-clip: text;
-
-  animation: shimmer 1.5s linear infinite;
+  animation: shimmer 1.8s linear infinite;
 }
 
 @keyframes shimmer {
-  0% {
-    background-position: -200% center;
-  }
-  100% {
-    background-position: 200% center;
-  }
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
 }
+
+/* Streaming caret */
+.stream-caret::after {
+  content: '▍';
+  display: inline-block;
+  margin-left: 2px;
+  color: hsl(var(--primary));
+  animation: caret-blink 1s steps(2, start) infinite;
+  font-weight: 400;
+}
+@keyframes caret-blink {
+  to { visibility: hidden; }
+}
+
+/* PDF export styles — clean, no markdown artifacts */
+.pdf-export {
+  font-family: 'Inter', system-ui, sans-serif;
+  color: #111;
+  background: #fff;
+  padding: 32px;
+  line-height: 1.6;
+  font-size: 13px;
+}
+.pdf-export h1, .pdf-export h2, .pdf-export h3, .pdf-export h4 {
+  color: #0a0a0a;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+  font-weight: 700;
+}
+.pdf-export h1 { font-size: 22px; border-bottom: 2px solid #e5e5e5; padding-bottom: 6px; }
+.pdf-export h2 { font-size: 18px; }
+.pdf-export h3 { font-size: 15px; }
+.pdf-export p { margin: 0.6em 0; }
+.pdf-export ul, .pdf-export ol { margin: 0.6em 0; padding-left: 1.5em; }
+.pdf-export li { margin: 0.3em 0; }
+.pdf-export code {
+  background: #f4f4f5;
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.9em;
+}
+.pdf-export pre {
+  background: #1e1e2e;
+  color: #f4f4f5;
+  padding: 12px;
+  border-radius: 8px;
+  overflow-x: auto;
+  font-size: 12px;
+}
+.pdf-export pre code { background: transparent; color: inherit; padding: 0; }
+.pdf-export blockquote {
+  border-left: 3px solid #6366f1;
+  padding-left: 12px;
+  color: #555;
+  font-style: italic;
+  margin: 0.8em 0;
+}
+.pdf-export .katex { font-size: 1em; }
+.pdf-export .katex-display { margin: 0.8em 0; overflow-x: auto; }
+.pdf-export table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.8em 0;
+}
+.pdf-export th, .pdf-export td {
+  border: 1px solid #d4d4d8;
+  padding: 6px 10px;
+  text-align: left;
+}
+.pdf-export th { background: #f4f4f5; font-weight: 600; }

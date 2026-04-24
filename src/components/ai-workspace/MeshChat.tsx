@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -8,6 +8,7 @@ import {
   ThumbsUp, ThumbsDown, Share2, Volume2, VolumeX, RotateCcw,
   PanelLeft, Edit3, ImagePlus, Pencil, Globe, Sparkles, FileUp,
   MoreHorizontal, BookOpen, Calculator, Atom, Code2, Languages, FlaskConical,
+  Download,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -35,13 +36,14 @@ const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-tutor`;
 interface MessageActionsProps {
   text: string;
   onRetry: () => void;
+  onExport: () => void;
   speak: (text: string) => void;
   stop: () => void;
   isSpeaking: boolean;
   isSupported: boolean;
 }
 
-const MessageActions = ({ text, onRetry, speak, stop, isSpeaking, isSupported }: MessageActionsProps) => {
+const MessageActions = ({ text, onRetry, onExport, speak, stop, isSpeaking, isSupported }: MessageActionsProps) => {
   const [copied, setCopied] = useState(false);
   const [liked, setLiked] = useState<boolean | null>(null);
   const { toast } = useToast();
@@ -102,6 +104,9 @@ const MessageActions = ({ text, onRetry, speak, stop, isSpeaking, isSupported }:
       <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg text-muted-foreground hover:text-foreground" onClick={onRetry} title="Regenerate">
         <RotateCcw className="h-3.5 w-3.5" />
       </Button>
+      <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg text-muted-foreground hover:text-primary" onClick={onExport} title="Export to PDF">
+        <Download className="h-3.5 w-3.5" />
+      </Button>
     </div>
   );
 };
@@ -110,6 +115,7 @@ export const MeshChat = () => {
   const [question, setQuestion] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const [attachedFile, setAttachedFile] = useState<{ data: string; name: string; type: string } | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
@@ -121,6 +127,10 @@ export const MeshChat = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // Typewriter buffer refs
+  const targetContentRef = useRef<string>('');
+  const displayedLengthRef = useRef<number>(0);
+  const typewriterRafRef = useRef<number | null>(null);
   const { toast } = useToast();
   const { isAuthenticated, user, session } = useAuth();
   const isMobile = useIsMobile();
@@ -240,6 +250,41 @@ export const MeshChat = () => {
     setIsLoading(true);
 
     let assistantContent = '';
+    targetContentRef.current = '';
+    displayedLengthRef.current = 0;
+
+    // Typewriter loop — reveals buffered chars smoothly
+    const startTypewriter = () => {
+      if (typewriterRafRef.current !== null) return;
+      const tick = () => {
+        const target = targetContentRef.current;
+        const displayed = displayedLengthRef.current;
+        if (displayed < target.length) {
+          // Reveal a small chunk per frame for smooth typing feel
+          const remaining = target.length - displayed;
+          const step = Math.max(2, Math.min(8, Math.ceil(remaining / 30)));
+          const next = Math.min(target.length, displayed + step);
+          displayedLengthRef.current = next;
+          const visible = target.slice(0, next);
+          setMessages(prev => {
+            const last = prev[prev.length - 1];
+            if (last?.role === 'assistant') {
+              return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: visible } : m));
+            }
+            return [...prev, { role: 'assistant', content: visible }];
+          });
+        }
+        typewriterRafRef.current = requestAnimationFrame(tick);
+      };
+      typewriterRafRef.current = requestAnimationFrame(tick);
+    };
+
+    const stopTypewriter = () => {
+      if (typewriterRafRef.current !== null) {
+        cancelAnimationFrame(typewriterRafRef.current);
+        typewriterRafRef.current = null;
+      }
+    };
 
     try {
       const doRequest = async (token: string) =>
@@ -270,6 +315,7 @@ export const MeshChat = () => {
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
       let textBuffer = '';
+      let firstTokenReceived = false;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -293,14 +339,14 @@ export const MeshChat = () => {
             const parsed = JSON.parse(jsonStr);
             const content = parsed.choices?.[0]?.delta?.content as string | undefined;
             if (content) {
+              if (!firstTokenReceived) {
+                firstTokenReceived = true;
+                setIsLoading(false);
+                setIsStreaming(true);
+                startTypewriter();
+              }
               assistantContent += content;
-              setMessages(prev => {
-                const last = prev[prev.length - 1];
-                if (last?.role === 'assistant') {
-                  return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: assistantContent } : m));
-                }
-                return [...prev, { role: 'assistant', content: assistantContent }];
-              });
+              targetContentRef.current = assistantContent;
             }
           } catch {
             textBuffer = line + '\n' + textBuffer;
@@ -308,6 +354,20 @@ export const MeshChat = () => {
           }
         }
       }
+
+      // Drain remaining buffered chars
+      await new Promise<void>((resolve) => {
+        const drain = () => {
+          if (displayedLengthRef.current >= targetContentRef.current.length) {
+            resolve();
+          } else {
+            requestAnimationFrame(drain);
+          }
+        };
+        drain();
+      });
+      stopTypewriter();
+      setIsStreaming(false);
 
       if (isAuthenticated && user) {
         const finalMessages = [...newMessages, { role: 'assistant' as const, content: assistantContent }];
@@ -322,6 +382,8 @@ export const MeshChat = () => {
         }
       }
     } catch (error) {
+      stopTypewriter();
+      setIsStreaming(false);
       console.error('Mesh Chat error:', error);
       toast({
         title: 'Error',
@@ -330,6 +392,107 @@ export const MeshChat = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Cleanup typewriter on unmount
+  useEffect(() => {
+    return () => {
+      if (typewriterRafRef.current !== null) {
+        cancelAnimationFrame(typewriterRafRef.current);
+      }
+    };
+  }, []);
+
+  // Strip markdown for clean PDF text (asterisks, hashes, backticks)
+  const stripMarkdownArtifacts = (md: string): string => {
+    return md
+      .replace(/^#{1,6}\s+/gm, '')              // headings #
+      .replace(/\*\*\*(.+?)\*\*\*/g, '$1')      // bold-italic
+      .replace(/\*\*(.+?)\*\*/g, '$1')          // bold
+      .replace(/\*(.+?)\*/g, '$1')              // italic
+      .replace(/__(.+?)__/g, '$1')              // bold _
+      .replace(/_(.+?)_/g, '$1')                // italic _
+      .replace(/`([^`]+)`/g, '$1')              // inline code
+      .replace(/^>\s?/gm, '')                   // blockquote
+      .replace(/^[-*+]\s+/gm, '• ')             // list bullets
+      .replace(/^\d+\.\s+/gm, (m) => m);        // keep numbered
+  };
+
+  // Export current chat output to PDF (with KaTeX math rendering)
+  const handleExportPDF = async () => {
+    const lastAssistant = [...messages].reverse().find(m => m.role === 'assistant');
+    if (!lastAssistant?.content?.trim()) {
+      toast({ title: 'Nothing to export', description: 'Send a message first to get a response.' });
+      return;
+    }
+
+    toast({ title: 'Preparing PDF...', description: 'Rendering math and formatting.' });
+
+    try {
+      // Lazy import heavy libs
+      const [{ default: html2pdf }, { default: ReactDOMServer }, ReactMod, MarkdownMod, MathMod, KatexMod] = await Promise.all([
+        import('html2pdf.js'),
+        import('react-dom/server'),
+        import('react'),
+        import('react-markdown'),
+        import('remark-math'),
+        import('rehype-katex'),
+      ]);
+
+      // Use the raw markdown so KaTeX renders properly; strip cosmetic markdown for plain text fallback if needed
+      const html = ReactDOMServer.renderToStaticMarkup(
+        ReactMod.createElement(MarkdownMod.default as any, {
+          remarkPlugins: [MathMod.default],
+          rehypePlugins: [KatexMod.default],
+          children: lastAssistant.content,
+        })
+      );
+
+      const container = document.createElement('div');
+      container.className = 'pdf-export';
+      container.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #6366f1;padding-bottom:10px;margin-bottom:18px;">
+          <div>
+            <div style="font-size:18px;font-weight:700;color:#0a0a0a;">Mesh Chat — Export</div>
+            <div style="font-size:11px;color:#666;">GPGC Portal · ${new Date().toLocaleString()}</div>
+          </div>
+          <div style="font-size:10px;color:#888;">Developed By: Mashal Khan</div>
+        </div>
+        ${html}
+      `;
+      // Inject KaTeX stylesheet inline so math renders in PDF
+      const katexCss = document.createElement('link');
+      katexCss.rel = 'stylesheet';
+      katexCss.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css';
+      container.prepend(katexCss);
+
+      document.body.appendChild(container);
+      container.style.position = 'fixed';
+      container.style.left = '-10000px';
+      container.style.top = '0';
+      container.style.width = '794px'; // A4 width
+
+      // Wait for KaTeX CSS
+      await new Promise(r => setTimeout(r, 400));
+
+      await (html2pdf() as any)
+        .set({
+          margin: [12, 12, 14, 12],
+          filename: `mesh-chat-${Date.now()}.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+          pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+        })
+        .from(container)
+        .save();
+
+      document.body.removeChild(container);
+      toast({ title: 'PDF downloaded', description: 'Your chat response has been exported.' });
+    } catch (err) {
+      console.error('PDF export error:', err);
+      toast({ title: 'Export failed', description: 'Could not generate PDF. Please try again.', variant: 'destructive' });
     }
   };
 
@@ -622,7 +785,7 @@ export const MeshChat = () => {
                         </div>
                       ) : (
                         <div className="relative group">
-                          <div className="prose prose-sm sm:prose-base dark:prose-invert max-w-none prose-pre:my-2 prose-p:my-2 prose-headings:mt-4 prose-headings:mb-2">
+                          <div className={`prose prose-sm sm:prose-base dark:prose-invert max-w-none prose-pre:my-2 prose-p:my-2.5 prose-headings:mt-4 prose-headings:mb-2 prose-headings:font-semibold prose-li:my-1 prose-ul:my-2 prose-ol:my-2 leading-relaxed ${isStreaming && index === messages.length - 1 ? 'stream-caret' : ''}`}>
                             <ReactMarkdown
                               remarkPlugins={[remarkMath]}
                               rehypePlugins={[rehypeKatex]}
@@ -650,14 +813,17 @@ export const MeshChat = () => {
                               {message.content}
                             </ReactMarkdown>
                           </div>
-                          <MessageActions
-                            text={message.content}
-                            onRetry={handleRetry}
-                            speak={speak}
-                            stop={stop}
-                            isSpeaking={isSpeaking}
-                            isSupported={isSupported}
-                          />
+                          {!(isStreaming && index === messages.length - 1) && (
+                            <MessageActions
+                              text={message.content}
+                              onRetry={handleRetry}
+                              onExport={handleExportPDF}
+                              speak={speak}
+                              stop={stop}
+                              isSpeaking={isSpeaking}
+                              isSupported={isSupported}
+                            />
+                          )}
                         </div>
                       )}
                     </div>
@@ -666,10 +832,12 @@ export const MeshChat = () => {
 
                 {isLoading && messages[messages.length - 1]?.role === 'user' && (
                   <div className="flex justify-start animate-in fade-in duration-300">
-                    <div className="flex items-center gap-1.5 px-4 py-3 bg-muted/60 rounded-2xl">
-                      <span className="w-2 h-2 rounded-full bg-foreground/50 animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <span className="w-2 h-2 rounded-full bg-foreground/50 animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <span className="w-2 h-2 rounded-full bg-foreground/50 animate-bounce" style={{ animationDelay: '300ms' }} />
+                    <div className="flex items-center gap-2.5 px-4 py-3">
+                      <div className="relative flex h-5 w-5 items-center justify-center">
+                        <span className="absolute inline-flex h-full w-full rounded-full bg-primary/30 animate-ping" />
+                        <Sparkles className="relative h-4 w-4 text-primary" />
+                      </div>
+                      <span className="thinking-shimmer text-sm">Thinking…</span>
                     </div>
                   </div>
                 )}
@@ -730,8 +898,8 @@ export const MeshChat = () => {
               </div>
             )}
 
-            {/* Input pill — professional white box with dark text */}
-            <div className="relative flex items-end gap-1.5 sm:gap-2 bg-card text-card-foreground rounded-[28px] border border-border shadow-[0_2px_12px_hsl(var(--foreground)/0.06)] hover:shadow-[0_4px_16px_hsl(var(--foreground)/0.08)] focus-within:shadow-[0_4px_20px_hsl(var(--foreground)/0.1)] transition-all p-1.5 sm:p-2">
+            {/* Input pill — always white box with dark text for clear visibility */}
+            <div className="relative flex items-end gap-1.5 sm:gap-2 bg-white text-neutral-900 rounded-[28px] border border-neutral-200 shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] focus-within:shadow-[0_4px_20px_rgba(0,0,0,0.1)] transition-all p-1.5 sm:p-2">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -746,7 +914,7 @@ export const MeshChat = () => {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-9 w-9 rounded-full text-card-foreground/70 hover:text-card-foreground hover:bg-muted/40 flex-shrink-0"
+                    className="h-9 w-9 rounded-full text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 flex-shrink-0"
                     title="Add"
                   >
                     <Plus className="h-5 w-5" />
@@ -776,7 +944,7 @@ export const MeshChat = () => {
                   }
                 }}
                 style={{ height: question ? undefined : (isMobile ? '36px' : '40px') }}
-                className="flex-1 !min-h-[36px] sm:!min-h-[40px] max-h-[140px] sm:max-h-[200px] resize-none border-0 bg-transparent text-card-foreground focus-visible:ring-0 focus-visible:ring-offset-0 py-2 sm:py-2.5 px-1 text-[15px] sm:text-base leading-relaxed overflow-y-auto scrollbar-thin placeholder:text-card-foreground/50"
+                className="flex-1 !min-h-[36px] sm:!min-h-[40px] max-h-[140px] sm:max-h-[200px] resize-none border-0 bg-transparent text-neutral-900 focus-visible:ring-0 focus-visible:ring-offset-0 py-2 sm:py-2.5 px-1 text-[15px] sm:text-base leading-relaxed overflow-y-auto scrollbar-thin placeholder:text-neutral-400"
                 rows={1}
                 disabled={isLoading}
               />

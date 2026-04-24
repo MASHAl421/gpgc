@@ -246,6 +246,41 @@ export const MeshChat = () => {
     setIsLoading(true);
 
     let assistantContent = '';
+    targetContentRef.current = '';
+    displayedLengthRef.current = 0;
+
+    // Typewriter loop — reveals buffered chars smoothly
+    const startTypewriter = () => {
+      if (typewriterRafRef.current !== null) return;
+      const tick = () => {
+        const target = targetContentRef.current;
+        const displayed = displayedLengthRef.current;
+        if (displayed < target.length) {
+          // Reveal a small chunk per frame for smooth typing feel
+          const remaining = target.length - displayed;
+          const step = Math.max(2, Math.min(8, Math.ceil(remaining / 30)));
+          const next = Math.min(target.length, displayed + step);
+          displayedLengthRef.current = next;
+          const visible = target.slice(0, next);
+          setMessages(prev => {
+            const last = prev[prev.length - 1];
+            if (last?.role === 'assistant') {
+              return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: visible } : m));
+            }
+            return [...prev, { role: 'assistant', content: visible }];
+          });
+        }
+        typewriterRafRef.current = requestAnimationFrame(tick);
+      };
+      typewriterRafRef.current = requestAnimationFrame(tick);
+    };
+
+    const stopTypewriter = () => {
+      if (typewriterRafRef.current !== null) {
+        cancelAnimationFrame(typewriterRafRef.current);
+        typewriterRafRef.current = null;
+      }
+    };
 
     try {
       const doRequest = async (token: string) =>
@@ -276,6 +311,7 @@ export const MeshChat = () => {
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
       let textBuffer = '';
+      let firstTokenReceived = false;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -299,14 +335,14 @@ export const MeshChat = () => {
             const parsed = JSON.parse(jsonStr);
             const content = parsed.choices?.[0]?.delta?.content as string | undefined;
             if (content) {
+              if (!firstTokenReceived) {
+                firstTokenReceived = true;
+                setIsLoading(false);
+                setIsStreaming(true);
+                startTypewriter();
+              }
               assistantContent += content;
-              setMessages(prev => {
-                const last = prev[prev.length - 1];
-                if (last?.role === 'assistant') {
-                  return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: assistantContent } : m));
-                }
-                return [...prev, { role: 'assistant', content: assistantContent }];
-              });
+              targetContentRef.current = assistantContent;
             }
           } catch {
             textBuffer = line + '\n' + textBuffer;
@@ -314,6 +350,20 @@ export const MeshChat = () => {
           }
         }
       }
+
+      // Drain remaining buffered chars
+      await new Promise<void>((resolve) => {
+        const drain = () => {
+          if (displayedLengthRef.current >= targetContentRef.current.length) {
+            resolve();
+          } else {
+            requestAnimationFrame(drain);
+          }
+        };
+        drain();
+      });
+      stopTypewriter();
+      setIsStreaming(false);
 
       if (isAuthenticated && user) {
         const finalMessages = [...newMessages, { role: 'assistant' as const, content: assistantContent }];
@@ -328,6 +378,8 @@ export const MeshChat = () => {
         }
       }
     } catch (error) {
+      stopTypewriter();
+      setIsStreaming(false);
       console.error('Mesh Chat error:', error);
       toast({
         title: 'Error',
@@ -336,6 +388,107 @@ export const MeshChat = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Cleanup typewriter on unmount
+  useEffect(() => {
+    return () => {
+      if (typewriterRafRef.current !== null) {
+        cancelAnimationFrame(typewriterRafRef.current);
+      }
+    };
+  }, []);
+
+  // Strip markdown for clean PDF text (asterisks, hashes, backticks)
+  const stripMarkdownArtifacts = (md: string): string => {
+    return md
+      .replace(/^#{1,6}\s+/gm, '')              // headings #
+      .replace(/\*\*\*(.+?)\*\*\*/g, '$1')      // bold-italic
+      .replace(/\*\*(.+?)\*\*/g, '$1')          // bold
+      .replace(/\*(.+?)\*/g, '$1')              // italic
+      .replace(/__(.+?)__/g, '$1')              // bold _
+      .replace(/_(.+?)_/g, '$1')                // italic _
+      .replace(/`([^`]+)`/g, '$1')              // inline code
+      .replace(/^>\s?/gm, '')                   // blockquote
+      .replace(/^[-*+]\s+/gm, '• ')             // list bullets
+      .replace(/^\d+\.\s+/gm, (m) => m);        // keep numbered
+  };
+
+  // Export current chat output to PDF (with KaTeX math rendering)
+  const handleExportPDF = async () => {
+    const lastAssistant = [...messages].reverse().find(m => m.role === 'assistant');
+    if (!lastAssistant?.content?.trim()) {
+      toast({ title: 'Nothing to export', description: 'Send a message first to get a response.' });
+      return;
+    }
+
+    toast({ title: 'Preparing PDF...', description: 'Rendering math and formatting.' });
+
+    try {
+      // Lazy import heavy libs
+      const [{ default: html2pdf }, { default: ReactDOMServer }, ReactMod, MarkdownMod, MathMod, KatexMod] = await Promise.all([
+        import('html2pdf.js'),
+        import('react-dom/server'),
+        import('react'),
+        import('react-markdown'),
+        import('remark-math'),
+        import('rehype-katex'),
+      ]);
+
+      // Use the raw markdown so KaTeX renders properly; strip cosmetic markdown for plain text fallback if needed
+      const html = ReactDOMServer.renderToStaticMarkup(
+        ReactMod.createElement(MarkdownMod.default as any, {
+          remarkPlugins: [MathMod.default],
+          rehypePlugins: [KatexMod.default],
+          children: lastAssistant.content,
+        })
+      );
+
+      const container = document.createElement('div');
+      container.className = 'pdf-export';
+      container.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #6366f1;padding-bottom:10px;margin-bottom:18px;">
+          <div>
+            <div style="font-size:18px;font-weight:700;color:#0a0a0a;">Mesh Chat — Export</div>
+            <div style="font-size:11px;color:#666;">GPGC Portal · ${new Date().toLocaleString()}</div>
+          </div>
+          <div style="font-size:10px;color:#888;">Developed By: Mashal Khan</div>
+        </div>
+        ${html}
+      `;
+      // Inject KaTeX stylesheet inline so math renders in PDF
+      const katexCss = document.createElement('link');
+      katexCss.rel = 'stylesheet';
+      katexCss.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css';
+      container.prepend(katexCss);
+
+      document.body.appendChild(container);
+      container.style.position = 'fixed';
+      container.style.left = '-10000px';
+      container.style.top = '0';
+      container.style.width = '794px'; // A4 width
+
+      // Wait for KaTeX CSS
+      await new Promise(r => setTimeout(r, 400));
+
+      await html2pdf()
+        .set({
+          margin: [12, 12, 14, 12],
+          filename: `mesh-chat-${Date.now()}.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+          pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+        })
+        .from(container)
+        .save();
+
+      document.body.removeChild(container);
+      toast({ title: 'PDF downloaded', description: 'Your chat response has been exported.' });
+    } catch (err) {
+      console.error('PDF export error:', err);
+      toast({ title: 'Export failed', description: 'Could not generate PDF. Please try again.', variant: 'destructive' });
     }
   };
 

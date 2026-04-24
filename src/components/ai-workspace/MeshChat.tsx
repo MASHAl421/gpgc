@@ -36,13 +36,14 @@ const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-tutor`;
 interface MessageActionsProps {
   text: string;
   onRetry: () => void;
+  onExport: () => void;
   speak: (text: string) => void;
   stop: () => void;
   isSpeaking: boolean;
   isSupported: boolean;
 }
 
-const MessageActions = ({ text, onRetry, speak, stop, isSpeaking, isSupported }: MessageActionsProps) => {
+const MessageActions = ({ text, onRetry, onExport, speak, stop, isSpeaking, isSupported }: MessageActionsProps) => {
   const [copied, setCopied] = useState(false);
   const [liked, setLiked] = useState<boolean | null>(null);
   const { toast } = useToast();

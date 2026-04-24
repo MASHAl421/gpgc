@@ -472,7 +472,7 @@ export const MeshChat = () => {
       // Wait for KaTeX CSS
       await new Promise(r => setTimeout(r, 400));
 
-      await html2pdf()
+      await (html2pdf() as any)
         .set({
           margin: [12, 12, 14, 12],
           filename: `mesh-chat-${Date.now()}.pdf`,

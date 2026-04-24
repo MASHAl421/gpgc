@@ -825,10 +825,12 @@ export const MeshChat = () => {
 
                 {isLoading && messages[messages.length - 1]?.role === 'user' && (
                   <div className="flex justify-start animate-in fade-in duration-300">
-                    <div className="flex items-center gap-1.5 px-4 py-3 bg-muted/60 rounded-2xl">
-                      <span className="w-2 h-2 rounded-full bg-foreground/50 animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <span className="w-2 h-2 rounded-full bg-foreground/50 animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <span className="w-2 h-2 rounded-full bg-foreground/50 animate-bounce" style={{ animationDelay: '300ms' }} />
+                    <div className="flex items-center gap-2.5 px-4 py-3">
+                      <div className="relative flex h-5 w-5 items-center justify-center">
+                        <span className="absolute inline-flex h-full w-full rounded-full bg-primary/30 animate-ping" />
+                        <Sparkles className="relative h-4 w-4 text-primary" />
+                      </div>
+                      <span className="thinking-shimmer text-sm">Thinking…</span>
                     </div>
                   </div>
                 )}

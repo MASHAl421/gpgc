@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -8,6 +8,7 @@ import {
   ThumbsUp, ThumbsDown, Share2, Volume2, VolumeX, RotateCcw,
   PanelLeft, Edit3, ImagePlus, Pencil, Globe, Sparkles, FileUp,
   MoreHorizontal, BookOpen, Calculator, Atom, Code2, Languages, FlaskConical,
+  Download,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';

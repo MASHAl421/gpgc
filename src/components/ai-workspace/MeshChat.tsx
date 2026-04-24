@@ -914,7 +914,7 @@ export const MeshChat = () => {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-9 w-9 rounded-full text-card-foreground/70 hover:text-card-foreground hover:bg-muted/40 flex-shrink-0"
+                    className="h-9 w-9 rounded-full text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 flex-shrink-0"
                     title="Add"
                   >
                     <Plus className="h-5 w-5" />

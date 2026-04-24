@@ -104,6 +104,9 @@ const MessageActions = ({ text, onRetry, onExport, speak, stop, isSpeaking, isSu
       <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg text-muted-foreground hover:text-foreground" onClick={onRetry} title="Regenerate">
         <RotateCcw className="h-3.5 w-3.5" />
       </Button>
+      <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg text-muted-foreground hover:text-primary" onClick={onExport} title="Export to PDF">
+        <Download className="h-3.5 w-3.5" />
+      </Button>
     </div>
   );
 };

@@ -694,22 +694,34 @@ export const MeshChat = () => {
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col min-w-0 relative">
-        {/* Top Header — pill-shaped buttons floating */}
-        <div className="flex items-center justify-between px-3 sm:px-4 py-2 flex-shrink-0">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 rounded-full bg-muted/60 hover:bg-muted shadow-sm"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            title={sidebarOpen ? "Close sidebar" : "Open sidebar"}
-          >
-            <PanelLeft className="h-4 w-4" />
-          </Button>
+        {/* Top Header — professional branded bar */}
+        <div className="flex items-center justify-between px-3 sm:px-4 py-2 flex-shrink-0 border-b border-border/40 bg-background/80 backdrop-blur-md">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 rounded-full hover:bg-muted"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              title={sidebarOpen ? "Close sidebar" : "Open sidebar"}
+            >
+              <PanelLeft className="h-4 w-4" />
+            </Button>
+            <div className="flex items-center gap-2 px-2">
+              <div className="relative h-8 w-8 rounded-xl bg-gradient-to-br from-primary via-primary to-primary/70 flex items-center justify-center shadow-sm">
+                <Sparkles className="h-4 w-4 text-primary-foreground" />
+                <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-background" />
+              </div>
+              <div className="flex flex-col leading-tight">
+                <span className="text-sm font-semibold tracking-tight">Mesh Chat</span>
+                <span className="text-[10px] text-muted-foreground hidden sm:inline">AI Study Assistant · Online</span>
+              </div>
+            </div>
+          </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2">
             <Button
               variant="ghost"
-              className="h-9 px-3 rounded-full bg-muted/60 hover:bg-muted shadow-sm gap-1.5 text-xs sm:text-sm font-medium"
+              className="h-9 px-3 rounded-full hover:bg-muted gap-1.5 text-xs sm:text-sm font-medium"
               onClick={handleNewChat}
               title="New chat"
             >
@@ -721,7 +733,7 @@ export const MeshChat = () => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 rounded-full bg-muted/60 hover:bg-muted shadow-sm"
+                  className="h-9 w-9 rounded-full hover:bg-muted"
                   title="More"
                 >
                   <MoreHorizontal className="h-4 w-4" />
@@ -741,24 +753,30 @@ export const MeshChat = () => {
 
         {/* Scroll area */}
         <div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
-          <div className="max-w-3xl mx-auto px-3 sm:px-6 pt-1 pb-1">
+          <div className="max-w-3xl mx-auto px-3 sm:px-6 pt-3 pb-2">
             {messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center min-h-[40vh] sm:min-h-[45vh] text-center px-4 animate-in fade-in duration-500">
-                <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-primary/10 flex items-center justify-center mb-6 shadow-sm">
-                  <Sparkles className="h-8 w-8 sm:h-10 sm:w-10 text-primary" />
+              <div className="flex flex-col items-center justify-center min-h-[40vh] sm:min-h-[45vh] text-center px-2 animate-in fade-in duration-500">
+                <div className="relative h-14 w-14 sm:h-16 sm:w-16 rounded-2xl bg-gradient-to-br from-primary via-primary to-primary/60 flex items-center justify-center mb-4 shadow-lg shadow-primary/20">
+                  <Sparkles className="h-7 w-7 sm:h-8 sm:w-8 text-primary-foreground" />
+                  <span className="absolute -bottom-1 -right-1 h-3 w-3 rounded-full bg-emerald-500 ring-2 ring-background" />
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-semibold mb-3 tracking-tight text-foreground">
-                  How can I help you today?
+                <h1 className="text-xl sm:text-3xl font-semibold mb-1.5 tracking-tight bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-transparent">
+                  Welcome to Mesh Chat
                 </h1>
-                <p className="text-muted-foreground text-sm sm:text-base max-w-md">
-                  I'm Mesh Chat. Ask me anything from your syllabus, or upload an image/PDF to get started.
+                <p className="text-muted-foreground text-xs sm:text-sm max-w-md">
+                  Ask anything from your syllabus — Mesh Chat understands text, images, and PDFs.
                 </p>
               </div>
             ) : (
               <div className="space-y-5 sm:space-y-7 pt-2">
                 {messages.map((message, index) => (
-                  <div key={index} className={`group flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
-                    <div className={message.role === 'user' ? 'max-w-[88%] sm:max-w-[80%]' : 'w-full sm:max-w-[90%]'}>
+                  <div key={index} className={`group flex gap-2.5 sm:gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
+                    {message.role === 'assistant' && (
+                      <div className="flex-shrink-0 h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-gradient-to-br from-primary via-primary to-primary/70 flex items-center justify-center shadow-sm mt-0.5">
+                        <Sparkles className="h-4 w-4 sm:h-[18px] sm:w-[18px] text-primary-foreground" />
+                      </div>
+                    )}
+                    <div className={message.role === 'user' ? 'max-w-[88%] sm:max-w-[78%]' : 'flex-1 min-w-0 max-w-[calc(100%-3rem)]'}>
                       {message.role === 'user' ? (
                         <div className="flex flex-col items-end gap-2">
                           {/* Image — bare, transparent, no bubble/shadow */}
@@ -776,21 +794,23 @@ export const MeshChat = () => {
                               <span className="text-xs sm:text-sm truncate max-w-[200px]">{message.imageName}</span>
                             </div>
                           )}
-                          {/* Text message — only render bubble if there's actual user text */}
+                          {/* Text message — refined gradient bubble */}
                           {message.content && message.content.trim() && message.content !== `Analyze this image` && message.content !== `Analyze this document` && (
-                            <div className="bg-zinc-100 dark:bg-zinc-800 text-foreground px-4 py-3 rounded-2xl text-[15px] sm:text-base max-w-full shadow-sm">
+                            <div className="bg-gradient-to-br from-primary to-primary/85 text-primary-foreground px-4 py-2.5 sm:py-3 rounded-3xl rounded-br-lg text-[15px] sm:text-base max-w-full shadow-sm">
                               <p className="whitespace-pre-wrap break-words">{message.content}</p>
                             </div>
                           )}
                         </div>
                       ) : (
-                        <div className="relative group flex gap-4 w-full">
-                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-1 shadow-sm border border-primary/20">
-                            <Sparkles className="h-5 w-5 text-primary" />
+                        <div className="relative group">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-semibold text-foreground/80">Mesh Chat</span>
+                            {isStreaming && index === messages.length - 1 && (
+                              <span className="text-[10px] text-muted-foreground thinking-shimmer">typing…</span>
+                            )}
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <div className={`prose prose-sm sm:prose-base dark:prose-invert max-w-none prose-pre:my-2 prose-p:my-2.5 prose-headings:mt-4 prose-headings:mb-2 prose-headings:font-semibold prose-li:my-1 prose-ul:my-2 prose-ol:my-2 leading-relaxed ${isStreaming && index === messages.length - 1 ? 'stream-caret' : ''}`}>
-                              <ReactMarkdown
+                          <div className={`prose prose-sm sm:prose-base dark:prose-invert max-w-none prose-pre:my-2 prose-p:my-2.5 prose-headings:mt-4 prose-headings:mb-2 prose-headings:font-semibold prose-li:my-1 prose-ul:my-2 prose-ol:my-2 leading-relaxed ${isStreaming && index === messages.length - 1 ? 'stream-caret' : ''}`}>
+                            <ReactMarkdown
                               remarkPlugins={[remarkMath]}
                               rehypePlugins={[rehypeKatex]}
                               components={{
@@ -818,19 +838,16 @@ export const MeshChat = () => {
                             </ReactMarkdown>
                           </div>
                           {!(isStreaming && index === messages.length - 1) && (
-                            <div className="mt-1 -ml-2">
-                              <MessageActions
-                                text={message.content}
-                                onRetry={handleRetry}
-                                onExport={handleExportPDF}
-                                speak={speak}
-                                stop={stop}
-                                isSpeaking={isSpeaking}
-                                isSupported={isSupported}
-                              />
-                            </div>
+                            <MessageActions
+                              text={message.content}
+                              onRetry={handleRetry}
+                              onExport={handleExportPDF}
+                              speak={speak}
+                              stop={stop}
+                              isSpeaking={isSpeaking}
+                              isSupported={isSupported}
+                            />
                           )}
-                          </div>
                         </div>
                       )}
                     </div>
@@ -838,14 +855,19 @@ export const MeshChat = () => {
                 ))}
 
                 {isLoading && messages[messages.length - 1]?.role === 'user' && (
-                  <div className="flex justify-start animate-in fade-in duration-300">
-                    <div className="flex gap-4 w-full">
-                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-1 shadow-sm border border-primary/20">
-                        <span className="absolute inline-flex h-full w-full rounded-full bg-primary/30 animate-ping" />
-                        <Sparkles className="relative h-5 w-5 text-primary" />
-                      </div>
-                      <div className="flex items-center">
-                        <span className="thinking-shimmer text-sm mt-2">Thinking…</span>
+                  <div className="flex justify-start gap-2.5 sm:gap-3 animate-in fade-in duration-300">
+                    <div className="flex-shrink-0 h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-gradient-to-br from-primary via-primary to-primary/70 flex items-center justify-center shadow-sm mt-0.5">
+                      <Sparkles className="h-4 w-4 sm:h-[18px] sm:w-[18px] text-primary-foreground animate-pulse" />
+                    </div>
+                    <div className="flex flex-col gap-1 pt-1">
+                      <span className="text-xs font-semibold text-foreground/80">Mesh Chat</span>
+                      <div className="flex items-center gap-2">
+                        <div className="flex gap-1">
+                          <span className="h-1.5 w-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <span className="h-1.5 w-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <span className="h-1.5 w-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '300ms' }} />
+                        </div>
+                        <span className="thinking-shimmer text-sm">Thinking…</span>
                       </div>
                     </div>
                   </div>

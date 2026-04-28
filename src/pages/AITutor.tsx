@@ -32,7 +32,7 @@ const AIWorkspace = () => {
               <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
                 <Sparkles className="h-4 w-4 text-primary-foreground" />
               </div>
-              <h1 className="font-semibold text-base sm:text-lg">AI Workspace</h1>
+              <h1 className="font-semibold text-base sm:text-lg">Mesh Chat</h1>
             </div>
             <TabsList className="grid w-full grid-cols-3 max-w-2xl">
               <TabsTrigger value="mesh-chat" className="gap-1.5 text-xs sm:text-sm">

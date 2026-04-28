@@ -733,7 +733,7 @@ export const MeshChat = () => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 rounded-full bg-muted/60 hover:bg-muted shadow-sm"
+                  className="h-9 w-9 rounded-full hover:bg-muted"
                   title="More"
                 >
                   <MoreHorizontal className="h-4 w-4" />
@@ -753,14 +753,15 @@ export const MeshChat = () => {
 
         {/* Scroll area */}
         <div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
-          <div className="max-w-3xl mx-auto px-3 sm:px-6 pt-1 pb-1">
+          <div className="max-w-3xl mx-auto px-3 sm:px-6 pt-3 pb-2">
             {messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center min-h-[40vh] sm:min-h-[45vh] text-center px-2 animate-in fade-in duration-500">
-                <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-3 sm:mb-4 border border-primary/20">
-                  <Sparkles className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
+                <div className="relative h-14 w-14 sm:h-16 sm:w-16 rounded-2xl bg-gradient-to-br from-primary via-primary to-primary/60 flex items-center justify-center mb-4 shadow-lg shadow-primary/20">
+                  <Sparkles className="h-7 w-7 sm:h-8 sm:w-8 text-primary-foreground" />
+                  <span className="absolute -bottom-1 -right-1 h-3 w-3 rounded-full bg-emerald-500 ring-2 ring-background" />
                 </div>
-                <h1 className="text-lg sm:text-2xl font-semibold mb-1.5 tracking-tight">
-                  How can I help you today?
+                <h1 className="text-xl sm:text-3xl font-semibold mb-1.5 tracking-tight bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-transparent">
+                  Welcome to Mesh Chat
                 </h1>
                 <p className="text-muted-foreground text-xs sm:text-sm max-w-md">
                   Ask anything from your syllabus — Mesh Chat understands text, images, and PDFs.

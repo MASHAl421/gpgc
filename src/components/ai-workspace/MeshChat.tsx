@@ -770,8 +770,13 @@ export const MeshChat = () => {
             ) : (
               <div className="space-y-5 sm:space-y-7 pt-2">
                 {messages.map((message, index) => (
-                  <div key={index} className={`group flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
-                    <div className={message.role === 'user' ? 'max-w-[88%] sm:max-w-[80%]' : 'w-full sm:max-w-[90%]'}>
+                  <div key={index} className={`group flex gap-2.5 sm:gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
+                    {message.role === 'assistant' && (
+                      <div className="flex-shrink-0 h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-gradient-to-br from-primary via-primary to-primary/70 flex items-center justify-center shadow-sm mt-0.5">
+                        <Sparkles className="h-4 w-4 sm:h-[18px] sm:w-[18px] text-primary-foreground" />
+                      </div>
+                    )}
+                    <div className={message.role === 'user' ? 'max-w-[88%] sm:max-w-[78%]' : 'flex-1 min-w-0 max-w-[calc(100%-3rem)]'}>
                       {message.role === 'user' ? (
                         <div className="flex flex-col items-end gap-2">
                           {/* Image — bare, transparent, no bubble/shadow */}
@@ -789,15 +794,21 @@ export const MeshChat = () => {
                               <span className="text-xs sm:text-sm truncate max-w-[200px]">{message.imageName}</span>
                             </div>
                           )}
-                          {/* Text message — only render bubble if there's actual user text */}
+                          {/* Text message — refined gradient bubble */}
                           {message.content && message.content.trim() && message.content !== `Analyze this image` && message.content !== `Analyze this document` && (
-                            <div className="bg-muted text-foreground px-4 py-2.5 sm:py-3 rounded-3xl rounded-br-lg text-[15px] sm:text-base max-w-full">
+                            <div className="bg-gradient-to-br from-primary to-primary/85 text-primary-foreground px-4 py-2.5 sm:py-3 rounded-3xl rounded-br-lg text-[15px] sm:text-base max-w-full shadow-sm">
                               <p className="whitespace-pre-wrap break-words">{message.content}</p>
                             </div>
                           )}
                         </div>
                       ) : (
                         <div className="relative group">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-semibold text-foreground/80">Mesh Chat</span>
+                            {isStreaming && index === messages.length - 1 && (
+                              <span className="text-[10px] text-muted-foreground thinking-shimmer">typing…</span>
+                            )}
+                          </div>
                           <div className={`prose prose-sm sm:prose-base dark:prose-invert max-w-none prose-pre:my-2 prose-p:my-2.5 prose-headings:mt-4 prose-headings:mb-2 prose-headings:font-semibold prose-li:my-1 prose-ul:my-2 prose-ol:my-2 leading-relaxed ${isStreaming && index === messages.length - 1 ? 'stream-caret' : ''}`}>
                             <ReactMarkdown
                               remarkPlugins={[remarkMath]}
@@ -844,13 +855,20 @@ export const MeshChat = () => {
                 ))}
 
                 {isLoading && messages[messages.length - 1]?.role === 'user' && (
-                  <div className="flex justify-start animate-in fade-in duration-300">
-                    <div className="flex items-center gap-2.5 px-4 py-3">
-                      <div className="relative flex h-5 w-5 items-center justify-center">
-                        <span className="absolute inline-flex h-full w-full rounded-full bg-primary/30 animate-ping" />
-                        <Sparkles className="relative h-4 w-4 text-primary" />
+                  <div className="flex justify-start gap-2.5 sm:gap-3 animate-in fade-in duration-300">
+                    <div className="flex-shrink-0 h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-gradient-to-br from-primary via-primary to-primary/70 flex items-center justify-center shadow-sm mt-0.5">
+                      <Sparkles className="h-4 w-4 sm:h-[18px] sm:w-[18px] text-primary-foreground animate-pulse" />
+                    </div>
+                    <div className="flex flex-col gap-1 pt-1">
+                      <span className="text-xs font-semibold text-foreground/80">Mesh Chat</span>
+                      <div className="flex items-center gap-2">
+                        <div className="flex gap-1">
+                          <span className="h-1.5 w-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <span className="h-1.5 w-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <span className="h-1.5 w-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '300ms' }} />
+                        </div>
+                        <span className="thinking-shimmer text-sm">Thinking…</span>
                       </div>
-                      <span className="thinking-shimmer text-sm">Thinking…</span>
                     </div>
                   </div>
                 )}

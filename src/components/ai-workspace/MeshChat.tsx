@@ -694,22 +694,34 @@ export const MeshChat = () => {
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col min-w-0 relative">
-        {/* Top Header — pill-shaped buttons floating */}
-        <div className="flex items-center justify-between px-3 sm:px-4 py-2 flex-shrink-0">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 rounded-full bg-muted/60 hover:bg-muted shadow-sm"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            title={sidebarOpen ? "Close sidebar" : "Open sidebar"}
-          >
-            <PanelLeft className="h-4 w-4" />
-          </Button>
+        {/* Top Header — professional branded bar */}
+        <div className="flex items-center justify-between px-3 sm:px-4 py-2 flex-shrink-0 border-b border-border/40 bg-background/80 backdrop-blur-md">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 rounded-full hover:bg-muted"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              title={sidebarOpen ? "Close sidebar" : "Open sidebar"}
+            >
+              <PanelLeft className="h-4 w-4" />
+            </Button>
+            <div className="flex items-center gap-2 px-2">
+              <div className="relative h-8 w-8 rounded-xl bg-gradient-to-br from-primary via-primary to-primary/70 flex items-center justify-center shadow-sm">
+                <Sparkles className="h-4 w-4 text-primary-foreground" />
+                <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-background" />
+              </div>
+              <div className="flex flex-col leading-tight">
+                <span className="text-sm font-semibold tracking-tight">Mesh Chat</span>
+                <span className="text-[10px] text-muted-foreground hidden sm:inline">AI Study Assistant · Online</span>
+              </div>
+            </div>
+          </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2">
             <Button
               variant="ghost"
-              className="h-9 px-3 rounded-full bg-muted/60 hover:bg-muted shadow-sm gap-1.5 text-xs sm:text-sm font-medium"
+              className="h-9 px-3 rounded-full hover:bg-muted gap-1.5 text-xs sm:text-sm font-medium"
               onClick={handleNewChat}
               title="New chat"
             >

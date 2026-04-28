@@ -607,7 +607,9 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
             {/* Enhanced Options Grid */}
             <div className="flex-1 p-4 sm:p-6 lg:p-8">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                {currentQuestion.shuffledOptions.map((opt, idx) => (
+                {currentQuestion.shuffledOptions.map((opt, idx) => {
+                  const status = getOptionStatus(currentQuestion.id, opt.key, currentQuestion.correct_option);
+                  return (
                   <div
                     key={opt.label}
                     onClick={() => !showAnswersInReview && handleSelectAnswer(currentQuestion.id, opt.key)}
@@ -619,13 +621,25 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
                     style={{ animationDelay: `${idx * 75}ms` }}
                   >
                     <div className="flex items-center gap-3 sm:gap-4">
-                      <span className="inline-flex items-center justify-center h-9 w-9 sm:h-11 sm:w-11 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-bold text-sm sm:text-base shrink-0 shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-200">
+                      <span className={cn(
+                        "inline-flex items-center justify-center h-9 w-9 sm:h-11 sm:w-11 rounded-xl font-bold text-sm sm:text-base shrink-0 shadow-sm transition-all duration-200",
+                        status === 'correct' && 'bg-success/20 text-success',
+                        status === 'wrong' && 'bg-destructive/20 text-destructive',
+                        !status && 'bg-gradient-to-br from-primary/20 to-primary/10 text-primary group-hover:shadow-md group-hover:scale-105'
+                      )}>
                         {opt.label}
                       </span>
-                      <span className="text-sm sm:text-base lg:text-lg font-medium leading-snug">{opt.text}</span>
+                      <span className="text-sm sm:text-base lg:text-lg font-medium leading-snug flex-1">{opt.text}</span>
+                      {status === 'correct' && (
+                        <CheckCircle2 className="h-6 w-6 sm:h-7 sm:w-7 text-success shrink-0 animate-in zoom-in-50 duration-300" />
+                      )}
+                      {status === 'wrong' && (
+                        <XCircle className="h-6 w-6 sm:h-7 sm:w-7 text-destructive shrink-0 animate-in zoom-in-50 duration-300" />
+                      )}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Enhanced Explanation */}

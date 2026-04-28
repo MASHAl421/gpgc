@@ -199,19 +199,10 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
     // In exam mode, allow changing answers; in practice mode after answer is locked, don't allow
     if (!isExamMode && selectedAnswers[questionId]) return;
     
-    const isNewAnswer = !selectedAnswers[questionId];
-    
     setSelectedAnswers(prev => ({
       ...prev,
       [questionId]: option,
     }));
-    
-    // Auto-advance to next question after selection (with small delay for visual feedback)
-    if (isNewAnswer && currentQuestionIndex < questions.length - 1) {
-      setTimeout(() => {
-        setCurrentQuestionIndex(prev => prev + 1);
-      }, 300);
-    }
   };
 
   const toggleFlag = (index: number) => {

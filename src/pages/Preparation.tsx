@@ -442,7 +442,7 @@ const Preparation = () => {
             })()}
 
             {/* Topics Content */}
-            <div className="lg:col-span-9">
+            <div className={quizConfig ? '' : 'lg:col-span-9'}>
               {/* Show Academic Resources */}
               {selectedCategory === 'academic' ? (
                 <AcademicResources subjectId={selectedSubject.id} subjectName={selectedSubject.name} />

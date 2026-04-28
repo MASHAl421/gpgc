@@ -349,15 +349,27 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
     const isSelected = opt === chosen;
     
     if (isSelected && isCorrect) {
-      return 'bg-success/10 border-success text-success cursor-default';
+      return 'bg-success/5 border-success text-foreground cursor-default shadow-sm shadow-success/20';
     }
     if (isSelected && !isCorrect) {
-      return 'bg-destructive/10 border-destructive text-destructive cursor-default';
+      return 'bg-destructive/5 border-destructive text-foreground cursor-default shadow-sm shadow-destructive/20';
     }
     if (isCorrect) {
-      return 'bg-success/10 border-success/50 text-success cursor-default';
+      return 'bg-success/5 border-success text-foreground cursor-default';
     }
     return 'bg-card border-border opacity-60 cursor-default';
+  };
+
+  const getOptionStatus = (questionId: string, option: string, correctOption: string): 'correct' | 'wrong' | null => {
+    const selected = selectedAnswers[questionId];
+    const shouldReveal = !isExamMode || showResults || showAnswersInReview;
+    if (!selected || (isExamMode && !shouldReveal)) return null;
+    const opt = normalizeOption(option);
+    const correct = normalizeOption(correctOption);
+    const chosen = normalizeOption(selected);
+    if (opt === correct) return 'correct';
+    if (opt === chosen && opt !== correct) return 'wrong';
+    return null;
   };
 
   const getDifficultyColor = (difficulty: string) => {

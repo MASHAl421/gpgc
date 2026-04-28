@@ -385,9 +385,9 @@ const Preparation = () => {
           </Card>
         ) : (
           /* Subject Detail View */
-          <div className="space-y-3 sm:space-y-0 sm:grid lg:grid-cols-12 sm:gap-4 md:gap-6">
-            {/* Filter categories - show simulations only for Applied Physics */}
-            {(() => {
+          <div className={quizConfig ? '' : 'space-y-3 sm:space-y-0 sm:grid lg:grid-cols-12 sm:gap-4 md:gap-6'}>
+            {/* Filter categories - hide entirely when quiz is active */}
+            {!quizConfig && (() => {
               const isPhysics = selectedSubject.name.toLowerCase().includes('physics');
               const filteredCategories = isPhysics 
                 ? preparationCategories 

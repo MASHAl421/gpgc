@@ -454,19 +454,20 @@ export const MeshChat = () => {
     toast({ title: 'Preparing PDF…', description: 'Rendering math and formatting.' });
 
     try {
-      const [{ default: html2pdf }, { default: ReactDOMServer }, ReactMod, MarkdownMod, MathMod, KatexMod] = await Promise.all([
+      const [{ default: html2pdf }, { default: ReactDOMServer }, ReactMod, MarkdownMod, MathMod, GfmMod, KatexMod] = await Promise.all([
         import('html2pdf.js'),
         import('react-dom/server'),
         import('react'),
         import('react-markdown'),
         import('remark-math'),
+        import('remark-gfm'),
         import('rehype-katex'),
       ]);
 
-      // Render markdown -> HTML (KaTeX handles math, ``` handles code)
+      // Render markdown -> HTML (KaTeX handles math, ``` handles code, GFM handles tables)
       const bodyHtml = ReactDOMServer.renderToStaticMarkup(
         ReactMod.createElement(MarkdownMod.default as any, {
-          remarkPlugins: [MathMod.default],
+          remarkPlugins: [MathMod.default, GfmMod.default],
           rehypePlugins: [KatexMod.default],
           children: lastAssistant.content,
         })

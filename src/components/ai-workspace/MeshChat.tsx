@@ -440,7 +440,7 @@ export const MeshChat = () => {
 
     // Find the user question that preceded this assistant reply
     let userQuestion = '';
-    if (!assistantText) {
+    if (!safeText) {
       const idx = [...messages].map(m => m.content).lastIndexOf(lastAssistant.content);
       for (let i = idx - 1; i >= 0; i--) {
         if (messages[i].role === 'user') { userQuestion = messages[i].content; break; }

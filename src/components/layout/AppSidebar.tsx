@@ -30,7 +30,7 @@ import { NotificationDropdown } from '@/components/NotificationDropdown';
 
 const menuItems = [
   { title: 'Home', url: '/home', icon: Home },
-  { title: 'Mesh Chat', url: '/ai-tutor', icon: Sparkles },
+  { title: 'AI Workspace', url: '/ai-tutor', icon: Sparkles },
   { title: 'Preparation', url: '/preparation', icon: BookOpen },
   { title: 'Competition Tests', url: '/competition', icon: Trophy },
   { title: 'Coins Earned', url: '/coins', icon: Coins },

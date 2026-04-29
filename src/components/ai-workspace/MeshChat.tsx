@@ -404,33 +404,31 @@ export const MeshChat = () => {
     };
   }, []);
 
-  // Strip markdown for clean PDF text (asterisks, hashes, backticks)
-  const stripMarkdownArtifacts = (md: string): string => {
-    return md
-      .replace(/^#{1,6}\s+/gm, '')              // headings #
-      .replace(/\*\*\*(.+?)\*\*\*/g, '$1')      // bold-italic
-      .replace(/\*\*(.+?)\*\*/g, '$1')          // bold
-      .replace(/\*(.+?)\*/g, '$1')              // italic
-      .replace(/__(.+?)__/g, '$1')              // bold _
-      .replace(/_(.+?)_/g, '$1')                // italic _
-      .replace(/`([^`]+)`/g, '$1')              // inline code
-      .replace(/^>\s?/gm, '')                   // blockquote
-      .replace(/^[-*+]\s+/gm, '• ')             // list bullets
-      .replace(/^\d+\.\s+/gm, (m) => m);        // keep numbered
-  };
-
-  // Export current chat output to PDF (with KaTeX math rendering)
-  const handleExportPDF = async () => {
-    const lastAssistant = [...messages].reverse().find(m => m.role === 'assistant');
+  // Export current chat (last Q&A pair) to a professional PDF
+  const handleExportPDF = async (assistantText?: string) => {
+    const lastAssistant = assistantText
+      ? { content: assistantText }
+      : [...messages].reverse().find(m => m.role === 'assistant');
     if (!lastAssistant?.content?.trim()) {
       toast({ title: 'Nothing to export', description: 'Send a message first to get a response.' });
       return;
     }
 
-    toast({ title: 'Preparing PDF...', description: 'Rendering math and formatting.' });
+    // Find the user question that preceded this assistant reply
+    let userQuestion = '';
+    if (!assistantText) {
+      const idx = [...messages].map(m => m.content).lastIndexOf(lastAssistant.content);
+      for (let i = idx - 1; i >= 0; i--) {
+        if (messages[i].role === 'user') { userQuestion = messages[i].content; break; }
+      }
+    } else {
+      const lastUser = [...messages].reverse().find(m => m.role === 'user');
+      userQuestion = lastUser?.content || '';
+    }
+
+    toast({ title: 'Preparing PDF…', description: 'Rendering math and formatting.' });
 
     try {
-      // Lazy import heavy libs
       const [{ default: html2pdf }, { default: ReactDOMServer }, ReactMod, MarkdownMod, MathMod, KatexMod] = await Promise.all([
         import('html2pdf.js'),
         import('react-dom/server'),
@@ -440,8 +438,8 @@ export const MeshChat = () => {
         import('rehype-katex'),
       ]);
 
-      // Use the raw markdown so KaTeX renders properly; strip cosmetic markdown for plain text fallback if needed
-      const html = ReactDOMServer.renderToStaticMarkup(
+      // Render markdown -> HTML (KaTeX handles math, ``` handles code)
+      const bodyHtml = ReactDOMServer.renderToStaticMarkup(
         ReactMod.createElement(MarkdownMod.default as any, {
           remarkPlugins: [MathMod.default],
           rehypePlugins: [KatexMod.default],
@@ -449,41 +447,148 @@ export const MeshChat = () => {
         })
       );
 
-      const container = document.createElement('div');
-      container.className = 'pdf-export';
-      container.innerHTML = `
-        <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #6366f1;padding-bottom:10px;margin-bottom:18px;">
-          <div>
-            <div style="font-size:18px;font-weight:700;color:#0a0a0a;">Mesh Chat — Export</div>
-            <div style="font-size:11px;color:#666;">GPGC Portal · ${new Date().toLocaleString()}</div>
-          </div>
-          <div style="font-size:10px;color:#888;">Developed By: Mashal Khan</div>
-        </div>
-        ${html}
+      // Professional document styles — clean, print-friendly, like the reference PDF
+      const styles = `
+        <style>
+          .pdf-doc, .pdf-doc * { box-sizing: border-box; }
+          .pdf-doc {
+            font-family: 'Helvetica Neue', Helvetica, Arial, 'Segoe UI', sans-serif;
+            color: #111827;
+            background: #ffffff;
+            font-size: 12px;
+            line-height: 1.65;
+            padding: 36px 40px 48px;
+            width: 794px;
+          }
+          .pdf-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding-bottom: 14px; margin-bottom: 22px;
+            border-bottom: 2px solid #4f46e5;
+          }
+          .pdf-brand { display:flex; align-items:center; gap:10px; }
+          .pdf-logo {
+            width: 32px; height: 32px; border-radius: 8px;
+            background: linear-gradient(135deg,#6366f1,#8b5cf6);
+            color:#fff; font-weight:700; display:flex; align-items:center; justify-content:center;
+            font-size: 14px;
+          }
+          .pdf-title { font-size: 16px; font-weight: 700; color:#0f172a; letter-spacing:-0.01em; }
+          .pdf-subtitle { font-size: 10px; color:#64748b; margin-top:1px; }
+          .pdf-meta { font-size: 10px; color:#64748b; text-align:right; }
+          .pdf-question {
+            background:#f8fafc; border-left: 3px solid #4f46e5;
+            padding: 12px 14px; border-radius: 6px; margin-bottom: 22px;
+            font-size: 12.5px; color:#0f172a;
+          }
+          .pdf-question .q-label {
+            font-size: 9.5px; font-weight:700; color:#4f46e5;
+            letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px;
+          }
+          .pdf-body { font-size: 12px; color:#1f2937; }
+          .pdf-body h1, .pdf-body h2, .pdf-body h3, .pdf-body h4 {
+            color:#0f172a; font-weight:700; margin: 18px 0 8px;
+            line-height: 1.3; page-break-after: avoid;
+          }
+          .pdf-body h1 { font-size: 17px; border-bottom:1px solid #e2e8f0; padding-bottom:5px; }
+          .pdf-body h2 { font-size: 15px; }
+          .pdf-body h3 { font-size: 13.5px; color:#4f46e5; }
+          .pdf-body h4 { font-size: 12.5px; }
+          .pdf-body p { margin: 8px 0; }
+          .pdf-body ul, .pdf-body ol { margin: 8px 0 8px 22px; padding: 0; }
+          .pdf-body li { margin: 4px 0; }
+          .pdf-body strong { color:#0f172a; font-weight:700; }
+          .pdf-body em { color:#334155; }
+          .pdf-body blockquote {
+            border-left: 3px solid #cbd5e1; background:#f8fafc;
+            margin: 10px 0; padding: 8px 12px; color:#475569; border-radius: 0 6px 6px 0;
+          }
+          .pdf-body code {
+            background: #f1f5f9; color:#be185d; padding: 1.5px 6px;
+            border-radius: 4px; font-family: 'SF Mono', Menlo, Consolas, monospace;
+            font-size: 11px;
+          }
+          .pdf-body pre {
+            background: #0f172a; color:#e2e8f0; padding: 12px 14px;
+            border-radius: 8px; overflow-x: auto; margin: 12px 0;
+            font-family: 'SF Mono', Menlo, Consolas, monospace;
+            font-size: 10.5px; line-height: 1.55;
+            page-break-inside: avoid;
+          }
+          .pdf-body pre code { background: transparent; color: inherit; padding: 0; font-size: inherit; }
+          .pdf-body table {
+            width: 100%; border-collapse: collapse; margin: 12px 0;
+            font-size: 11px; page-break-inside: avoid;
+          }
+          .pdf-body th, .pdf-body td {
+            border: 1px solid #e2e8f0; padding: 7px 10px; text-align: left;
+          }
+          .pdf-body th { background:#f8fafc; font-weight: 700; color:#0f172a; }
+          .pdf-body hr { border: none; border-top: 1px solid #e2e8f0; margin: 16px 0; }
+          .pdf-body a { color:#4f46e5; text-decoration: none; }
+          .pdf-body img { max-width: 100%; height: auto; border-radius: 6px; }
+          .katex { font-size: 1.05em; }
+          .pdf-footer {
+            margin-top: 28px; padding-top: 12px; border-top: 1px solid #e2e8f0;
+            display: flex; justify-content: space-between;
+            font-size: 9.5px; color:#94a3b8;
+          }
+        </style>
       `;
-      // Inject KaTeX stylesheet inline so math renders in PDF
+
+      const container = document.createElement('div');
+      container.className = 'pdf-doc';
+      container.innerHTML = `
+        ${styles}
+        <div class="pdf-header">
+          <div class="pdf-brand">
+            <div class="pdf-logo">M</div>
+            <div>
+              <div class="pdf-title">Mesh Chat — Study Note</div>
+              <div class="pdf-subtitle">GPGC Portal · AI Study Assistant</div>
+            </div>
+          </div>
+          <div class="pdf-meta">
+            ${new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' })}<br/>
+            ${new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' })}
+          </div>
+        </div>
+
+        ${userQuestion ? `
+          <div class="pdf-question">
+            <div class="q-label">Question</div>
+            <div>${userQuestion.replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'} as any)[c])}</div>
+          </div>
+        ` : ''}
+
+        <div class="pdf-body">${bodyHtml}</div>
+
+        <div class="pdf-footer">
+          <span>Developed By: Mashal Khan</span>
+          <span>GPGC Portal · gpgc.lovable.app</span>
+        </div>
+      `;
+
+      // KaTeX stylesheet for proper math rendering in the offscreen DOM
       const katexCss = document.createElement('link');
       katexCss.rel = 'stylesheet';
       katexCss.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css';
-      container.prepend(katexCss);
+      document.head.appendChild(katexCss);
 
       document.body.appendChild(container);
       container.style.position = 'fixed';
       container.style.left = '-10000px';
       container.style.top = '0';
-      container.style.width = '794px'; // A4 width
 
-      // Wait for KaTeX CSS
-      await new Promise(r => setTimeout(r, 400));
+      await new Promise(r => setTimeout(r, 500));
 
       await (html2pdf() as any)
         .set({
-          margin: [12, 12, 14, 12],
+          margin: 0,
           filename: `mesh-chat-${Date.now()}.pdf`,
           image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-          pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+          html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', letterRendering: true },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
+          pagebreak: { mode: ['css', 'legacy'], avoid: ['pre', 'table', 'h1', 'h2', 'h3'] },
         })
         .from(container)
         .save();

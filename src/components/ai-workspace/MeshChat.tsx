@@ -111,6 +111,28 @@ const MessageActions = ({ text, onRetry, onExport, speak, stop, isSpeaking, isSu
   );
 };
 
+const UserCopyButton = ({ text }: { text: string }) => {
+  const [copied, setCopied] = useState(false);
+  const { toast } = useToast();
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    toast({ title: 'Copied to clipboard' });
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="h-7 w-7 rounded-lg text-muted-foreground hover:text-foreground sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+      onClick={handleCopy}
+      title="Copy message"
+    >
+      {copied ? <Check className="h-3.5 w-3.5 text-primary" /> : <Copy className="h-3.5 w-3.5" />}
+    </Button>
+  );
+};
+
 export const MeshChat = () => {
   const [question, setQuestion] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
@@ -404,33 +426,31 @@ export const MeshChat = () => {
     };
   }, []);
 
-  // Strip markdown for clean PDF text (asterisks, hashes, backticks)
-  const stripMarkdownArtifacts = (md: string): string => {
-    return md
-      .replace(/^#{1,6}\s+/gm, '')              // headings #
-      .replace(/\*\*\*(.+?)\*\*\*/g, '$1')      // bold-italic
-      .replace(/\*\*(.+?)\*\*/g, '$1')          // bold
-      .replace(/\*(.+?)\*/g, '$1')              // italic
-      .replace(/__(.+?)__/g, '$1')              // bold _
-      .replace(/_(.+?)_/g, '$1')                // italic _
-      .replace(/`([^`]+)`/g, '$1')              // inline code
-      .replace(/^>\s?/gm, '')                   // blockquote
-      .replace(/^[-*+]\s+/gm, '• ')             // list bullets
-      .replace(/^\d+\.\s+/gm, (m) => m);        // keep numbered
-  };
-
-  // Export current chat output to PDF (with KaTeX math rendering)
-  const handleExportPDF = async () => {
-    const lastAssistant = [...messages].reverse().find(m => m.role === 'assistant');
+  // Export current chat (last Q&A pair) to a professional PDF
+  const handleExportPDF = async (assistantText?: string) => {
+    const lastAssistant = assistantText
+      ? { content: assistantText }
+      : [...messages].reverse().find(m => m.role === 'assistant');
     if (!lastAssistant?.content?.trim()) {
       toast({ title: 'Nothing to export', description: 'Send a message first to get a response.' });
       return;
     }
 
-    toast({ title: 'Preparing PDF...', description: 'Rendering math and formatting.' });
+    // Find the user question that preceded this assistant reply
+    let userQuestion = '';
+    if (!assistantText) {
+      const idx = [...messages].map(m => m.content).lastIndexOf(lastAssistant.content);
+      for (let i = idx - 1; i >= 0; i--) {
+        if (messages[i].role === 'user') { userQuestion = messages[i].content; break; }
+      }
+    } else {
+      const lastUser = [...messages].reverse().find(m => m.role === 'user');
+      userQuestion = lastUser?.content || '';
+    }
+
+    toast({ title: 'Preparing PDF…', description: 'Rendering math and formatting.' });
 
     try {
-      // Lazy import heavy libs
       const [{ default: html2pdf }, { default: ReactDOMServer }, ReactMod, MarkdownMod, MathMod, KatexMod] = await Promise.all([
         import('html2pdf.js'),
         import('react-dom/server'),
@@ -440,8 +460,8 @@ export const MeshChat = () => {
         import('rehype-katex'),
       ]);
 
-      // Use the raw markdown so KaTeX renders properly; strip cosmetic markdown for plain text fallback if needed
-      const html = ReactDOMServer.renderToStaticMarkup(
+      // Render markdown -> HTML (KaTeX handles math, ``` handles code)
+      const bodyHtml = ReactDOMServer.renderToStaticMarkup(
         ReactMod.createElement(MarkdownMod.default as any, {
           remarkPlugins: [MathMod.default],
           rehypePlugins: [KatexMod.default],
@@ -449,41 +469,148 @@ export const MeshChat = () => {
         })
       );
 
-      const container = document.createElement('div');
-      container.className = 'pdf-export';
-      container.innerHTML = `
-        <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #6366f1;padding-bottom:10px;margin-bottom:18px;">
-          <div>
-            <div style="font-size:18px;font-weight:700;color:#0a0a0a;">Mesh Chat — Export</div>
-            <div style="font-size:11px;color:#666;">GPGC Portal · ${new Date().toLocaleString()}</div>
-          </div>
-          <div style="font-size:10px;color:#888;">Developed By: Mashal Khan</div>
-        </div>
-        ${html}
+      // Professional document styles — clean, print-friendly, like the reference PDF
+      const styles = `
+        <style>
+          .pdf-doc, .pdf-doc * { box-sizing: border-box; }
+          .pdf-doc {
+            font-family: 'Helvetica Neue', Helvetica, Arial, 'Segoe UI', sans-serif;
+            color: #111827;
+            background: #ffffff;
+            font-size: 12px;
+            line-height: 1.65;
+            padding: 36px 40px 48px;
+            width: 794px;
+          }
+          .pdf-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding-bottom: 14px; margin-bottom: 22px;
+            border-bottom: 2px solid #4f46e5;
+          }
+          .pdf-brand { display:flex; align-items:center; gap:10px; }
+          .pdf-logo {
+            width: 32px; height: 32px; border-radius: 8px;
+            background: linear-gradient(135deg,#6366f1,#8b5cf6);
+            color:#fff; font-weight:700; display:flex; align-items:center; justify-content:center;
+            font-size: 14px;
+          }
+          .pdf-title { font-size: 16px; font-weight: 700; color:#0f172a; letter-spacing:-0.01em; }
+          .pdf-subtitle { font-size: 10px; color:#64748b; margin-top:1px; }
+          .pdf-meta { font-size: 10px; color:#64748b; text-align:right; }
+          .pdf-question {
+            background:#f8fafc; border-left: 3px solid #4f46e5;
+            padding: 12px 14px; border-radius: 6px; margin-bottom: 22px;
+            font-size: 12.5px; color:#0f172a;
+          }
+          .pdf-question .q-label {
+            font-size: 9.5px; font-weight:700; color:#4f46e5;
+            letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px;
+          }
+          .pdf-body { font-size: 12px; color:#1f2937; }
+          .pdf-body h1, .pdf-body h2, .pdf-body h3, .pdf-body h4 {
+            color:#0f172a; font-weight:700; margin: 18px 0 8px;
+            line-height: 1.3; page-break-after: avoid;
+          }
+          .pdf-body h1 { font-size: 17px; border-bottom:1px solid #e2e8f0; padding-bottom:5px; }
+          .pdf-body h2 { font-size: 15px; }
+          .pdf-body h3 { font-size: 13.5px; color:#4f46e5; }
+          .pdf-body h4 { font-size: 12.5px; }
+          .pdf-body p { margin: 8px 0; }
+          .pdf-body ul, .pdf-body ol { margin: 8px 0 8px 22px; padding: 0; }
+          .pdf-body li { margin: 4px 0; }
+          .pdf-body strong { color:#0f172a; font-weight:700; }
+          .pdf-body em { color:#334155; }
+          .pdf-body blockquote {
+            border-left: 3px solid #cbd5e1; background:#f8fafc;
+            margin: 10px 0; padding: 8px 12px; color:#475569; border-radius: 0 6px 6px 0;
+          }
+          .pdf-body code {
+            background: #f1f5f9; color:#be185d; padding: 1.5px 6px;
+            border-radius: 4px; font-family: 'SF Mono', Menlo, Consolas, monospace;
+            font-size: 11px;
+          }
+          .pdf-body pre {
+            background: #0f172a; color:#e2e8f0; padding: 12px 14px;
+            border-radius: 8px; overflow-x: auto; margin: 12px 0;
+            font-family: 'SF Mono', Menlo, Consolas, monospace;
+            font-size: 10.5px; line-height: 1.55;
+            page-break-inside: avoid;
+          }
+          .pdf-body pre code { background: transparent; color: inherit; padding: 0; font-size: inherit; }
+          .pdf-body table {
+            width: 100%; border-collapse: collapse; margin: 12px 0;
+            font-size: 11px; page-break-inside: avoid;
+          }
+          .pdf-body th, .pdf-body td {
+            border: 1px solid #e2e8f0; padding: 7px 10px; text-align: left;
+          }
+          .pdf-body th { background:#f8fafc; font-weight: 700; color:#0f172a; }
+          .pdf-body hr { border: none; border-top: 1px solid #e2e8f0; margin: 16px 0; }
+          .pdf-body a { color:#4f46e5; text-decoration: none; }
+          .pdf-body img { max-width: 100%; height: auto; border-radius: 6px; }
+          .katex { font-size: 1.05em; }
+          .pdf-footer {
+            margin-top: 28px; padding-top: 12px; border-top: 1px solid #e2e8f0;
+            display: flex; justify-content: space-between;
+            font-size: 9.5px; color:#94a3b8;
+          }
+        </style>
       `;
-      // Inject KaTeX stylesheet inline so math renders in PDF
+
+      const container = document.createElement('div');
+      container.className = 'pdf-doc';
+      container.innerHTML = `
+        ${styles}
+        <div class="pdf-header">
+          <div class="pdf-brand">
+            <div class="pdf-logo">M</div>
+            <div>
+              <div class="pdf-title">Mesh Chat — Study Note</div>
+              <div class="pdf-subtitle">GPGC Portal · AI Study Assistant</div>
+            </div>
+          </div>
+          <div class="pdf-meta">
+            ${new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' })}<br/>
+            ${new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' })}
+          </div>
+        </div>
+
+        ${userQuestion ? `
+          <div class="pdf-question">
+            <div class="q-label">Question</div>
+            <div>${userQuestion.replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'} as any)[c])}</div>
+          </div>
+        ` : ''}
+
+        <div class="pdf-body">${bodyHtml}</div>
+
+        <div class="pdf-footer">
+          <span>Developed By: Mashal Khan</span>
+          <span>GPGC Portal · gpgc.lovable.app</span>
+        </div>
+      `;
+
+      // KaTeX stylesheet for proper math rendering in the offscreen DOM
       const katexCss = document.createElement('link');
       katexCss.rel = 'stylesheet';
       katexCss.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css';
-      container.prepend(katexCss);
+      document.head.appendChild(katexCss);
 
       document.body.appendChild(container);
       container.style.position = 'fixed';
       container.style.left = '-10000px';
       container.style.top = '0';
-      container.style.width = '794px'; // A4 width
 
-      // Wait for KaTeX CSS
-      await new Promise(r => setTimeout(r, 400));
+      await new Promise(r => setTimeout(r, 500));
 
       await (html2pdf() as any)
         .set({
-          margin: [12, 12, 14, 12],
+          margin: 0,
           filename: `mesh-chat-${Date.now()}.pdf`,
           image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-          pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+          html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', letterRendering: true },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
+          pagebreak: { mode: ['css', 'legacy'], avoid: ['pre', 'table', 'h1', 'h2', 'h3'] },
         })
         .from(container)
         .save();
@@ -634,8 +761,14 @@ export const MeshChat = () => {
         </div>
         <div className="flex-1 overflow-y-auto px-2 space-y-0.5 pb-2 scrollbar-thin">
           {historyLoading ? (
-            <div className="p-4 text-center">
-              <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
+            <div className="space-y-1.5 px-1 py-2">
+              {[...Array(6)].map((_, i) => (
+                <div
+                  key={i}
+                  className="h-8 rounded-lg bg-gradient-to-r from-muted/60 via-muted/40 to-muted/60 animate-pulse"
+                  style={{ animationDelay: `${i * 80}ms` }}
+                />
+              ))}
             </div>
           ) : filteredSessions.length === 0 ? (
             <div className="p-4 text-center text-muted-foreground text-sm">
@@ -694,34 +827,22 @@ export const MeshChat = () => {
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col min-w-0 relative">
-        {/* Top Header — professional branded bar */}
-        <div className="flex items-center justify-between px-3 sm:px-4 py-2 flex-shrink-0 border-b border-border/40 bg-background/80 backdrop-blur-md">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 rounded-full hover:bg-muted"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              title={sidebarOpen ? "Close sidebar" : "Open sidebar"}
-            >
-              <PanelLeft className="h-4 w-4" />
-            </Button>
-            <div className="flex items-center gap-2 px-2">
-              <div className="relative h-8 w-8 rounded-xl bg-gradient-to-br from-primary via-primary to-primary/70 flex items-center justify-center shadow-sm">
-                <Sparkles className="h-4 w-4 text-primary-foreground" />
-                <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-background" />
-              </div>
-              <div className="flex flex-col leading-tight">
-                <span className="text-sm font-semibold tracking-tight">Mesh Chat</span>
-                <span className="text-[10px] text-muted-foreground hidden sm:inline">AI Study Assistant · Online</span>
-              </div>
-            </div>
-          </div>
+        {/* Top Header — pill-shaped buttons floating */}
+        <div className="flex items-center justify-between px-3 sm:px-4 py-2 flex-shrink-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 rounded-full bg-muted/60 hover:bg-muted shadow-sm"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            title={sidebarOpen ? "Close sidebar" : "Open sidebar"}
+          >
+            <PanelLeft className="h-4 w-4" />
+          </Button>
 
           <div className="flex items-center gap-1.5 sm:gap-2">
             <Button
               variant="ghost"
-              className="h-9 px-3 rounded-full hover:bg-muted gap-1.5 text-xs sm:text-sm font-medium"
+              className="h-9 px-3 rounded-full bg-muted/60 hover:bg-muted shadow-sm gap-1.5 text-xs sm:text-sm font-medium"
               onClick={handleNewChat}
               title="New chat"
             >
@@ -733,7 +854,7 @@ export const MeshChat = () => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 rounded-full hover:bg-muted"
+                  className="h-9 w-9 rounded-full bg-muted/60 hover:bg-muted shadow-sm"
                   title="More"
                 >
                   <MoreHorizontal className="h-4 w-4" />
@@ -753,30 +874,24 @@ export const MeshChat = () => {
 
         {/* Scroll area */}
         <div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
-          <div className="max-w-3xl mx-auto px-3 sm:px-6 pt-3 pb-2">
+          <div className="max-w-3xl mx-auto px-3 sm:px-6 pt-1 pb-1">
             {messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center min-h-[40vh] sm:min-h-[45vh] text-center px-2 animate-in fade-in duration-500">
-                <div className="relative h-14 w-14 sm:h-16 sm:w-16 rounded-2xl bg-gradient-to-br from-primary via-primary to-primary/60 flex items-center justify-center mb-4 shadow-lg shadow-primary/20">
-                  <Sparkles className="h-7 w-7 sm:h-8 sm:w-8 text-primary-foreground" />
-                  <span className="absolute -bottom-1 -right-1 h-3 w-3 rounded-full bg-emerald-500 ring-2 ring-background" />
+              <div className="flex flex-col items-center justify-center min-h-[40vh] sm:min-h-[45vh] text-center px-4 animate-in fade-in duration-500">
+                <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-primary/10 flex items-center justify-center mb-6 shadow-sm">
+                  <Sparkles className="h-8 w-8 sm:h-10 sm:w-10 text-primary" />
                 </div>
-                <h1 className="text-xl sm:text-3xl font-semibold mb-1.5 tracking-tight bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-transparent">
-                  Welcome to Mesh Chat
+                <h1 className="text-2xl sm:text-3xl font-semibold mb-3 tracking-tight text-foreground">
+                  How can I help you today?
                 </h1>
-                <p className="text-muted-foreground text-xs sm:text-sm max-w-md">
-                  Ask anything from your syllabus — Mesh Chat understands text, images, and PDFs.
+                <p className="text-muted-foreground text-sm sm:text-base max-w-md">
+                  I'm Mesh Chat. Ask me anything from your syllabus, or upload an image/PDF to get started.
                 </p>
               </div>
             ) : (
               <div className="space-y-5 sm:space-y-7 pt-2">
                 {messages.map((message, index) => (
-                  <div key={index} className={`group flex gap-2.5 sm:gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
-                    {message.role === 'assistant' && (
-                      <div className="flex-shrink-0 h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-gradient-to-br from-primary via-primary to-primary/70 flex items-center justify-center shadow-sm mt-0.5">
-                        <Sparkles className="h-4 w-4 sm:h-[18px] sm:w-[18px] text-primary-foreground" />
-                      </div>
-                    )}
-                    <div className={message.role === 'user' ? 'max-w-[88%] sm:max-w-[78%]' : 'flex-1 min-w-0 max-w-[calc(100%-3rem)]'}>
+                  <div key={index} className={`group flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
+                    <div className={message.role === 'user' ? 'max-w-[88%] sm:max-w-[80%]' : 'w-full sm:max-w-[90%]'}>
                       {message.role === 'user' ? (
                         <div className="flex flex-col items-end gap-2">
                           {/* Image — bare, transparent, no bubble/shadow */}
@@ -794,23 +909,24 @@ export const MeshChat = () => {
                               <span className="text-xs sm:text-sm truncate max-w-[200px]">{message.imageName}</span>
                             </div>
                           )}
-                          {/* Text message — refined gradient bubble */}
+                          {/* Text message — only render bubble if there's actual user text */}
                           {message.content && message.content.trim() && message.content !== `Analyze this image` && message.content !== `Analyze this document` && (
-                            <div className="bg-gradient-to-br from-primary to-primary/85 text-primary-foreground px-4 py-2.5 sm:py-3 rounded-3xl rounded-br-lg text-[15px] sm:text-base max-w-full shadow-sm">
-                              <p className="whitespace-pre-wrap break-words">{message.content}</p>
-                            </div>
+                            <>
+                              <div className="bg-zinc-100 dark:bg-zinc-800 text-foreground px-4 py-3 rounded-2xl text-[15px] sm:text-base max-w-full shadow-sm">
+                                <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                              </div>
+                              <UserCopyButton text={message.content} />
+                            </>
                           )}
                         </div>
                       ) : (
-                        <div className="relative group">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-semibold text-foreground/80">Mesh Chat</span>
-                            {isStreaming && index === messages.length - 1 && (
-                              <span className="text-[10px] text-muted-foreground thinking-shimmer">typing…</span>
-                            )}
+                        <div className="relative group flex gap-4 w-full">
+                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-1 shadow-sm border border-primary/20">
+                            <Sparkles className="h-5 w-5 text-primary" />
                           </div>
-                          <div className={`prose prose-sm sm:prose-base dark:prose-invert max-w-none prose-pre:my-2 prose-p:my-2.5 prose-headings:mt-4 prose-headings:mb-2 prose-headings:font-semibold prose-li:my-1 prose-ul:my-2 prose-ol:my-2 leading-relaxed ${isStreaming && index === messages.length - 1 ? 'stream-caret' : ''}`}>
-                            <ReactMarkdown
+                          <div className="flex-1 min-w-0">
+                            <div className={`prose prose-sm sm:prose-base dark:prose-invert max-w-none prose-pre:my-2 prose-p:my-2.5 prose-headings:mt-4 prose-headings:mb-2 prose-headings:font-semibold prose-li:my-1 prose-ul:my-2 prose-ol:my-2 leading-relaxed ${isStreaming && index === messages.length - 1 ? 'stream-caret' : ''}`}>
+                              <ReactMarkdown
                               remarkPlugins={[remarkMath]}
                               rehypePlugins={[rehypeKatex]}
                               components={{
@@ -838,16 +954,19 @@ export const MeshChat = () => {
                             </ReactMarkdown>
                           </div>
                           {!(isStreaming && index === messages.length - 1) && (
-                            <MessageActions
-                              text={message.content}
-                              onRetry={handleRetry}
-                              onExport={handleExportPDF}
-                              speak={speak}
-                              stop={stop}
-                              isSpeaking={isSpeaking}
-                              isSupported={isSupported}
-                            />
+                            <div className="mt-1 -ml-2">
+                              <MessageActions
+                                text={message.content}
+                                onRetry={handleRetry}
+                                onExport={handleExportPDF}
+                                speak={speak}
+                                stop={stop}
+                                isSpeaking={isSpeaking}
+                                isSupported={isSupported}
+                              />
+                            </div>
                           )}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -855,19 +974,14 @@ export const MeshChat = () => {
                 ))}
 
                 {isLoading && messages[messages.length - 1]?.role === 'user' && (
-                  <div className="flex justify-start gap-2.5 sm:gap-3 animate-in fade-in duration-300">
-                    <div className="flex-shrink-0 h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-gradient-to-br from-primary via-primary to-primary/70 flex items-center justify-center shadow-sm mt-0.5">
-                      <Sparkles className="h-4 w-4 sm:h-[18px] sm:w-[18px] text-primary-foreground animate-pulse" />
-                    </div>
-                    <div className="flex flex-col gap-1 pt-1">
-                      <span className="text-xs font-semibold text-foreground/80">Mesh Chat</span>
-                      <div className="flex items-center gap-2">
-                        <div className="flex gap-1">
-                          <span className="h-1.5 w-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '0ms' }} />
-                          <span className="h-1.5 w-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '150ms' }} />
-                          <span className="h-1.5 w-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '300ms' }} />
-                        </div>
-                        <span className="thinking-shimmer text-sm">Thinking…</span>
+                  <div className="flex justify-start animate-in fade-in duration-300">
+                    <div className="flex gap-4 w-full">
+                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-1 shadow-sm border border-primary/20">
+                        <span className="absolute inline-flex h-full w-full rounded-full bg-primary/30 animate-ping" />
+                        <Sparkles className="relative h-5 w-5 text-primary" />
+                      </div>
+                      <div className="flex items-center">
+                        <span className="thinking-shimmer text-sm mt-2">Thinking…</span>
                       </div>
                     </div>
                   </div>

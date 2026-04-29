@@ -883,9 +883,12 @@ export const MeshChat = () => {
                           )}
                           {/* Text message — only render bubble if there's actual user text */}
                           {message.content && message.content.trim() && message.content !== `Analyze this image` && message.content !== `Analyze this document` && (
-                            <div className="bg-zinc-100 dark:bg-zinc-800 text-foreground px-4 py-3 rounded-2xl text-[15px] sm:text-base max-w-full shadow-sm">
-                              <p className="whitespace-pre-wrap break-words">{message.content}</p>
-                            </div>
+                            <>
+                              <div className="bg-zinc-100 dark:bg-zinc-800 text-foreground px-4 py-3 rounded-2xl text-[15px] sm:text-base max-w-full shadow-sm">
+                                <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                              </div>
+                              <UserCopyButton text={message.content} />
+                            </>
                           )}
                         </div>
                       ) : (

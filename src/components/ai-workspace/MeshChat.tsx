@@ -928,27 +928,48 @@ export const MeshChat = () => {
                             <Sparkles className="h-5 w-5 text-primary" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className={`prose prose-sm sm:prose-base dark:prose-invert max-w-none prose-pre:my-2 prose-p:my-2.5 prose-headings:mt-4 prose-headings:mb-2 prose-headings:font-semibold prose-li:my-1 prose-ul:my-2 prose-ol:my-2 leading-relaxed ${isStreaming && index === messages.length - 1 ? 'stream-caret' : ''}`}>
+                            <div className={`prose prose-sm sm:prose-base dark:prose-invert max-w-none prose-pre:my-3 prose-p:my-2.5 prose-headings:mt-5 prose-headings:mb-2.5 prose-headings:font-bold prose-headings:tracking-tight prose-h1:text-xl prose-h2:text-lg prose-h3:text-base prose-h3:text-primary prose-li:my-1 prose-ul:my-2 prose-ol:my-2 prose-strong:text-foreground prose-strong:font-bold prose-blockquote:border-primary prose-blockquote:bg-primary/5 prose-blockquote:py-1 prose-blockquote:px-4 prose-blockquote:rounded-r-lg prose-blockquote:not-italic prose-table:my-3 prose-th:bg-muted prose-th:font-bold prose-th:px-3 prose-th:py-2 prose-td:px-3 prose-td:py-2 prose-td:border prose-th:border prose-hr:my-5 prose-hr:border-border leading-relaxed ${isStreaming && index === messages.length - 1 ? 'stream-caret' : ''}`}>
                               <ReactMarkdown
-                              remarkPlugins={[remarkMath]}
+                              remarkPlugins={[remarkMath, remarkGfm]}
                               rehypePlugins={[rehypeKatex]}
                               components={{
                                 code({ node, inline, className, children, ...props }: any) {
                                   const match = /language-(\w+)/.exec(className || '');
                                   return !inline && match ? (
-                                    <SyntaxHighlighter
-                                      style={oneDark}
-                                      language={match[1]}
-                                      PreTag="div"
-                                      customStyle={{ borderRadius: '14px', fontSize: '0.85em', margin: '0.75em 0' }}
-                                      {...props}
-                                    >
-                                      {String(children).replace(/\n$/, '')}
-                                    </SyntaxHighlighter>
+                                    <div className="relative group/code my-3 rounded-xl overflow-hidden border border-border/50 shadow-sm">
+                                      <div className="flex items-center justify-between px-4 py-2 bg-zinc-800 text-zinc-300 text-[11px] font-mono uppercase tracking-wider">
+                                        <span>{match[1]}</span>
+                                        <button
+                                          onClick={() => {
+                                            navigator.clipboard.writeText(String(children).replace(/\n$/, ''));
+                                            toast({ title: 'Code copied' });
+                                          }}
+                                          className="opacity-0 group-hover/code:opacity-100 transition-opacity hover:text-white"
+                                        >
+                                          Copy
+                                        </button>
+                                      </div>
+                                      <SyntaxHighlighter
+                                        style={oneDark}
+                                        language={match[1]}
+                                        PreTag="div"
+                                        customStyle={{ margin: 0, borderRadius: 0, fontSize: '0.85em', padding: '14px 16px' }}
+                                        {...props}
+                                      >
+                                        {String(children).replace(/\n$/, '')}
+                                      </SyntaxHighlighter>
+                                    </div>
                                   ) : (
-                                    <code className="bg-muted px-1.5 py-0.5 rounded-md text-[0.85em] font-mono" {...props}>
+                                    <code className="bg-muted text-primary px-1.5 py-0.5 rounded-md text-[0.85em] font-mono font-medium" {...props}>
                                       {children}
                                     </code>
+                                  );
+                                },
+                                table({ children }: any) {
+                                  return (
+                                    <div className="my-3 overflow-x-auto rounded-lg border border-border">
+                                      <table className="w-full text-sm border-collapse">{children}</table>
+                                    </div>
                                   );
                                 },
                               }}

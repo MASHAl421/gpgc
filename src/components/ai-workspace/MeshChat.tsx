@@ -428,10 +428,12 @@ export const MeshChat = () => {
 
   // Export current chat (last Q&A pair) to a professional PDF
   const handleExportPDF = async (assistantText?: string) => {
-    const lastAssistant = assistantText
-      ? { content: assistantText }
+    // Guard against accidental event-object args from button onClick
+    const safeText = typeof assistantText === 'string' ? assistantText : undefined;
+    const lastAssistant = safeText
+      ? { content: safeText }
       : [...messages].reverse().find(m => m.role === 'assistant');
-    if (!lastAssistant?.content?.trim()) {
+    if (!lastAssistant?.content || typeof lastAssistant.content !== 'string' || !lastAssistant.content.trim()) {
       toast({ title: 'Nothing to export', description: 'Send a message first to get a response.' });
       return;
     }

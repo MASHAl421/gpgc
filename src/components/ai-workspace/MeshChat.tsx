@@ -761,8 +761,14 @@ export const MeshChat = () => {
         </div>
         <div className="flex-1 overflow-y-auto px-2 space-y-0.5 pb-2 scrollbar-thin">
           {historyLoading ? (
-            <div className="p-4 text-center">
-              <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
+            <div className="space-y-1.5 px-1 py-2">
+              {[...Array(6)].map((_, i) => (
+                <div
+                  key={i}
+                  className="h-8 rounded-lg bg-gradient-to-r from-muted/60 via-muted/40 to-muted/60 animate-pulse"
+                  style={{ animationDelay: `${i * 80}ms` }}
+                />
+              ))}
             </div>
           ) : filteredSessions.length === 0 ? (
             <div className="p-4 text-center text-muted-foreground text-sm">

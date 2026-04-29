@@ -385,9 +385,9 @@ const Preparation = () => {
           </Card>
         ) : (
           /* Subject Detail View */
-          <div className={quizConfig ? '' : 'space-y-3 sm:space-y-0 sm:grid lg:grid-cols-12 sm:gap-4 md:gap-6'}>
-            {/* Filter categories - hide entirely when quiz is active */}
-            {!quizConfig && (() => {
+          <div className="space-y-3 sm:space-y-0 sm:grid lg:grid-cols-12 sm:gap-4 md:gap-6">
+            {/* Filter categories - show simulations only for Applied Physics */}
+            {(() => {
               const isPhysics = selectedSubject.name.toLowerCase().includes('physics');
               const filteredCategories = isPhysics 
                 ? preparationCategories 
@@ -442,7 +442,7 @@ const Preparation = () => {
             })()}
 
             {/* Topics Content */}
-            <div className={quizConfig ? '' : 'lg:col-span-9'}>
+            <div className="lg:col-span-9">
               {/* Show Academic Resources */}
               {selectedCategory === 'academic' ? (
                 <AcademicResources subjectId={selectedSubject.id} subjectName={selectedSubject.name} />

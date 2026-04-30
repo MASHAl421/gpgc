@@ -72,7 +72,7 @@ interface ForumReply {
 }
 
 const Forum = () => {
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const { profileData } = useSemesterOnboarding();
   const { awardPoints, refetch: refetchPoints } = useForumPoints();
   const [searchQuery, setSearchQuery] = useState('');

@@ -117,6 +117,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Realtime: keep header coin balance / profile in sync across the app
+  useEffect(() => {
+    if (!user?.id) return;
+    const channel = supabase
+      .channel(`profile-${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` },
+        (payload) => {
+          setProfile((prev) => (prev ? { ...prev, ...(payload.new as Profile) } : (payload.new as Profile)));
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+
   const login = async (email: string, password: string): Promise<{ error: string | null }> => {
     try {
       const { error } = await supabase.auth.signInWithPassword({

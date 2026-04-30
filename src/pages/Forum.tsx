@@ -322,6 +322,17 @@ const Forum = () => {
 
       await awardPoints('new_reply', FORUM_POINTS.NEW_REPLY, data?.id, 'Added a reply to a discussion');
 
+      // Coin reward for replying
+      const COIN_REWARD_REPLY = 2;
+      await supabase.rpc('add_coins', {
+        _user_id: user.id,
+        _amount: COIN_REWARD_REPLY,
+        _transaction_type: 'forum_reply',
+        _description: 'Replied to a forum discussion',
+        _reference_id: data?.id ?? null,
+      });
+      await refreshProfile();
+
       if (selectedPost.user_id !== user.id) {
         await createNotification(
           selectedPost.user_id,
@@ -333,7 +344,7 @@ const Forum = () => {
         );
       }
 
-      toast.success('Reply posted! +' + FORUM_POINTS.NEW_REPLY + ' points');
+      toast.success(`Reply posted! +${FORUM_POINTS.NEW_REPLY} pts · +${COIN_REWARD_REPLY} coins`);
       setReplyContent('');
       fetchReplies(selectedPost.id);
       fetchData();

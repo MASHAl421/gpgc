@@ -69,7 +69,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
           {/* Footer - Developed By */}
           <footer className="h-10 border-t border-border bg-card flex items-center justify-center shrink-0">
             <p className="text-xs sm:text-sm text-muted-foreground">
-              Developed By: <span className="font-medium text-foreground">Mashal Khan</span>
+              Developed By: <span className="font-medium text-foreground">MYNT</span>
             </p>
           </footer>
         </div>

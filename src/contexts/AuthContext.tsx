@@ -175,6 +175,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         login,
         signup,
         logout,
+        refreshProfile,
       }}
     >
       {children}

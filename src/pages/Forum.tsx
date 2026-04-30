@@ -279,7 +279,18 @@ const Forum = () => {
 
       await awardPoints('new_post', FORUM_POINTS.NEW_POST, data?.id, 'Created a new discussion');
 
-      toast.success('Post created successfully! +' + FORUM_POINTS.NEW_POST + ' points');
+      // Coin reward for community contribution
+      const COIN_REWARD_POST = 3;
+      await supabase.rpc('add_coins', {
+        _user_id: user.id,
+        _amount: COIN_REWARD_POST,
+        _transaction_type: 'forum_post',
+        _description: 'Created a new forum discussion',
+        _reference_id: data?.id ?? null,
+      });
+      await refreshProfile();
+
+      toast.success(`Post created! +${FORUM_POINTS.NEW_POST} pts · +${COIN_REWARD_POST} coins`);
       setNewPostOpen(false);
       setNewPostTitle('');
       setNewPostContent('');

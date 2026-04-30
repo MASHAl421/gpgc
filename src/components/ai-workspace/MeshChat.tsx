@@ -452,38 +452,72 @@ export const MeshChat = () => {
       const container = document.createElement('div');
       container.className = 'pdf-export';
       container.innerHTML = `
-        <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #6366f1;padding-bottom:10px;margin-bottom:18px;">
+        <style>
+          .pdf-export, .pdf-export * { color: #0a0a0a !important; background: transparent !important; box-sizing: border-box; }
+          .pdf-export { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; font-size: 13px; line-height: 1.6; padding: 24px; background: #ffffff !important; width: 794px; }
+          .pdf-export h1 { font-size: 22px; font-weight: 700; margin: 18px 0 10px; border-bottom: 2px solid #6366f1; padding-bottom: 6px; }
+          .pdf-export h2 { font-size: 18px; font-weight: 700; margin: 16px 0 8px; color: #4338ca !important; }
+          .pdf-export h3 { font-size: 15px; font-weight: 600; margin: 14px 0 6px; color: #4f46e5 !important; }
+          .pdf-export h4 { font-size: 13px; font-weight: 600; margin: 12px 0 6px; }
+          .pdf-export p { margin: 8px 0; }
+          .pdf-export ul, .pdf-export ol { margin: 8px 0 8px 22px; padding: 0; }
+          .pdf-export li { margin: 4px 0; }
+          .pdf-export strong { font-weight: 700; color: #4338ca !important; }
+          .pdf-export blockquote { border-left: 4px solid #6366f1; background: #eef2ff !important; padding: 8px 12px; margin: 10px 0; border-radius: 4px; }
+          .pdf-export code { background: #eef2ff !important; padding: 1px 5px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 12px; color: #4338ca !important; }
+          .pdf-export pre { background: #1e293b !important; padding: 12px; border-radius: 6px; overflow: hidden; white-space: pre-wrap; word-wrap: break-word; }
+          .pdf-export pre, .pdf-export pre * { color: #f1f5f9 !important; font-family: 'Courier New', monospace; font-size: 12px; }
+          .pdf-export table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+          .pdf-export th, .pdf-export td { border: 1px solid #d4d4d8; padding: 6px 10px; text-align: left; }
+          .pdf-export th { background: #f4f4f5 !important; font-weight: 700; }
+          .pdf-export hr { border: 0; border-top: 1px solid #e4e4e7; margin: 14px 0; }
+          .pdf-export .pdf-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #6366f1; padding-bottom: 10px; margin-bottom: 18px; }
+          .pdf-export .pdf-title { font-size: 18px; font-weight: 700; }
+          .pdf-export .pdf-meta { font-size: 11px; color: #666 !important; }
+          .pdf-export .katex { font-size: 1.05em; }
+        </style>
+        <div class="pdf-header">
           <div>
-            <div style="font-size:18px;font-weight:700;color:#0a0a0a;">Mesh Chat — Export</div>
-            <div style="font-size:11px;color:#666;">GPGC Portal · ${new Date().toLocaleString()}</div>
+            <div class="pdf-title">Mesh Chat — Export</div>
+            <div class="pdf-meta">GPGC Portal · ${new Date().toLocaleString()}</div>
           </div>
-          <div style="font-size:10px;color:#888;">Developed By: Mashal Khan</div>
+          <div class="pdf-meta">Developed By: MYNT</div>
         </div>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
         ${html}
       `;
-      // Inject KaTeX stylesheet inline so math renders in PDF
-      const katexCss = document.createElement('link');
-      katexCss.rel = 'stylesheet';
-      katexCss.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css';
-      container.prepend(katexCss);
 
-      document.body.appendChild(container);
+      // Position off-screen but rendered (not display:none, not -10000px)
       container.style.position = 'fixed';
-      container.style.left = '-10000px';
+      container.style.left = '0';
       container.style.top = '0';
-      container.style.width = '794px'; // A4 width
+      container.style.width = '794px';
+      container.style.background = '#ffffff';
+      container.style.zIndex = '-1';
+      container.style.opacity = '0';
+      container.style.pointerEvents = 'none';
+      document.body.appendChild(container);
 
-      // Wait for KaTeX CSS
-      await new Promise(r => setTimeout(r, 400));
+      // Wait for KaTeX CSS + fonts to load
+      await new Promise(r => setTimeout(r, 800));
+      if ((document as any).fonts?.ready) {
+        try { await (document as any).fonts.ready; } catch {}
+      }
 
       await (html2pdf() as any)
         .set({
-          margin: [12, 12, 14, 12],
+          margin: [10, 10, 12, 10],
           filename: `mesh-chat-${Date.now()}.pdf`,
           image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+          html2canvas: {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: '#ffffff',
+            logging: false,
+            windowWidth: 794,
+          },
           jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-          pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+          pagebreak: { mode: ['css', 'legacy'] },
         })
         .from(container)
         .save();

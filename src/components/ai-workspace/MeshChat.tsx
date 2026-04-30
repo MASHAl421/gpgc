@@ -809,11 +809,82 @@ export const MeshChat = () => {
                               <span className="text-[10px] text-muted-foreground thinking-shimmer">typing…</span>
                             )}
                           </div>
-                          <div className={`prose prose-sm sm:prose-base dark:prose-invert max-w-none prose-pre:my-2 prose-p:my-2.5 prose-headings:mt-4 prose-headings:mb-2 prose-headings:font-semibold prose-li:my-1 prose-ul:my-2 prose-ol:my-2 leading-relaxed ${isStreaming && index === messages.length - 1 ? 'stream-caret' : ''}`}>
+                          <div className={`mesh-output prose prose-sm sm:prose-base dark:prose-invert max-w-none leading-relaxed ${isStreaming && index === messages.length - 1 ? 'stream-caret' : ''}`}>
                             <ReactMarkdown
                               remarkPlugins={[remarkMath]}
                               rehypePlugins={[rehypeKatex]}
                               components={{
+                                h1: ({ children }) => (
+                                  <h1 className="!mt-5 !mb-3 text-xl sm:text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent border-b-2 border-primary/20 pb-2">
+                                    {children}
+                                  </h1>
+                                ),
+                                h2: ({ children }) => (
+                                  <h2 className="!mt-5 !mb-2 text-lg sm:text-xl font-bold text-foreground flex items-center gap-2 before:content-[''] before:block before:w-1 before:h-6 before:rounded-full before:bg-gradient-to-b before:from-primary before:to-primary/40">
+                                    {children}
+                                  </h2>
+                                ),
+                                h3: ({ children }) => (
+                                  <h3 className="!mt-4 !mb-2 text-base sm:text-lg font-semibold text-primary">
+                                    {children}
+                                  </h3>
+                                ),
+                                h4: ({ children }) => (
+                                  <h4 className="!mt-3 !mb-1.5 text-sm sm:text-base font-semibold text-foreground/90 uppercase tracking-wide">
+                                    {children}
+                                  </h4>
+                                ),
+                                p: ({ children }) => (
+                                  <p className="my-2.5 text-foreground/90 leading-7">{children}</p>
+                                ),
+                                strong: ({ children }) => (
+                                  <strong className="font-semibold text-primary">{children}</strong>
+                                ),
+                                em: ({ children }) => (
+                                  <em className="italic text-foreground/80">{children}</em>
+                                ),
+                                ul: ({ children }) => (
+                                  <ul className="my-3 space-y-1.5 list-none pl-0">{children}</ul>
+                                ),
+                                ol: ({ children }) => (
+                                  <ol className="my-3 space-y-1.5 list-decimal pl-6 marker:text-primary marker:font-semibold">{children}</ol>
+                                ),
+                                li: ({ children, ...props }: any) => {
+                                  const ordered = props.ordered;
+                                  if (ordered) return <li className="pl-1 leading-7">{children}</li>;
+                                  return (
+                                    <li className="relative pl-6 leading-7 before:content-['▸'] before:absolute before:left-0 before:top-0 before:text-primary before:font-bold">
+                                      {children}
+                                    </li>
+                                  );
+                                },
+                                blockquote: ({ children }) => (
+                                  <blockquote className="my-4 border-l-4 border-primary bg-primary/5 dark:bg-primary/10 px-4 py-3 rounded-r-lg italic text-foreground/85 [&>p]:my-1">
+                                    {children}
+                                  </blockquote>
+                                ),
+                                hr: () => (
+                                  <hr className="my-5 border-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+                                ),
+                                a: ({ children, href }) => (
+                                  <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary font-medium underline decoration-primary/40 underline-offset-2 hover:decoration-primary transition-colors">
+                                    {children}
+                                  </a>
+                                ),
+                                table: ({ children }) => (
+                                  <div className="my-4 overflow-x-auto rounded-lg border border-border">
+                                    <table className="w-full text-sm">{children}</table>
+                                  </div>
+                                ),
+                                thead: ({ children }) => (
+                                  <thead className="bg-muted/60">{children}</thead>
+                                ),
+                                th: ({ children }) => (
+                                  <th className="px-3 py-2 text-left font-semibold text-foreground border-b border-border">{children}</th>
+                                ),
+                                td: ({ children }) => (
+                                  <td className="px-3 py-2 border-b border-border/50 text-foreground/85">{children}</td>
+                                ),
                                 code({ node, inline, className, children, ...props }: any) {
                                   const match = /language-(\w+)/.exec(className || '');
                                   return !inline && match ? (
@@ -827,7 +898,7 @@ export const MeshChat = () => {
                                       {String(children).replace(/\n$/, '')}
                                     </SyntaxHighlighter>
                                   ) : (
-                                    <code className="bg-muted px-1.5 py-0.5 rounded-md text-[0.85em] font-mono" {...props}>
+                                    <code className="bg-primary/10 text-primary px-1.5 py-0.5 rounded-md text-[0.85em] font-mono font-medium" {...props}>
                                       {children}
                                     </code>
                                   );

@@ -133,6 +133,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => {
       supabase.removeChannel(channel);
     };
+  }, [user?.id]);
 
   const login = async (email: string, password: string): Promise<{ error: string | null }> => {
     try {

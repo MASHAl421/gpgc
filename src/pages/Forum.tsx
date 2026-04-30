@@ -72,7 +72,7 @@ interface ForumReply {
 }
 
 const Forum = () => {
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const { profileData } = useSemesterOnboarding();
   const { awardPoints, refetch: refetchPoints } = useForumPoints();
   const [searchQuery, setSearchQuery] = useState('');
@@ -279,7 +279,18 @@ const Forum = () => {
 
       await awardPoints('new_post', FORUM_POINTS.NEW_POST, data?.id, 'Created a new discussion');
 
-      toast.success('Post created successfully! +' + FORUM_POINTS.NEW_POST + ' points');
+      // Coin reward for community contribution
+      const COIN_REWARD_POST = 3;
+      await supabase.rpc('add_coins', {
+        _user_id: user.id,
+        _amount: COIN_REWARD_POST,
+        _transaction_type: 'forum_post',
+        _description: 'Created a new forum discussion',
+        _reference_id: data?.id ?? null,
+      });
+      await refreshProfile();
+
+      toast.success(`Post created! +${FORUM_POINTS.NEW_POST} pts · +${COIN_REWARD_POST} coins`);
       setNewPostOpen(false);
       setNewPostTitle('');
       setNewPostContent('');
@@ -311,6 +322,17 @@ const Forum = () => {
 
       await awardPoints('new_reply', FORUM_POINTS.NEW_REPLY, data?.id, 'Added a reply to a discussion');
 
+      // Coin reward for replying
+      const COIN_REWARD_REPLY = 2;
+      await supabase.rpc('add_coins', {
+        _user_id: user.id,
+        _amount: COIN_REWARD_REPLY,
+        _transaction_type: 'forum_reply',
+        _description: 'Replied to a forum discussion',
+        _reference_id: data?.id ?? null,
+      });
+      await refreshProfile();
+
       if (selectedPost.user_id !== user.id) {
         await createNotification(
           selectedPost.user_id,
@@ -322,7 +344,7 @@ const Forum = () => {
         );
       }
 
-      toast.success('Reply posted! +' + FORUM_POINTS.NEW_REPLY + ' points');
+      toast.success(`Reply posted! +${FORUM_POINTS.NEW_REPLY} pts · +${COIN_REWARD_REPLY} coins`);
       setReplyContent('');
       fetchReplies(selectedPost.id);
       fetchData();

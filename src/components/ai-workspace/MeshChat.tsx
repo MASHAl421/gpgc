@@ -850,7 +850,7 @@ export const MeshChat = () => {
                           </div>
                           <div className={`mesh-output prose prose-sm sm:prose-base dark:prose-invert max-w-none leading-relaxed ${isStreaming && index === messages.length - 1 ? 'stream-caret' : ''}`}>
                             <ReactMarkdown
-                              remarkPlugins={[remarkMath]}
+                              remarkPlugins={[remarkGfm, remarkMath]}
                               rehypePlugins={[rehypeKatex]}
                               components={{
                                 h1: ({ children }) => (
@@ -911,18 +911,24 @@ export const MeshChat = () => {
                                   </a>
                                 ),
                                 table: ({ children }) => (
-                                  <div className="my-4 overflow-x-auto rounded-lg border border-border">
-                                    <table className="w-full text-sm">{children}</table>
+                                  <div className="my-5 overflow-x-auto rounded-lg border border-border bg-card shadow-sm">
+                                    <table className="w-full min-w-[560px] border-separate border-spacing-0 text-sm leading-relaxed">
+                                      {children}
+                                    </table>
                                   </div>
                                 ),
                                 thead: ({ children }) => (
-                                  <thead className="bg-muted/60">{children}</thead>
+                                  <thead className="bg-primary/10 text-primary">{children}</thead>
                                 ),
                                 th: ({ children }) => (
-                                  <th className="px-3 py-2 text-left font-semibold text-foreground border-b border-border">{children}</th>
+                                  <th className="border-b border-r border-border px-3 py-2.5 text-left align-top font-bold last:border-r-0 [&_code]:bg-primary/15">
+                                    {children}
+                                  </th>
                                 ),
                                 td: ({ children }) => (
-                                  <td className="px-3 py-2 border-b border-border/50 text-foreground/85">{children}</td>
+                                  <td className="border-b border-r border-border/60 px-3 py-2.5 align-top text-foreground/90 last:border-r-0 [&_code]:whitespace-nowrap [&_code]:bg-primary/10 [&_strong]:text-primary">
+                                    {children}
+                                  </td>
                                 ),
                                 code({ node, inline, className, children, ...props }: any) {
                                   const match = /language-(\w+)/.exec(className || '');

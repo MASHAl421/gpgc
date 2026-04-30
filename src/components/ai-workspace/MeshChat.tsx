@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -431,11 +432,12 @@ export const MeshChat = () => {
 
     try {
       // Lazy import heavy libs
-      const [{ default: html2pdf }, { default: ReactDOMServer }, ReactMod, MarkdownMod, MathMod, KatexMod] = await Promise.all([
+      const [{ default: html2pdf }, { default: ReactDOMServer }, ReactMod, MarkdownMod, GfmMod, MathMod, KatexMod] = await Promise.all([
         import('html2pdf.js'),
         import('react-dom/server'),
         import('react'),
         import('react-markdown'),
+        import('remark-gfm'),
         import('remark-math'),
         import('rehype-katex'),
       ]);
@@ -443,7 +445,7 @@ export const MeshChat = () => {
       // Use the raw markdown so KaTeX renders properly; strip cosmetic markdown for plain text fallback if needed
       const html = ReactDOMServer.renderToStaticMarkup(
         ReactMod.createElement(MarkdownMod.default as any, {
-          remarkPlugins: [MathMod.default],
+          remarkPlugins: [GfmMod.default, MathMod.default],
           rehypePlugins: [KatexMod.default],
           children: lastAssistant.content,
         })
@@ -467,9 +469,12 @@ export const MeshChat = () => {
           .pdf-export code { background: #eef2ff !important; padding: 1px 5px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 12px; color: #4338ca !important; }
           .pdf-export pre { background: #1e293b !important; padding: 12px; border-radius: 6px; overflow: hidden; white-space: pre-wrap; word-wrap: break-word; }
           .pdf-export pre, .pdf-export pre * { color: #f1f5f9 !important; font-family: 'Courier New', monospace; font-size: 12px; }
-          .pdf-export table { width: 100%; border-collapse: collapse; margin: 10px 0; }
-          .pdf-export th, .pdf-export td { border: 1px solid #d4d4d8; padding: 6px 10px; text-align: left; }
-          .pdf-export th { background: #f4f4f5 !important; font-weight: 700; }
+          .pdf-export table { width: 100%; border-collapse: separate; border-spacing: 0; margin: 12px 0; border: 1px solid #d4d4d8; border-radius: 8px; overflow: hidden; }
+          .pdf-export th, .pdf-export td { border-right: 1px solid #e4e4e7; border-bottom: 1px solid #e4e4e7; padding: 8px 10px; text-align: left; vertical-align: top; }
+          .pdf-export th:last-child, .pdf-export td:last-child { border-right: 0; }
+          .pdf-export tr:last-child td { border-bottom: 0; }
+          .pdf-export th { background: #eef2ff !important; font-weight: 700; color: #3730a3 !important; }
+          .pdf-export tr:nth-child(even) td { background: #fafafa !important; }
           .pdf-export hr { border: 0; border-top: 1px solid #e4e4e7; margin: 14px 0; }
           .pdf-export .pdf-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #6366f1; padding-bottom: 10px; margin-bottom: 18px; }
           .pdf-export .pdf-title { font-size: 18px; font-weight: 700; }
@@ -487,14 +492,14 @@ export const MeshChat = () => {
         ${html}
       `;
 
-      // Position off-screen but rendered (not display:none, not -10000px)
+      // Keep the export node rendered and opaque. html2canvas captures opacity:0 as a blank page.
       container.style.position = 'fixed';
       container.style.left = '0';
       container.style.top = '0';
       container.style.width = '794px';
       container.style.background = '#ffffff';
-      container.style.zIndex = '-1';
-      container.style.opacity = '0';
+      container.style.zIndex = '2147483647';
+      container.style.opacity = '1';
       container.style.pointerEvents = 'none';
       document.body.appendChild(container);
 
@@ -845,7 +850,7 @@ export const MeshChat = () => {
                           </div>
                           <div className={`mesh-output prose prose-sm sm:prose-base dark:prose-invert max-w-none leading-relaxed ${isStreaming && index === messages.length - 1 ? 'stream-caret' : ''}`}>
                             <ReactMarkdown
-                              remarkPlugins={[remarkMath]}
+                              remarkPlugins={[remarkGfm, remarkMath]}
                               rehypePlugins={[rehypeKatex]}
                               components={{
                                 h1: ({ children }) => (
@@ -906,18 +911,24 @@ export const MeshChat = () => {
                                   </a>
                                 ),
                                 table: ({ children }) => (
-                                  <div className="my-4 overflow-x-auto rounded-lg border border-border">
-                                    <table className="w-full text-sm">{children}</table>
+                                  <div className="my-5 overflow-x-auto rounded-lg border border-border bg-card shadow-sm">
+                                    <table className="w-full min-w-[560px] border-separate border-spacing-0 text-sm leading-relaxed">
+                                      {children}
+                                    </table>
                                   </div>
                                 ),
                                 thead: ({ children }) => (
-                                  <thead className="bg-muted/60">{children}</thead>
+                                  <thead className="bg-primary/10 text-primary">{children}</thead>
                                 ),
                                 th: ({ children }) => (
-                                  <th className="px-3 py-2 text-left font-semibold text-foreground border-b border-border">{children}</th>
+                                  <th className="border-b border-r border-border px-3 py-2.5 text-left align-top font-bold last:border-r-0 [&_code]:bg-primary/15">
+                                    {children}
+                                  </th>
                                 ),
                                 td: ({ children }) => (
-                                  <td className="px-3 py-2 border-b border-border/50 text-foreground/85">{children}</td>
+                                  <td className="border-b border-r border-border/60 px-3 py-2.5 align-top text-foreground/90 last:border-r-0 [&_code]:whitespace-nowrap [&_code]:bg-primary/10 [&_strong]:text-primary">
+                                    {children}
+                                  </td>
                                 ),
                                 code({ node, inline, className, children, ...props }: any) {
                                   const match = /language-(\w+)/.exec(className || '');

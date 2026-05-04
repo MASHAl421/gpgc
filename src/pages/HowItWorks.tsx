@@ -92,7 +92,7 @@ const HowItWorks = () => {
         <Card className="bg-card border-border">
           <CardHeader>
             <CardTitle className="text-foreground">Key Features</CardTitle>
-            <CardDescription>Everything you need for successful BS preparation</CardDescription>
+            <CardDescription>Everything you need for successful BSCS preparation</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid sm:grid-cols-2 gap-3">

@@ -72,7 +72,7 @@ const Login = () => {
             A Smart Way to Learn
           </h2>
           <p className="text-lg text-center mb-12 max-w-md opacity-90">
-            Your complete learning companion for BS preparation. Access quizzes, notes, past papers, and more.
+            Your complete learning companion for BSCS preparation. Access quizzes, notes, past papers, and more.
           </p>
           <div className="flex flex-col gap-4 w-full max-w-sm">
             {features.map((feature, index) => (

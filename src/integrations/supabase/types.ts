@@ -1082,6 +1082,14 @@ export type Database = {
         }
         Returns: number
       }
+      check_and_grant_achievements: {
+        Args: { _user_id: string }
+        Returns: {
+          achievement_id: string
+          coins_reward: number
+          name: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

@@ -168,6 +168,9 @@ export const CompetitionQuizModal = ({
           console.error('Error adding coins:', coinError);
         }
 
+        const { checkAchievements } = await import('@/lib/achievements');
+        await checkAchievements(user.id);
+
         toast.success(`You earned ${coinsEarned} coins!`);
       } catch (error) {
         console.error('Error saving attempt:', error);

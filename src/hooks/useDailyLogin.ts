@@ -87,6 +87,9 @@ export const useDailyLogin = () => {
         console.error('Error adding daily login coins:', coinError);
       }
 
+      const { checkAchievements } = await import('@/lib/achievements');
+      await checkAchievements(user.id);
+
       setTodayLogin(newLogin);
       setShowReward(true);
     } catch (error) {

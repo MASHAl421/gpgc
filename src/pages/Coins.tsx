@@ -376,8 +376,18 @@ const Coins = () => {
                           </div>
                         </div>
                       </div>
-                      <Button className="w-full mt-4" variant="outline" disabled>
-                        Coming Soon
+                      <Button
+                        className="w-full mt-4"
+                        variant={purchased ? 'outline' : 'default'}
+                        disabled={purchased || !canAfford || purchasing === item.id}
+                        onClick={() => handlePurchase(item)}
+                      >
+                        {purchasing === item.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : purchased ? (
+                          <Check className="h-4 w-4 mr-2" />
+                        ) : null}
+                        {purchased ? 'Purchased' : canAfford ? 'Purchase' : 'Not Enough Coins'}
                       </Button>
                     </CardContent>
                   </Card>

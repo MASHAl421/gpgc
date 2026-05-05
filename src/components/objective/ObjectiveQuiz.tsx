@@ -303,6 +303,10 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
         console.error('Error adding coins:', coinError);
       }
 
+      // Check for newly unlocked achievements
+      const { checkAchievements } = await import('@/lib/achievements');
+      await checkAchievements(user.id);
+
       setCoinsEarned(coins);
     } catch (error) {
       console.error('Error saving quiz attempt:', error);

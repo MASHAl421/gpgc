@@ -125,10 +125,6 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
         .from('quizzes')
         .select('id, difficulty, topic_id')
         .in('topic_id', config.selectedTopics);
-      
-      if (config.difficultyLevels.length < 3) {
-        quizQuery = quizQuery.in('difficulty', config.difficultyLevels);
-      }
 
       const { data: quizzes, error: quizError } = await quizQuery;
       
@@ -145,7 +141,8 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
       let questionsQuery = supabase
         .from('questions')
         .select('*')
-        .in('quiz_id', quizIds);
+        .in('quiz_id', quizIds)
+        .range(0, 1999);
       
       if (config.questionTypes.length === 1) {
         questionsQuery = questionsQuery.eq('question_type', config.questionTypes[0]);
@@ -158,7 +155,7 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
       const quizDifficultyMap = Object.fromEntries(quizzes.map(q => [q.id, q.difficulty]));
       let enrichedQuestions: UIQuestion[] = (questionsData || []).map((q: Question) => ({
         ...q,
-        difficulty: quizDifficultyMap[q.quiz_id] || 'medium',
+        difficulty: q.difficulty || quizDifficultyMap[q.quiz_id] || 'medium',
         question_type: q.question_type || 'exercise',
         shuffledOptions: buildShuffledOptions(q),
       }));

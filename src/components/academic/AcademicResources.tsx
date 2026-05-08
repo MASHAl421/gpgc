@@ -77,6 +77,18 @@ const academicData: Record<string, {
       title: 'Applied Physics Notes - Google Drive',
       url: 'https://drive.google.com/file/d/1kKLywgz9KAwSA_MxYJf_I-4ElFIC-cFF/view?usp=sharing'
     }
+  },
+  'ideology-&-constitution-of-pakistan': {
+    courseContent: '/academic/ideology-constitution-pakistan-course-content.pdf',
+    notes: [
+      { id: '1', title: 'Complete Key Notes (All 6 Units)', file_url: '/academic/notes/ideology-constitution-pakistan-key-notes.pdf' },
+    ]
+  },
+  'idiology-&-constitution-of-pakistan': {
+    courseContent: '/academic/ideology-constitution-pakistan-course-content.pdf',
+    notes: [
+      { id: '1', title: 'Complete Key Notes (All 6 Units)', file_url: '/academic/notes/ideology-constitution-pakistan-key-notes.pdf' },
+    ]
   }
 };
 

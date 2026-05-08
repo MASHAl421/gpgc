@@ -141,7 +141,8 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
       let questionsQuery = supabase
         .from('questions')
         .select('*')
-        .in('quiz_id', quizIds);
+        .in('quiz_id', quizIds)
+        .range(0, 1999);
       
       if (config.questionTypes.length === 1) {
         questionsQuery = questionsQuery.eq('question_type', config.questionTypes[0]);

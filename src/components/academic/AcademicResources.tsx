@@ -89,6 +89,12 @@ const academicData: Record<string, {
     notes: [
       { id: '1', title: 'Complete Key Notes (All 6 Units)', file_url: '/academic/notes/ideology-constitution-pakistan-key-notes.pdf' },
     ]
+  },
+  'digital-logic-&-design': {
+    courseContent: '/academic/dld-course-content.pdf',
+    notes: [
+      { id: '1', title: 'Complete DLD Notes (All Lectures)', file_url: '/academic/notes/dld-complete-notes.pdf' },
+    ]
   }
 };
 

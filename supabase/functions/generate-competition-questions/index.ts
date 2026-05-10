@@ -206,14 +206,16 @@ RESPONSE FORMAT (JSON array only, no markdown):
 
 Generate ${validatedCount} unique, beginner-friendly questions NOW:`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${Deno.env.get("LOVABLE_API_KEY")}`,
+        "Authorization": `Bearer ${Deno.env.get("OPENROUTER_API_KEY")}`,
         "Content-Type": "application/json",
+        "HTTP-Referer": "https://gpgc.lovable.app",
+        "X-Title": "GPGC Portal",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: "You are an expert academic question generator for beginners. Always respond with valid JSON array only, no markdown. Keep questions simple and educational." },
           { role: "user", content: systemPrompt }

@@ -108,7 +108,7 @@ serve(async (req) => {
         "X-Title": "GPGC Portal",
       },
       body: JSON.stringify({
-        model: "nvidia/nemotron-nano-9b-v2:free",
+        model: "nvidia/nemotron-3-super-120b-a12b:free",
         messages: [
           {
             role: "system",

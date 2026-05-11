@@ -215,7 +215,7 @@ Generate ${validatedCount} unique, beginner-friendly questions NOW:`;
         "X-Title": "GPGC Portal",
       },
       body: JSON.stringify({
-        model: "nvidia/nemotron-nano-9b-v2:free",
+        model: "nvidia/nemotron-3-super-120b-a12b:free",
         messages: [
           { role: "system", content: "You are an expert academic question generator for beginners. Always respond with valid JSON array only, no markdown. Keep questions simple and educational." },
           { role: "user", content: systemPrompt }

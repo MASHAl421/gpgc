@@ -147,9 +147,9 @@ async function callLovableAI(prompt: string) {
         },
         { role: "user", content: prompt },
       ],
-      temperature: 0.8,
-      // Large papers need a bit more room, but we still keep it bounded.
-      max_tokens: 8000,
+      temperature: 0.7,
+      max_tokens: 4000,
+      provider: { sort: "throughput" },
     }),
   });
 

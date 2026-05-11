@@ -164,6 +164,8 @@ Be friendly, encouraging, and patient. You're here to help students succeed in t
           ...processedMessages,
         ],
         stream: true,
+        provider: { sort: "throughput" },
+        max_tokens: 2048,
       }),
     });
 

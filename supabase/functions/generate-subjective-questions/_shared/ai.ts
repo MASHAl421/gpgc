@@ -138,7 +138,7 @@ async function callLovableAI(prompt: string) {
       "X-Title": "GPGC Portal",
     },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash-lite",
+      model: "nvidia/nemotron-3-super-120b-a12b:free",
       messages: [
         {
           role: "system",

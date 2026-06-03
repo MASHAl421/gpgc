@@ -35,6 +35,9 @@ interface ShuffledOption {
 
 interface UIQuestion extends Question {
   shuffledOptions: ShuffledOption[];
+  topic_id?: string;
+  topic_name?: string;
+  unit_name?: string;
 }
 
 interface ObjectiveQuizProps {
@@ -120,30 +123,46 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
   const fetchQuestions = async () => {
     try {
       setLoading(true);
-      
-      let quizQuery = supabase
+
+      const { data: quizzes, error: quizError } = await supabase
         .from('quizzes')
         .select('id, difficulty, topic_id')
         .in('topic_id', config.selectedTopics);
 
-      const { data: quizzes, error: quizError } = await quizQuery;
-      
       if (quizError) throw quizError;
-      
+
       if (!quizzes || quizzes.length === 0) {
         setQuestions([]);
         setLoading(false);
         return;
       }
 
+      // Fetch topic + unit (chapter) names for grouping
+      const { data: topicsData } = await supabase
+        .from('topics')
+        .select('id, name, unit_id, units(name)')
+        .in('id', config.selectedTopics);
+
+      const topicInfoMap: Record<string, { name: string; unitName: string; unitId: string; order: number }> = {};
+      (topicsData || []).forEach((t: any, idx) => {
+        topicInfoMap[t.id] = {
+          name: t.name,
+          unitName: t.units?.name || '',
+          unitId: t.unit_id || '',
+          order: idx,
+        };
+      });
+
       const quizIds = quizzes.map(q => q.id);
-      
+      const quizTopicMap = Object.fromEntries(quizzes.map(q => [q.id, q.topic_id]));
+      const quizDifficultyMap = Object.fromEntries(quizzes.map(q => [q.id, q.difficulty]));
+
       let questionsQuery = supabase
         .from('questions')
         .select('*')
         .in('quiz_id', quizIds)
         .range(0, 1999);
-      
+
       if (config.questionTypes.length === 1) {
         questionsQuery = questionsQuery.eq('question_type', config.questionTypes[0]);
       }
@@ -152,17 +171,23 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
 
       if (questionsError) throw questionsError;
 
-      const quizDifficultyMap = Object.fromEntries(quizzes.map(q => [q.id, q.difficulty]));
-      let enrichedQuestions: UIQuestion[] = (questionsData || []).map((q: Question) => ({
-        ...q,
-        difficulty: q.difficulty || quizDifficultyMap[q.quiz_id] || 'medium',
-        question_type: q.question_type || 'exercise',
-        shuffledOptions: buildShuffledOptions(q),
-      }));
+      let enrichedQuestions: UIQuestion[] = (questionsData || []).map((q: Question) => {
+        const topicId = quizTopicMap[q.quiz_id];
+        const info = topicId ? topicInfoMap[topicId] : undefined;
+        return {
+          ...q,
+          difficulty: q.difficulty || quizDifficultyMap[q.quiz_id] || 'medium',
+          question_type: q.question_type || 'exercise',
+          shuffledOptions: buildShuffledOptions(q),
+          topic_id: topicId,
+          topic_name: info?.name,
+          unit_name: info?.unitName,
+        };
+      });
 
       // Client-side filter by difficulty
       if (config.difficultyLevels.length > 0 && config.difficultyLevels.length < 3) {
-        enrichedQuestions = enrichedQuestions.filter(q => 
+        enrichedQuestions = enrichedQuestions.filter(q =>
           config.difficultyLevels.includes(q.difficulty || 'medium')
         );
       }
@@ -174,9 +199,28 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
         );
       }
 
-      // Shuffle questions if enabled
+      // Shuffle WITHIN each topic so chapter/topic grouping stays intact
       if (examSettings.shuffleQuestions && enrichedQuestions.length > 0) {
-        enrichedQuestions = shuffleArray(enrichedQuestions, Date.now());
+        const byTopic: Record<string, UIQuestion[]> = {};
+        enrichedQuestions.forEach(q => {
+          const k = q.topic_id || 'unknown';
+          (byTopic[k] = byTopic[k] || []).push(q);
+        });
+        const seed = Date.now();
+        Object.keys(byTopic).forEach(k => {
+          byTopic[k] = shuffleArray(byTopic[k], seed + k.length);
+        });
+        // Re-assemble in topic selection order
+        enrichedQuestions = Object.keys(byTopic)
+          .sort((a, b) => (topicInfoMap[a]?.order ?? 999) - (topicInfoMap[b]?.order ?? 999))
+          .flatMap(k => byTopic[k]);
+      } else {
+        // Just sort by topic order to keep them grouped
+        enrichedQuestions.sort((a, b) => {
+          const ao = a.topic_id ? topicInfoMap[a.topic_id]?.order ?? 999 : 999;
+          const bo = b.topic_id ? topicInfoMap[b.topic_id]?.order ?? 999 : 999;
+          return ao - bo;
+        });
       }
 
       // Limit questions for entrance exam mode

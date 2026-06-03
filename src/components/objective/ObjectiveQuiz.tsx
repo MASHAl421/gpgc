@@ -670,6 +670,7 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
                   )}
                 </CardContent>
               </Card>
+              </div>
             );
           })}
         </div>

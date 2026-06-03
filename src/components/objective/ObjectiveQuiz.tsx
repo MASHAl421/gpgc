@@ -566,12 +566,32 @@ const ObjectiveQuiz = ({ config, onBack }: ObjectiveQuizProps) => {
             const isAnswered = !!selectedAnswers[question.id];
             const isFlagged = flaggedQuestions.has(qIdx);
             const showExplanationForQ = (!isExamMode && examSettings.showExplanations && isAnswered) || showAnswersInReview;
+            const prev = qIdx > 0 ? questions[qIdx - 1] : null;
+            const isNewTopic = !prev || prev.topic_id !== question.topic_id;
+            const topicQuestionCount = questions.filter(q => q.topic_id === question.topic_id).length;
 
             return (
-              <Card
-                key={question.id}
-                className="bg-card border-border rounded-xl sm:rounded-2xl overflow-hidden shadow-sm"
-              >
+              <div key={question.id}>
+                {isNewTopic && question.topic_name && (
+                  <div className="mt-2 mb-3 sm:mt-4 sm:mb-4">
+                    <div className="rounded-xl bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 px-4 py-3 sm:px-5 sm:py-4">
+                      {question.unit_name && (
+                        <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-primary/80">
+                          Chapter — {question.unit_name}
+                        </p>
+                      )}
+                      <h3 className="text-base sm:text-lg font-bold text-foreground mt-0.5">
+                        Topic: {question.topic_name}
+                      </h3>
+                      <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+                        {topicQuestionCount} question{topicQuestionCount === 1 ? '' : 's'}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                <Card
+                  className="bg-card border-border rounded-xl sm:rounded-2xl overflow-hidden shadow-sm"
+                >
                 <CardContent className="p-4 sm:p-5 lg:p-6">
                   {/* Question Header */}
                   <div className="flex items-start justify-between gap-3 mb-3 sm:mb-4">

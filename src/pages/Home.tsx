@@ -46,19 +46,20 @@ const Home = () => {
     <MainLayout>
       <SemesterOnboarding open={needsOnboarding} onComplete={completeOnboarding} />
 
-      <div className="max-w-6xl mx-auto space-y-8">
+      <div className="max-w-6xl mx-auto space-y-8 animate-fade-in">
         {/* ============ HERO WELCOME ============ */}
-        <Card className="border-border rounded-2xl shadow-sm overflow-hidden">
+        <Card className="border-border/70 rounded-2xl shadow-[var(--shadow-card)] overflow-hidden">
           <CardContent className="p-0">
-            <div className="relative bg-gradient-to-br from-primary/15 via-card to-card p-6 md:p-10">
-              <div className="absolute -top-20 -right-20 w-72 h-72 rounded-full bg-primary/10 blur-3xl" />
+            <div className="relative hero-bg p-6 md:p-10">
+              <div className="blob w-72 h-72 bg-primary/20 -top-20 -right-20" />
+              <div className="blob w-60 h-60 bg-[hsl(var(--emerald))]/20 -bottom-20 -left-10" />
               <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-6">
                 <div>
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-3">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/70 backdrop-blur border border-border text-primary text-xs font-semibold mb-3 shadow-sm">
                     <Sparkles className="h-3.5 w-3.5" /> Welcome back
                   </span>
-                  <h1 className="text-2xl md:text-4xl font-bold text-foreground tracking-tight">
-                    Hi, {profile?.username || 'Student'} 👋
+                  <h1 className="text-2xl md:text-4xl font-bold tracking-tight">
+                    Hi, <span className="text-gradient">{profile?.username || 'Student'}</span> 👋
                   </h1>
                   <div className="flex items-center gap-2 mt-2 flex-wrap">
                     <p className="text-sm md:text-base text-muted-foreground">
@@ -69,7 +70,7 @@ const Home = () => {
                     )}
                   </div>
                 </div>
-                <Button onClick={() => navigate('/preparation')} className="cta-pill h-11 px-6 self-start">
+                <Button onClick={() => navigate('/preparation')} className="cta-pill btn-gradient h-11 px-6 self-start">
                   <GraduationCap className="mr-2 h-5 w-5" /> Start Learning
                 </Button>
               </div>
@@ -80,7 +81,7 @@ const Home = () => {
         {/* ============ STATS ============ */}
         <div className="grid gap-4 grid-cols-3">
           {stats.map((s) => (
-            <Card key={s.label} className="border-border rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+            <Card key={s.label} className="border-border/70 rounded-2xl shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-elevated)] hover:-translate-y-1 transition-all duration-300">
               <CardContent className="p-4 md:p-5 flex items-center gap-4">
                 <div className="icon-pill h-12 w-12">
                   <s.icon className={`h-6 w-6 ${s.color}`} />

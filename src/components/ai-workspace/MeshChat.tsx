@@ -1075,24 +1075,8 @@ export const MeshChat = () => {
         {/* Bottom Input Area — ChatGPT-style pill */}
         <div className="px-3 sm:px-6 pb-2 sm:pb-3 pt-0 safe-area-bottom flex-shrink-0">
           <div className="max-w-3xl mx-auto">
-            {/* Quick action chips — only show on empty state */}
-            {messages.length === 0 && !attachedFile && (
-              <div className="flex flex-wrap gap-1.5 justify-center mb-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                {quickActions.slice(0, isMobile ? 3 : 4).map((action, i) => (
-                  <button
-                    key={i}
-                    onClick={() => {
-                      setQuestion(action.prompt);
-                      textareaRef.current?.focus();
-                    }}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-muted/60 hover:bg-muted active:scale-95 transition-all text-xs sm:text-sm border border-border/50"
-                  >
-                    <action.icon className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="font-medium">{action.label}</span>
-                  </button>
-                ))}
-              </div>
-            )}
+            {/* Quick action chips removed — suggestion cards now live in the empty-state above */}
+
 
             {/* Attached file preview — transparent, clean */}
             {attachedFile && (

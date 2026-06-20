@@ -333,6 +333,58 @@ const Admin = () => {
     setIsLoading(false);
   };
 
+  // Bulk regenerate short/easy key notes via Gemini
+  const [regenSemester, setRegenSemester] = useState<'1' | '2' | 'all'>('all');
+  const [regenRunning, setRegenRunning] = useState(false);
+  const [regenProgress, setRegenProgress] = useState({ done: 0, total: 0, failed: 0 });
+
+  const handleRegenerateAll = async () => {
+    if (!confirm('This will replace existing key notes with new short, easy AI-generated notes. Continue?')) return;
+    setRegenRunning(true);
+    setRegenProgress({ done: 0, total: 0, failed: 0 });
+    try {
+      // Fetch all topics for selected semester(s)
+      let query = supabase
+        .from('topics')
+        .select('id, units!inner(subjects!inner(semester))');
+      if (regenSemester !== 'all') {
+        query = query.eq('units.subjects.semester', parseInt(regenSemester));
+      }
+      const { data: topicRows, error } = await query;
+      if (error) throw error;
+      const ids = (topicRows ?? []).map((t: any) => t.id);
+      setRegenProgress({ done: 0, total: ids.length, failed: 0 });
+
+      const BATCH = 5;
+      let done = 0;
+      let failed = 0;
+      for (let i = 0; i < ids.length; i += BATCH) {
+        const batch = ids.slice(i, i + BATCH);
+        const { data, error: fnErr } = await supabase.functions.invoke('regenerate-key-notes', {
+          body: { topicIds: batch },
+        });
+        if (fnErr) {
+          failed += batch.length;
+        } else {
+          const results = (data as any)?.results ?? [];
+          for (const r of results) {
+            if (r.ok) done++;
+            else failed++;
+          }
+        }
+        setRegenProgress({ done, total: ids.length, failed });
+      }
+      toast({
+        title: 'Regeneration Complete',
+        description: `${done} succeeded, ${failed} failed of ${ids.length} topics.`,
+      });
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message ?? 'Failed', variant: 'destructive' });
+    } finally {
+      setRegenRunning(false);
+    }
+  };
+
   if (loadingData) {
     return (
       <MainLayout>

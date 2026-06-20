@@ -839,17 +839,50 @@ export const MeshChat = () => {
         <div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
           <div className="max-w-3xl mx-auto px-3 sm:px-6 pt-3 pb-2">
             {messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center min-h-[40vh] sm:min-h-[45vh] text-center px-2 animate-in fade-in duration-500">
-                <div className="relative h-14 w-14 sm:h-16 sm:w-16 rounded-2xl bg-gradient-to-br from-primary via-primary to-primary/60 flex items-center justify-center mb-4 shadow-lg shadow-primary/20">
-                  <Sparkles className="h-7 w-7 sm:h-8 sm:w-8 text-primary-foreground" />
-                  <span className="absolute -bottom-1 -right-1 h-3 w-3 rounded-full bg-emerald-500 ring-2 ring-background" />
+              <div className="flex flex-col items-center justify-center min-h-[50vh] sm:min-h-[60vh] px-2 animate-fade-in">
+                {/* Animated logo */}
+                <div className="relative mb-6">
+                  <div className="absolute inset-0 bg-[image:var(--gradient-primary)] blur-2xl opacity-40 rounded-full" />
+                  <div className="relative h-16 w-16 sm:h-20 sm:w-20 rounded-2xl bg-[image:var(--gradient-primary)] flex items-center justify-center shadow-[var(--shadow-glow)] animate-float">
+                    <Sparkles className="h-8 w-8 sm:h-10 sm:w-10 text-primary-foreground" />
+                  </div>
                 </div>
-                <h1 className="text-xl sm:text-3xl font-semibold mb-1.5 tracking-tight bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-transparent">
-                  Welcome to Mesh Chat
+
+                {/* Personalized greeting (Gemini-style) */}
+                <h1 className="text-3xl sm:text-5xl font-semibold tracking-tight mb-2 text-center">
+                  <span className="text-gradient">Hello, {user?.email?.split('@')[0] || 'there'}</span>
                 </h1>
-                <p className="text-muted-foreground text-xs sm:text-sm max-w-md">
-                  Ask anything from your syllabus — Mesh Chat understands text, images, and PDFs.
+                <p className="text-muted-foreground text-base sm:text-lg max-w-md text-center mb-8 sm:mb-10">
+                  How can I help you study today?
                 </p>
+
+                {/* Suggestion cards (2x2) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-2xl">
+                  {quickActions.slice(0, 4).map((action, i) => (
+                    <button
+                      key={i}
+                      onClick={() => {
+                        setQuestion(action.prompt);
+                        textareaRef.current?.focus();
+                      }}
+                      className="group relative text-left p-4 rounded-2xl bg-card border border-border/70 hover:border-primary/40 hover:shadow-[var(--shadow-elevated)] hover:-translate-y-0.5 transition-all duration-300 animate-fade-in-up"
+                      style={{ animationDelay: `${i * 0.08}s` }}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 ring-1 ring-primary/15 flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:rotate-3 transition-transform">
+                          <action.icon className="h-4.5 w-4.5 text-primary" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-foreground text-sm leading-snug mb-1">{action.label}</p>
+                          <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                            {action.prompt.slice(0, 80)}{action.prompt.length > 80 ? '…' : ''}
+                          </p>
+                        </div>
+                        <ArrowUp className="h-3.5 w-3.5 text-muted-foreground rotate-45 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-1" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
             ) : (
               <div className="space-y-5 sm:space-y-7 pt-2">

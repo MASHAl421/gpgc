@@ -1,8 +1,16 @@
 // Shared OpenRouter client for all edge functions.
-// Using a fast free model — gemini-2.0-flash-exp is much faster than gpt-oss/nemotron free tiers.
+// Uses openai/gpt-oss-120b:free with provider routing to prefer fastest providers
+// (Cerebras / Groq) which serve gpt-oss-120b at 1000+ tokens/sec.
 
-export const OPENROUTER_MODEL = "google/gemini-2.0-flash-exp:free";
+export const OPENROUTER_MODEL = "openai/gpt-oss-120b:free";
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+
+// Route to fastest providers first. Cerebras + Groq serve gpt-oss-120b at extreme speed.
+const PROVIDER_ROUTING = {
+  order: ["cerebras", "groq", "fireworks", "together"],
+  allow_fallbacks: true,
+  sort: "throughput" as const,
+};
 
 function getKey() {
   const key = Deno.env.get("OPENROUTER_API_KEY");
@@ -36,6 +44,8 @@ export async function openRouterChat(opts: {
     messages: opts.messages,
     temperature: opts.temperature ?? 0.7,
     max_tokens: opts.maxTokens ?? 4096,
+    provider: PROVIDER_ROUTING,
+    reasoning: { exclude: true },
   };
   if (opts.responseFormatJson) {
     body.response_format = { type: "json_object" };
@@ -75,7 +85,10 @@ export async function openRouterStream(opts: {
     temperature: opts.temperature ?? 0.7,
     max_tokens: opts.maxTokens ?? 4096,
     stream: true,
+    provider: PROVIDER_ROUTING,
+    reasoning: { exclude: true },
   };
+
 
   const res = await fetch(OPENROUTER_URL, {
     method: "POST",

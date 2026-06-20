@@ -177,23 +177,6 @@ serve(async (req) => {
       });
     }
 
-      if (!geminiRes.ok) {
-        const errText = await geminiRes.text();
-        return new Response(JSON.stringify({ error: "Enhancement failed", detail: errText }), {
-          status: geminiRes.status,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const data = await geminiRes.json();
-      const notes = data?.candidates?.[0]?.content?.parts
-        ?.map((p: any) => p?.text || "")
-        .join("")
-        .trim() || "";
-
-      return new Response(JSON.stringify({ notes }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
     return new Response(JSON.stringify({ error: "Unknown action" }), {
       status: 400,

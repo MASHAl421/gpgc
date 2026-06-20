@@ -641,14 +641,12 @@ const Preparation = () => {
                                                 {topicNotes.map(note => (
                                                   <Card key={note.id} className="bg-background border-border">
                                                     <CardContent className="p-2.5 sm:p-3 md:p-4">
-                                                      <h4 className="font-bold text-foreground mb-1.5 sm:mb-2 text-sm sm:text-base md:text-lg">
-                                                        {note.title}
-                                                      </h4>
                                                       <div className="prose prose-sm max-w-none text-muted-foreground dark:prose-invert prose-headings:text-foreground prose-headings:font-bold prose-headings:text-base sm:prose-headings:text-lg prose-p:text-muted-foreground prose-strong:text-foreground prose-strong:font-bold prose-li:text-muted-foreground prose-ul:list-disc prose-ul:pl-4 prose-ol:list-decimal prose-ol:pl-4 text-xs sm:text-sm md:text-base [&_h3]:text-sm [&_h3]:sm:text-base [&_h3]:md:text-lg [&_h3]:font-bold [&_h3]:text-foreground [&_h4]:text-sm [&_h4]:font-semibold [&_h4]:text-foreground">
                                                         <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
-                                                          {note.content}
+                                                          {note.content.replace(/^\s*#{1,6}\s+.*(?:\r?\n)+/, '').replace(/^\s*\*\*[^\n]+\*\*\s*(?:\r?\n)+/, '')}
                                                         </ReactMarkdown>
                                                       </div>
+
                                                     </CardContent>
                                                   </Card>
                                                 ))}

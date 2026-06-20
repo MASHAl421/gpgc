@@ -136,13 +136,15 @@ serve(async (req) => {
     }
 
     if (action === "enhance") {
-      const { transcript } = body;
+      const { transcript, style } = body;
       if (!transcript || typeof transcript !== "string") {
         return new Response(JSON.stringify({ error: "Missing transcript" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+      const styleKey = (typeof style === "string" && STYLE_PROMPTS[style]) ? style : "detailed";
+      const systemPrompt = `${BASE_RULES}\n\n${STYLE_PROMPTS[styleKey]}`;
 
       const geminiRes = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
@@ -150,12 +152,30 @@ serve(async (req) => {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            systemInstruction: { role: "system", parts: [{ text: ENHANCE_PROMPT }] },
+            systemInstruction: { role: "system", parts: [{ text: systemPrompt }] },
             contents: [{ role: "user", parts: [{ text: `Raw transcript:\n\n${transcript}` }] }],
             generationConfig: { temperature: 0.4, maxOutputTokens: 4096 },
           }),
         }
       );
+
+      if (!geminiRes.ok) {
+        const errText = await geminiRes.text();
+        return new Response(JSON.stringify({ error: "Enhancement failed", detail: errText }), {
+          status: geminiRes.status,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const data = await geminiRes.json();
+      const notes = data?.candidates?.[0]?.content?.parts
+        ?.map((p: any) => p?.text || "")
+        .join("")
+        .trim() || "";
+
+      return new Response(JSON.stringify({ notes, style: styleKey }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
       if (!geminiRes.ok) {
         const errText = await geminiRes.text();

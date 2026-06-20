@@ -42,7 +42,8 @@ RULES:
 - Use emojis in section headers, bullet points (-), and bold for key terms.
 - Output ONLY the formatted markdown notes. No preamble, no "Here are your notes:", nothing extra.`;
 
-const GATEWAY = "https://ai.gateway.lovable.dev/v1";
+const OPENROUTER = "https://openrouter.ai/api/v1";
+const GEMINI = "https://generativelanguage.googleapis.com/v1beta";
 
 function base64ToBytes(b64: string): Uint8Array {
   const bin = atob(b64);
@@ -89,8 +90,9 @@ serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
+    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!OPENROUTER_API_KEY || !GEMINI_API_KEY) {
       return new Response(JSON.stringify({ error: "Server not configured" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -115,22 +117,29 @@ serve(async (req) => {
         });
       }
 
-      const bytes = base64ToBytes(audio);
-      const ext = extFromMime(mimeType);
-      const fd = new FormData();
-      fd.append("model", "openai/gpt-4o-mini-transcribe");
-      fd.append("file", new Blob([bytes], { type: mimeType.split(";")[0] }), `recording.${ext}`);
-
-      const res = await fetch(`${GATEWAY}/audio/transcriptions`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}` },
-        body: fd,
-      });
+      // Use Gemini direct (free) for audio transcription via inline data
+      const cleanMime = mimeType.split(";")[0].trim();
+      const res = await fetch(
+        `${GEMINI}/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { text: "Transcribe this audio recording verbatim. Return ONLY the transcript text, no preamble, no formatting, no commentary." },
+                { inline_data: { mime_type: cleanMime, data: audio } },
+              ],
+            }],
+            generationConfig: { temperature: 0.1, maxOutputTokens: 8192 },
+          }),
+        },
+      );
 
       if (!res.ok) {
         const errText = await res.text();
         console.error("Transcription error:", res.status, errText);
-        const status = res.status === 429 || res.status === 402 ? res.status : 500;
+        const status = res.status === 429 ? 429 : 500;
         return new Response(JSON.stringify({ error: "Transcription failed", detail: errText }), {
           status,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -138,7 +147,9 @@ serve(async (req) => {
       }
 
       const data = await res.json();
-      const transcript = String(data?.text ?? "").trim();
+      const transcript = String(
+        data?.candidates?.[0]?.content?.parts?.map((p: any) => p?.text ?? "").join("") ?? ""
+      ).trim();
 
       return new Response(JSON.stringify({ transcript }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -156,14 +167,16 @@ serve(async (req) => {
       const styleKey = (typeof style === "string" && STYLE_PROMPTS[style]) ? style : "detailed";
       const systemPrompt = `${BASE_RULES}\n\n${STYLE_PROMPTS[styleKey]}`;
 
-      const res = await fetch(`${GATEWAY}/chat/completions`, {
+      const res = await fetch(`${OPENROUTER}/chat/completions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+          "HTTP-Referer": "https://gpgcswabi.lovable.app",
+          "X-Title": "GPGC Portal",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
+          model: "google/gemini-2.0-flash-exp:free",
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: `Raw transcript:\n\n${transcript}` },

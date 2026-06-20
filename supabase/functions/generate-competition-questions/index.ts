@@ -206,20 +206,22 @@ RESPONSE FORMAT (JSON array only, no markdown):
 
 Generate ${validatedCount} unique, beginner-friendly questions NOW:`;
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
+    if (!OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY is not configured");
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+        "HTTP-Referer": "https://gpgcswabi.lovable.app",
+        "X-Title": "GPGC Portal",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-2.0-flash-exp:free",
         messages: [
-          { role: "system", content: "You are an expert academic question generator for beginners. Always respond with valid JSON array only, no markdown. Keep questions simple and educational." },
-          { role: "user", content: systemPrompt },
+          { role: "system", content: "You are an expert academic question generator for beginners. Always respond with valid JSON object containing a 'questions' array, no markdown. Keep questions simple and educational." },
+          { role: "user", content: systemPrompt + "\n\nWrap the array in { \"questions\": [...] }." },
         ],
         temperature: 0.7,
         max_tokens: 4000,
@@ -241,7 +243,8 @@ Generate ${validatedCount} unique, beginner-friendly questions NOW:`;
     
     let questions;
     try {
-      questions = JSON.parse(content);
+      const parsed = JSON.parse(content);
+      questions = Array.isArray(parsed) ? parsed : parsed.questions;
     } catch (parseError) {
       console.error("Parse error, content:", content);
       throw new Error("Failed to parse AI response");

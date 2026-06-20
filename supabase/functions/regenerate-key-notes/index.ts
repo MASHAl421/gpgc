@@ -1,4 +1,4 @@
-// Regenerate short, easy-to-remember key notes for given topics using Gemini.
+// Regenerate short, easy-to-remember key notes for given topics using Lovable AI Gateway.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -7,10 +7,8 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY")!;
-const GEMINI_URL =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" +
-  GEMINI_API_KEY;
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
+const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -30,7 +28,7 @@ function buildPrompt(subject: string, unit: string, topic: string, urdu: boolean
   **اہم نکات:**
   - نکتہ 1
   - نکتہ 2
-  - نکتہ 3 (3 سے 5 نکات)
+  - نکتہ 3 (3 سے 7 نکات)
   **یاد رکھنے کا آسان طریقہ:** ایک مختصر یادداشت/مثال
 صرف نوٹ کا متن واپس کریں، کوئی اضافی تبصرہ نہیں۔`;
   }
@@ -47,7 +45,7 @@ Strict rules:
   **Key Points:**
   - point 1
   - point 2
-  - point 3 (3 to 5 bullets, each one short line)
+  - point 3 (3 to 7 bullets, each one short line)
   **Memory Hook:** one mnemonic, analogy, or formula to remember it
 Return ONLY the note text, no preamble.`;
 }
@@ -55,22 +53,36 @@ Return ONLY the note text, no preamble.`;
 async function generateNote(subject: string, unit: string, topic: string) {
   const urdu = /islamic|اسلام/i.test(subject);
   const prompt = buildPrompt(subject, unit, topic, urdu);
-  const res = await fetch(GEMINI_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.6, maxOutputTokens: 600 },
-    }),
-  });
-  if (!res.ok) {
-    const t = await res.text();
-    throw new Error(`Gemini ${res.status}: ${t.slice(0, 200)}`);
+
+  // Retry with backoff on 429/503
+  let lastErr = "";
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const res = await fetch(AI_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.6,
+      }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const text = data?.choices?.[0]?.message?.content ?? "";
+      if (!text.trim()) throw new Error("Empty AI response");
+      return text.trim();
+    }
+    lastErr = `${res.status}: ${(await res.text()).slice(0, 200)}`;
+    if (res.status === 429 || res.status === 503) {
+      await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
+      continue;
+    }
+    throw new Error(`AI ${lastErr}`);
   }
-  const data = await res.json();
-  const text = data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join("") ?? "";
-  if (!text.trim()) throw new Error("Empty Gemini response");
-  return text.trim();
+  throw new Error(`AI retries exhausted ${lastErr}`);
 }
 
 Deno.serve(async (req) => {
@@ -87,7 +99,6 @@ Deno.serve(async (req) => {
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
 
-    // Fetch topic + unit + subject context
     const { data: topics, error } = await admin
       .from("topics")
       .select("id, name, units:unit_id(name, subjects:subject_id(name))")
@@ -100,7 +111,6 @@ Deno.serve(async (req) => {
       const unit = (t as any).units?.name ?? "";
       try {
         const note = await generateNote(subject, unit, t.name);
-        // Replace existing notes for this topic
         await admin.from("key_notes").delete().eq("topic_id", t.id);
         const { error: insErr } = await admin.from("key_notes").insert({
           topic_id: t.id,

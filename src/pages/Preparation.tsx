@@ -109,6 +109,32 @@ const iconMap: Record<string, React.ComponentType<{
   Monitor,
   FlaskConical
 };
+
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const cleanKeyNoteContent = (content: string, topicName: string, noteTitle: string) => {
+  let cleaned = content.replace(/^\uFEFF/, '').trimStart();
+  const titles = [topicName, noteTitle].filter(Boolean).map(escapeRegExp);
+  const duplicateTitlePattern = titles.length
+    ? new RegExp(`^\\s*(?:#{1,6}\\s*)?(?:\\*\\*)?(?:${titles.join('|')})(?:\\*\\*)?\\s*:?\\s*(?:\\r?\\n|$)`, 'i')
+    : null;
+
+  for (let index = 0; index < 4; index += 1) {
+    const previous = cleaned;
+    cleaned = cleaned
+      .replace(/^\s*#{1,6}\s+\*\*([^\n]+)\*\*\s*(?:\r?\n|$)/, '')
+      .replace(/^\s*\*\*([^\n]+)\*\*\s*(?:\r?\n|$)/, '')
+      .replace(/^\s*#{1,6}\s+([^\n]+)\s*(?:\r?\n|$)/, '')
+      .trimStart();
+    if (duplicateTitlePattern) {
+      cleaned = cleaned.replace(duplicateTitlePattern, '').trimStart();
+    }
+    if (cleaned === previous) break;
+  }
+
+  return cleaned;
+};
+
 const Preparation = () => {
   const isMobile = useIsMobile();
   const {

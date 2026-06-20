@@ -59,19 +59,15 @@ async function generateNote(subject: string, unit: string, topic: string) {
   for (let attempt = 0; attempt < 4; attempt++) {
     const res = await fetch(AI_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.6,
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.6, maxOutputTokens: 600 },
       }),
     });
     if (res.ok) {
       const data = await res.json();
-      const text = data?.choices?.[0]?.message?.content ?? "";
+      const text = data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join("") ?? "";
       if (!text.trim()) throw new Error("Empty AI response");
       return text.trim();
     }

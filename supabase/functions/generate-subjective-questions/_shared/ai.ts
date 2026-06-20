@@ -129,42 +129,27 @@ Return valid JSON only.`;
 }
 
 async function callLovableAI(prompt: string) {
-  const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-  if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
-
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: {
-          parts: [{
-            text: "You are an expert academic question generator. Always respond with valid JSON only (no markdown).",
-          }],
+  const { openRouterChat } = await import("../../_shared/openrouter.ts");
+  try {
+    return await openRouterChat({
+      messages: [
+        {
+          role: "system",
+          content: "You are an expert academic question generator. Always respond with valid JSON only (no markdown).",
         },
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 8000,
-          responseMimeType: "application/json",
-        },
-      }),
-    },
-  );
-
-  if (!response.ok) {
-    const t = await response.text().catch(() => "");
-    console.error("AI API error:", response.status, t);
-    if (response.status === 429) throw new RateLimitError();
-    if (response.status === 402) throw new PaymentRequiredError();
-    throw new Error(`AI API error: ${response.status}`);
+        { role: "user", content: prompt },
+      ],
+      temperature: 0.7,
+      maxTokens: 8000,
+      responseFormatJson: true,
+    });
+  } catch (e: any) {
+    const status = e?.status;
+    console.error("AI API error:", status, e?.message ?? e);
+    if (status === 429) throw new RateLimitError();
+    if (status === 402) throw new PaymentRequiredError();
+    throw new Error(`AI API error: ${status ?? "unknown"}`);
   }
-
-  const data = await response.json();
-  return String(
-    data?.candidates?.[0]?.content?.parts?.map((p: any) => p?.text || "").join("") ?? "",
-  );
 }
 
 function normalizeQuestions(

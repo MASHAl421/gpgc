@@ -206,34 +206,22 @@ RESPONSE FORMAT (JSON array only, no markdown):
 
 Generate ${validatedCount} unique, beginner-friendly questions NOW:`;
 
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
-
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: "You are an expert academic question generator for beginners. Always respond with valid JSON array only, no markdown. Keep questions simple and educational." }] },
-          contents: [{ role: "user", parts: [{ text: systemPrompt }] }],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 4000,
-            responseMimeType: "application/json",
-          },
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("AI API error:", errorText);
-      throw new Error(`AI API error: ${response.status}`);
+    const { openRouterChat } = await import("../_shared/openrouter.ts");
+    let content = "";
+    try {
+      content = await openRouterChat({
+        messages: [
+          { role: "system", content: "You are an expert academic question generator for beginners. Always respond with valid JSON array only, no markdown. Keep questions simple and educational." },
+          { role: "user", content: systemPrompt },
+        ],
+        temperature: 0.7,
+        maxTokens: 4000,
+        responseFormatJson: true,
+      });
+    } catch (e: any) {
+      console.error("AI API error:", e?.message ?? e);
+      throw new Error(`AI API error: ${e?.status ?? "unknown"}`);
     }
-
-    const data = await response.json();
-    let content = data?.candidates?.[0]?.content?.parts?.map((p: any) => p?.text || "").join("") || "";
     
     // Clean up the response - remove markdown code blocks if present
     content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();

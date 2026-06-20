@@ -1,7 +1,7 @@
 // Shared OpenRouter client for all edge functions.
-// Uses model: openai/gpt-oss-120b:free via OpenAI-compatible API.
+// Using a fast free model — gemini-2.0-flash-exp is much faster than gpt-oss/nemotron free tiers.
 
-export const OPENROUTER_MODEL = "openai/gpt-oss-120b:free";
+export const OPENROUTER_MODEL = "google/gemini-2.0-flash-exp:free";
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
 function getKey() {

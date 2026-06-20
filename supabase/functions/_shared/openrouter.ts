@@ -1,7 +1,7 @@
 // Shared OpenRouter client for all edge functions.
-// Uses model: nvidia/nemotron-3-ultra-550b-a55b:free via OpenAI-compatible API.
+// Uses model: openai/gpt-oss-120b:free via OpenAI-compatible API.
 
-export const OPENROUTER_MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free";
+export const OPENROUTER_MODEL = "openai/gpt-oss-120b:free";
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
 function getKey() {

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Login from "./pages/Login";
+import Welcome from "./pages/Welcome";
 import Home from "./pages/Home";
 import Preparation from "./pages/Preparation";
 import AIWorkspace from "./pages/AITutor";
@@ -70,9 +71,23 @@ const AppRoutes = () => {
     );
   }
 
+  // Show the intro Welcome page once per browser session (sessionStorage flag).
+  // On any /home, /login etc. visit when the flag is missing, it routes through Welcome first.
+  const introShown = typeof window !== 'undefined'
+    ? sessionStorage.getItem('gpgc_intro_shown') === '1'
+    : false;
+
   return (
     <Routes>
-      <Route path="/" element={isAuthenticated ? <Navigate to="/home" replace /> : <Login />} />
+      <Route
+        path="/"
+        element={
+          introShown
+            ? (isAuthenticated ? <Navigate to="/home" replace /> : <Login />)
+            : <Welcome />
+        }
+      />
+      <Route path="/login" element={isAuthenticated ? <Navigate to="/home" replace /> : <Login />} />
       <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
       <Route path="/preparation" element={<ProtectedRoute><Preparation /></ProtectedRoute>} />
       <Route path="/ai-tutor" element={<ProtectedRoute><AIWorkspace /></ProtectedRoute>} />

@@ -3,6 +3,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { MeshChat } from '@/components/ai-workspace/MeshChat';
 import { VTNotes } from '@/components/ai-workspace/VTNotes';
+import { AssignmentCreator } from '@/components/ai-workspace/AssignmentCreator';
 import { Sparkles, MessageSquare, NotebookPen, FileEdit } from 'lucide-react';
 
 const ComingSoon = ({ icon: Icon, title, description }: { icon: any; title: string; description: string }) => (
@@ -62,12 +63,8 @@ const AIWorkspace = () => {
             <VTNotes />
           </TabsContent>
 
-          <TabsContent value="assignment" className="flex-1 min-h-0 m-0 overflow-y-auto">
-            <ComingSoon
-              icon={FileEdit}
-              title="Unique Assignment Creator"
-              description="Generate one-of-a-kind assignments tailored to your subject, topic, and difficulty — complete with original questions and structured formatting."
-            />
+          <TabsContent value="assignment" className="flex-1 min-h-0 m-0 overflow-hidden">
+            <AssignmentCreator />
           </TabsContent>
         </Tabs>
       </div>

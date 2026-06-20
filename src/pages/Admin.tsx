@@ -17,6 +17,7 @@ import {
   ClipboardList,
   Plus,
   Loader2,
+  Sparkles,
 } from 'lucide-react';
 
 interface Subject {

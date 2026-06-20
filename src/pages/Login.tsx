@@ -27,6 +27,10 @@ import {
   Zap,
   Smartphone,
   ArrowRight,
+  Award,
+  Bell,
+  CalendarDays,
+  Building2,
 } from 'lucide-react';
 
 const KEY_FEATURES = [
@@ -45,6 +49,22 @@ const WHY_US = [
   { icon: ShieldCheck, title: 'Curriculum-Aligned',  desc: 'Built around the official BS-level syllabus, unit by unit, topic by topic.' },
   { icon: Zap,         title: 'Smart & Fast',         desc: 'Quick-response interface, instant feedback on quizzes, AI-generated notes in seconds.' },
   { icon: Sparkles,    title: 'Gamified Learning',    desc: 'Earn coins, unlock achievements, climb the forum leaderboard while you study.' },
+];
+
+const COUNTERS = [
+  { icon: Users,     value: '5,000+',  label: 'Active Students' },
+  { icon: Building2, value: '12+',     label: 'Departments' },
+  { icon: Award,     value: '250+',    label: 'Faculty Members' },
+  { icon: BookOpen,  value: '50+',     label: 'Programs' },
+];
+
+const NOTICES = [
+  { tag: 'Admissions', date: 'Jun 18, 2026', title: 'BS Admissions Fall 2026 — applications now open',
+    desc: 'Apply online for BSCS, BSIT and other BS programs. Last date and merit list schedule published.' },
+  { tag: 'Examination', date: 'Jun 12, 2026', title: 'Semester 2 mid-term datesheet released',
+    desc: 'Check the official datesheet for upcoming mid-term examinations across all departments.' },
+  { tag: 'Event', date: 'Jun 05, 2026', title: 'Annual Science & Tech Expo — register your project',
+    desc: 'Showcase your project at the campus expo. Registration window open for two weeks.' },
 ];
 
 const Login = () => {
@@ -93,39 +113,36 @@ const Login = () => {
       <PublicHeader onLoginClick={scrollToAuth} />
 
       {/* ============ HERO ============ */}
-      <section className="relative overflow-hidden">
-        {/* tinted background blob */}
-        <div className="absolute inset-0 -z-10 bg-gradient-to-br from-primary/10 via-background to-background" />
-        <div className="absolute -top-32 -right-32 w-[500px] h-[500px] rounded-full bg-primary/10 blur-3xl -z-10" />
+      <section className="relative overflow-hidden hero-bg">
+        <div className="blob w-[420px] h-[420px] bg-primary/25 -top-32 -left-24 animate-float" />
+        <div className="blob w-[360px] h-[360px] bg-[hsl(var(--emerald))]/25 top-40 -right-20 animate-float" style={{ animationDelay: '1.5s' }} />
 
-        <div className="max-w-6xl mx-auto px-4 py-16 md:py-24 grid lg:grid-cols-2 gap-12 items-center">
-          {/* Left: copy + CTA */}
-          <div>
-            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-6">
+        <div className="max-w-6xl mx-auto px-4 py-20 md:py-28 grid lg:grid-cols-2 gap-12 items-center relative">
+          <div className="reveal">
+            <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/70 backdrop-blur-md border border-border text-primary text-xs font-semibold mb-6 shadow-sm">
               <Sparkles className="h-3.5 w-3.5" /> Smart Learning Companion
             </span>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight tracking-tight">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-[1.05] tracking-tight">
               Knowledge at your
-              <span className="block text-primary">Fingertips.</span>
+              <span className="block text-gradient">Fingertips.</span>
             </h1>
-            <p className="mt-5 text-base md:text-lg text-muted-foreground max-w-xl leading-relaxed">
+            <p className="mt-6 text-base md:text-lg text-muted-foreground max-w-xl leading-relaxed">
               GPGC Portal is a modern learning companion built for BS-level students — quizzes, expert key notes, past papers, an AI tutor and progress tracking, all in one calm, focused workspace.
             </p>
 
             <div className="flex flex-wrap gap-3 mt-8">
-              <Button onClick={scrollToAuth} className="cta-pill h-12 px-7 text-base">
+              <Button onClick={scrollToAuth} className="cta-pill btn-gradient h-12 px-7 text-base">
                 Get Started Free <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
               <Button
                 onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
                 variant="outline"
-                className="rounded-full h-12 px-7 text-base"
+                className="rounded-full h-12 px-7 text-base border-border hover:border-primary hover:text-primary transition-colors"
               >
                 Explore Features
               </Button>
             </div>
 
-            {/* mini stats */}
             <div className="grid grid-cols-3 gap-4 mt-10 max-w-md">
               {[
                 { v: '2000+', l: 'Quizzes' },
@@ -133,27 +150,24 @@ const Login = () => {
                 { v: 'AI',    l: 'Powered Tutor' },
               ].map((s) => (
                 <div key={s.l}>
-                  <div className="text-2xl md:text-3xl font-bold text-foreground">{s.v}</div>
+                  <div className="text-2xl md:text-3xl font-bold text-gradient">{s.v}</div>
                   <div className="text-xs md:text-sm text-muted-foreground">{s.l}</div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Right: phone mockup */}
-          <div className="relative flex justify-center lg:justify-end">
+          <div className="relative flex justify-center lg:justify-end reveal" style={{ animationDelay: '0.15s' }}>
             <div className="relative w-[280px] md:w-[320px]">
-              {/* phone frame */}
-              <div className="relative rounded-[2.5rem] bg-secondary p-3 shadow-2xl">
+              <div className="absolute -inset-8 bg-[image:var(--gradient-primary)] opacity-20 blur-3xl rounded-full" />
+              <div className="relative rounded-[2.5rem] bg-secondary p-3 shadow-2xl animate-float">
                 <div className="rounded-[2rem] bg-card overflow-hidden">
-                  {/* notch */}
                   <div className="h-6 bg-secondary flex items-center justify-center">
                     <div className="h-1.5 w-16 rounded-full bg-secondary-foreground/30" />
                   </div>
-                  {/* screen */}
                   <div className="p-5 bg-gradient-to-b from-primary/10 to-card">
                     <div className="flex items-center gap-3 mb-5">
-                      <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center">
+                      <div className="h-10 w-10 rounded-full bg-[image:var(--gradient-primary)] flex items-center justify-center">
                         <GraduationCap className="h-5 w-5 text-primary-foreground" />
                       </div>
                       <div>
@@ -161,7 +175,6 @@ const Login = () => {
                         <div className="text-sm font-bold text-foreground">Student</div>
                       </div>
                     </div>
-
                     <div className="grid grid-cols-2 gap-2.5">
                       {[
                         { i: BookOpen,      l: 'Syllabus' },
@@ -171,26 +184,24 @@ const Login = () => {
                         { i: FileText,      l: 'Papers' },
                         { i: MessageSquare, l: 'Forum' },
                       ].map((t, idx) => (
-                        <div key={idx} className="bg-card border border-border rounded-xl p-3 flex flex-col items-center gap-1.5 shadow-sm">
+                        <div key={idx} className="bg-card border border-border rounded-xl p-3 flex flex-col items-center gap-1.5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
                           <t.i className="h-5 w-5 text-primary" />
                           <span className="text-[10px] font-medium text-foreground">{t.l}</span>
                         </div>
                       ))}
                     </div>
-
-                    <button className="w-full mt-4 bg-primary text-primary-foreground text-xs font-semibold py-2.5 rounded-full shadow">
+                    <button className="w-full mt-4 bg-[image:var(--gradient-primary)] text-primary-foreground text-xs font-semibold py-2.5 rounded-full shadow">
                       Start Learning
                     </button>
                   </div>
                 </div>
               </div>
 
-              {/* floating chips */}
-              <div className="absolute -left-4 top-10 bg-card border border-border rounded-xl shadow-lg p-3 flex items-center gap-2 hidden md:flex">
+              <div className="absolute -left-4 top-10 glass-card p-3 hidden md:flex items-center gap-2 animate-float" style={{ animationDelay: '0.8s' }}>
                 <Smartphone className="h-4 w-4 text-primary" />
                 <span className="text-xs font-medium">Works on mobile</span>
               </div>
-              <div className="absolute -right-4 bottom-16 bg-card border border-border rounded-xl shadow-lg p-3 flex items-center gap-2 hidden md:flex">
+              <div className="absolute -right-4 bottom-16 glass-card p-3 hidden md:flex items-center gap-2 animate-float" style={{ animationDelay: '1.6s' }}>
                 <Sparkles className="h-4 w-4 text-primary" />
                 <span className="text-xs font-medium">AI-powered</span>
               </div>
@@ -202,17 +213,60 @@ const Login = () => {
       {/* ============ KEY FEATURES ============ */}
       <section id="features" className="section-tinted">
         <div className="section-inner">
-          <h2 className="section-title">Key Features</h2>
+          <h2 className="section-title">Key <span className="text-gradient">Features</span></h2>
           <p className="section-subtitle">
             Comprehensive tools and resources to make learning smarter, faster, and stress-free.
           </p>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {KEY_FEATURES.map((f) => (
-              <div key={f.text} className="feature-card flex items-center gap-4">
-                <div className="icon-pill"><f.icon className="h-6 w-6" /></div>
+            {KEY_FEATURES.map((f, i) => (
+              <div key={f.text} className="feature-card flex items-center gap-4 group reveal" style={{ animationDelay: `${i * 0.05}s` }}>
+                <div className="icon-pill group-hover:scale-110 group-hover:rotate-3 transition-transform"><f.icon className="h-6 w-6" /></div>
                 <span className="font-medium text-foreground">{f.text}</span>
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ============ STATS COUNTERS ============ */}
+      <section id="stats" className="section relative overflow-hidden">
+        <div className="absolute inset-0 -z-10 bg-[image:var(--gradient-primary)] opacity-[0.06]" />
+        <div className="section-inner">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+            {COUNTERS.map((c, i) => (
+              <div key={c.label} className="glass-card p-6 text-center reveal hover:-translate-y-1 transition-transform" style={{ animationDelay: `${i * 0.08}s` }}>
+                <div className="icon-pill-gradient mx-auto mb-4"><c.icon className="h-6 w-6" /></div>
+                <div className="text-3xl md:text-4xl font-bold text-gradient">{c.value}</div>
+                <div className="text-xs md:text-sm text-muted-foreground mt-1 font-medium">{c.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ============ LATEST NOTICES ============ */}
+      <section id="notices" className="section-tinted">
+        <div className="section-inner">
+          <h2 className="section-title">Latest <span className="text-gradient">Notices & News</span></h2>
+          <p className="section-subtitle">Stay updated with announcements, datesheets, events and admissions from the college.</p>
+          <div className="grid gap-5 md:grid-cols-3">
+            {NOTICES.map((n, i) => (
+              <article key={n.title} className="feature-card group reveal" style={{ animationDelay: `${i * 0.08}s` }}>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold">
+                    <Bell className="h-3 w-3" /> {n.tag}
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                    <CalendarDays className="h-3.5 w-3.5" /> {n.date}
+                  </span>
+                </div>
+                <h3 className="font-semibold text-foreground mb-2 group-hover:text-primary transition-colors leading-snug">{n.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{n.desc}</p>
+                <div className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+                  Read more <ArrowRight className="h-3.5 w-3.5" />
+                </div>
+              </article>
             ))}
           </div>
         </div>
@@ -221,15 +275,15 @@ const Login = () => {
       {/* ============ WHY CHOOSE US ============ */}
       <section id="why" className="section">
         <div className="section-inner">
-          <h2 className="section-title">Why Choose GPGC Portal?</h2>
+          <h2 className="section-title">Why Choose <span className="text-gradient">GPGC Portal?</span></h2>
           <p className="section-subtitle">
             Smart learning tools. Reliable resources. Everything you need for success — all in one platform.
           </p>
 
           <div className="grid gap-6 md:grid-cols-3">
-            {WHY_US.map((w) => (
-              <div key={w.title} className="feature-card text-center">
-                <div className="icon-pill mx-auto mb-5 h-14 w-14">
+            {WHY_US.map((w, i) => (
+              <div key={w.title} className="feature-card text-center group reveal" style={{ animationDelay: `${i * 0.1}s` }}>
+                <div className="icon-pill-gradient mx-auto mb-5 h-14 w-14 group-hover:scale-110 transition-transform">
                   <w.icon className="h-7 w-7" />
                 </div>
                 <h3 className="text-lg font-semibold text-foreground mb-2">{w.title}</h3>

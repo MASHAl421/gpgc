@@ -1,14 +1,12 @@
-// Regenerate short, easy-to-remember key notes for given topics using Lovable AI Gateway.
+// Regenerate short, easy-to-remember key notes for given topics via OpenRouter.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { openRouterChat } from "../_shared/openrouter.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
-
-const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY")!;
-const AI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -54,29 +52,25 @@ async function generateNote(subject: string, unit: string, topic: string) {
   const urdu = /islamic|اسلام/i.test(subject);
   const prompt = buildPrompt(subject, unit, topic, urdu);
 
-  // Retry with backoff on 429/503
   let lastErr = "";
   for (let attempt = 0; attempt < 4; attempt++) {
-    const res = await fetch(AI_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.6, maxOutputTokens: 600 },
-      }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      const text = data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join("") ?? "";
+    try {
+      const text = await openRouterChat({
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.6,
+        maxTokens: 600,
+      });
       if (!text.trim()) throw new Error("Empty AI response");
       return text.trim();
+    } catch (e: any) {
+      lastErr = String(e?.message ?? e);
+      const status = e?.status;
+      if (status === 429 || status === 503) {
+        await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
+        continue;
+      }
+      throw new Error(`AI ${lastErr}`);
     }
-    lastErr = `${res.status}: ${(await res.text()).slice(0, 200)}`;
-    if (res.status === 429 || res.status === 503) {
-      await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
-      continue;
-    }
-    throw new Error(`AI ${lastErr}`);
   }
   throw new Error(`AI retries exhausted ${lastErr}`);
 }

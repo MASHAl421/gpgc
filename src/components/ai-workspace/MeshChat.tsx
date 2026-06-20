@@ -1107,8 +1107,8 @@ export const MeshChat = () => {
               </div>
             )}
 
-            {/* Input pill — always white box with dark text for clear visibility */}
-            <div className="relative flex items-end gap-1.5 sm:gap-2 bg-white text-neutral-900 rounded-[28px] border border-neutral-200 shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] focus-within:shadow-[0_4px_20px_rgba(0,0,0,0.1)] transition-all p-1.5 sm:p-2">
+            {/* Composer — modern multi-row pill, ChatGPT/Gemini style */}
+            <div className="relative bg-white rounded-3xl border border-neutral-200 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_6px_28px_rgba(0,0,0,0.09)] focus-within:border-primary/40 focus-within:shadow-[0_6px_32px_hsl(var(--primary)/0.18)] transition-all duration-300">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -1117,62 +1117,93 @@ export const MeshChat = () => {
                 className="hidden"
               />
 
-              {/* Attach button (Plus icon like ChatGPT) */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+              {/* Textarea row */}
+              <div className="px-4 pt-3.5 pb-2">
+                <Textarea
+                  ref={textareaRef}
+                  placeholder={attachedFile ? 'Add a message…' : 'Ask Mesh Chat anything…'}
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey && !isMobile) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                  style={{ height: question ? undefined : (isMobile ? '32px' : '36px') }}
+                  className="w-full !min-h-[32px] sm:!min-h-[36px] max-h-[140px] sm:max-h-[220px] resize-none border-0 bg-transparent text-neutral-900 focus-visible:ring-0 focus-visible:ring-offset-0 p-0 text-[15px] sm:text-base leading-relaxed overflow-y-auto scrollbar-thin placeholder:text-neutral-400"
+                  rows={1}
+                  disabled={isLoading}
+                />
+              </div>
+
+              {/* Tool row */}
+              <div className="flex items-center justify-between gap-2 px-2 pb-2">
+                <div className="flex items-center gap-1">
+                  {/* Attach */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 rounded-full text-neutral-500 hover:text-primary hover:bg-primary/10 transition-colors"
+                        title="Attach file"
+                      >
+                        <Plus className="h-5 w-5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" side="top" className="w-52 mb-2 rounded-xl">
+                      <DropdownMenuItem onClick={() => fileInputRef.current?.click()} className="rounded-lg cursor-pointer">
+                        <ImagePlus className="h-4 w-4 mr-2 text-primary" />
+                        Upload image
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => fileInputRef.current?.click()} className="rounded-lg cursor-pointer">
+                        <FileUp className="h-4 w-4 mr-2 text-primary" />
+                        Upload PDF
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  {/* Decorative tool chips (visual parity with Gemini) */}
                   <Button
                     variant="ghost"
-                    size="icon"
-                    className="h-9 w-9 rounded-full text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 flex-shrink-0"
-                    title="Add"
+                    size="sm"
+                    className="hidden sm:inline-flex h-9 rounded-full px-3 text-xs font-medium text-neutral-600 hover:text-primary hover:bg-primary/10 transition-colors gap-1.5"
+                    onClick={() => textareaRef.current?.focus()}
+                    title="Web context"
+                    type="button"
                   >
-                    <Plus className="h-5 w-5" />
+                    <Globe className="h-3.5 w-3.5" /> Web
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" side="top" className="w-52 mb-2">
-                  <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
-                    <ImagePlus className="h-4 w-4 mr-2" />
-                    Upload image
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
-                    <FileUp className="h-4 w-4 mr-2" />
-                    Upload PDF
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="hidden sm:inline-flex h-9 rounded-full px-3 text-xs font-medium text-neutral-600 hover:text-primary hover:bg-primary/10 transition-colors gap-1.5"
+                    onClick={() => textareaRef.current?.focus()}
+                    title="Study mode"
+                    type="button"
+                  >
+                    <BookOpen className="h-3.5 w-3.5" /> Study
+                  </Button>
+                </div>
 
-              <Textarea
-                ref={textareaRef}
-                placeholder={attachedFile ? "Add a message..." : "Ask anything"}
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey && !isMobile) {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }}
-                style={{ height: question ? undefined : (isMobile ? '36px' : '40px') }}
-                className="flex-1 !min-h-[36px] sm:!min-h-[40px] max-h-[140px] sm:max-h-[200px] resize-none border-0 bg-transparent text-neutral-900 focus-visible:ring-0 focus-visible:ring-offset-0 py-2 sm:py-2.5 px-1 text-[15px] sm:text-base leading-relaxed overflow-y-auto scrollbar-thin placeholder:text-neutral-400"
-                rows={1}
-                disabled={isLoading}
-              />
-
-              {/* Send button */}
-              <Button
-                size="icon"
-                className="h-9 w-9 rounded-full flex-shrink-0 bg-foreground text-background hover:bg-foreground/90 disabled:bg-muted-foreground/40 disabled:text-background transition-all"
-                onClick={() => handleSend()}
-                disabled={isLoading || (!question.trim() && !attachedFile)}
-                title="Send"
-              >
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <ArrowUp className="h-4 w-4" strokeWidth={2.5} />
-                )}
-              </Button>
+                {/* Send */}
+                <Button
+                  size="icon"
+                  className="h-10 w-10 rounded-full flex-shrink-0 btn-gradient text-primary-foreground shadow-[var(--shadow-glow)] hover:opacity-95 hover:scale-105 active:scale-95 disabled:opacity-40 disabled:shadow-none disabled:scale-100 transition-all"
+                  onClick={() => handleSend()}
+                  disabled={isLoading || (!question.trim() && !attachedFile)}
+                  title="Send"
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ArrowUp className="h-4 w-4" strokeWidth={2.75} />
+                  )}
+                </Button>
+              </div>
             </div>
+
 
             <p className="text-[10px] sm:text-[11px] text-center text-muted-foreground mt-1.5">
               Mesh Chat can make mistakes. Verify important information.

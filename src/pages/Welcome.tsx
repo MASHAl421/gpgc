@@ -194,6 +194,7 @@ const FloatingPill = ({ pill }: { pill: Pill }) => {
   const style: React.CSSProperties = {
     left: `${pill.x}%`,
     top: `${pill.y}%`,
+    ['--rot' as any]: `${pill.rot ?? 0}deg`,
     transform: `translate(-50%, -50%) rotate(${pill.rot ?? 0}deg) scale(${pill.scale ?? 1})`,
     animationDelay: `${pill.delay}ms`,
   };

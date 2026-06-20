@@ -690,7 +690,51 @@ const Admin = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="notes">
+          <TabsContent value="notes" className="space-y-4">
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle className="text-foreground flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  AI: Regenerate Short Key Notes
+                </CardTitle>
+                <CardDescription>
+                  Replaces existing key notes with short, easy-to-remember AI notes (idea + bullets + memory hook) for every topic. Islamic Studies stays in Urdu.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
+                  <div className="space-y-2 flex-1">
+                    <Label>Semester</Label>
+                    <Select value={regenSemester} onValueChange={(v) => setRegenSemester(v as any)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All (Semester 1 & 2)</SelectItem>
+                        <SelectItem value="1">Semester 1 only</SelectItem>
+                        <SelectItem value="2">Semester 2 only</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button onClick={handleRegenerateAll} disabled={regenRunning}>
+                    {regenRunning ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-4 w-4 mr-2" />
+                    )}
+                    {regenRunning ? 'Regenerating...' : 'Regenerate All'}
+                  </Button>
+                </div>
+                {regenProgress.total > 0 && (
+                  <div className="text-sm text-muted-foreground">
+                    Progress: {regenProgress.done + regenProgress.failed} / {regenProgress.total}
+                    {regenProgress.failed > 0 && ` (${regenProgress.failed} failed)`}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+
             <Card className="bg-card border-border">
               <CardHeader>
                 <CardTitle className="text-foreground">Add Key Note</CardTitle>

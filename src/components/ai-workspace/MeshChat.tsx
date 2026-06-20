@@ -628,11 +628,34 @@ export const MeshChat = () => {
   };
   const quickActions = getQuickActions();
 
+  /* ---------- Sessions grouped by date (Today / Yesterday / Previous 7 days / Older) ---------- */
+  const groupedSessions = (() => {
+    const now = new Date();
+    const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const today = startOfDay(now);
+    const yesterday = today - 86400000;
+    const weekAgo = today - 7 * 86400000;
+    const groups: { key: string; label: string; items: typeof filteredSessions }[] = [
+      { key: 't',  label: 'Today',           items: [] },
+      { key: 'y',  label: 'Yesterday',       items: [] },
+      { key: 'w',  label: 'Previous 7 days', items: [] },
+      { key: 'o',  label: 'Older',           items: [] },
+    ];
+    for (const s of filteredSessions) {
+      const ts = startOfDay(new Date(s.updated_at || s.created_at || Date.now()));
+      if (ts >= today) groups[0].items.push(s);
+      else if (ts >= yesterday) groups[1].items.push(s);
+      else if (ts >= weekAgo) groups[2].items.push(s);
+      else groups[3].items.push(s);
+    }
+    return groups.filter(g => g.items.length > 0);
+  })();
+
   /* ---------- Sidebar content (shared between desktop + mobile drawer) ---------- */
   const SidebarContent = ({ onClose }: { onClose?: () => void }) => (
-    <div className="h-full flex flex-col bg-muted/30">
+    <div className="h-full flex flex-col bg-card/40 backdrop-blur-sm">
+      {/* Header row */}
       <div className="p-3 flex items-center gap-2 flex-shrink-0">
-        {/* Close button — only on mobile drawer (desktop uses the header toggle) */}
         {isMobile && (
           <Button
             variant="ghost"
@@ -645,8 +668,7 @@ export const MeshChat = () => {
           </Button>
         )}
         <Button
-          variant="ghost"
-          className="flex-1 justify-start gap-2 h-9 rounded-full hover:bg-muted font-medium"
+          className="flex-1 justify-start gap-2 h-10 rounded-xl btn-gradient text-primary-foreground shadow-[var(--shadow-glow)] hover:opacity-95 font-medium"
           onClick={handleNewChat}
         >
           <Edit3 className="h-4 w-4" />
@@ -654,6 +676,7 @@ export const MeshChat = () => {
         </Button>
       </div>
 
+      {/* Search */}
       <div className="px-3 pb-2 flex-shrink-0">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -662,52 +685,73 @@ export const MeshChat = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search chats"
-            className="w-full pl-9 pr-3 py-2 text-sm bg-background border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-ring/40"
+            className="w-full pl-9 pr-3 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
           />
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col min-h-0">
-        <div className="px-4 py-2 flex-shrink-0">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Your chats</p>
-        </div>
-        <div className="flex-1 overflow-y-auto px-2 space-y-0.5 pb-2 scrollbar-thin">
-          {historyLoading ? (
-            <div className="p-4 text-center">
-              <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
-            </div>
-          ) : filteredSessions.length === 0 ? (
-            <div className="p-4 text-center text-muted-foreground text-sm">
+      {/* Grouped chat list */}
+      <div className="flex-1 overflow-y-auto px-2 pb-2 scrollbar-thin">
+        {historyLoading ? (
+          <div className="p-6 text-center">
+            <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
+          </div>
+        ) : filteredSessions.length === 0 ? (
+          <div className="p-6 text-center">
+            <MessageSquare className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
+            <p className="text-sm text-muted-foreground">
               {searchQuery ? 'No matches' : 'No chats yet'}
-            </div>
-          ) : (
-            filteredSessions.map((s) => (
-              <div
-                key={s.id}
-                className={`group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-                  currentSessionId === s.id ? 'bg-accent text-accent-foreground' : 'hover:bg-muted'
-                }`}
-                onClick={() => handleLoadSession(s.id)}
-              >
-                <span className="flex-1 text-sm truncate">{s.title || 'New Chat'}</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-background"
-                  onClick={(e) => { e.stopPropagation(); deleteSession(s.id); }}
-                >
-                  <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
-                </Button>
+            </p>
+          </div>
+        ) : (
+          groupedSessions.map((g) => (
+            <div key={g.key} className="mb-3">
+              <p className="px-3 pt-2 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                {g.label}
+              </p>
+              <div className="space-y-0.5">
+                {g.items.map((s) => {
+                  const active = currentSessionId === s.id;
+                  return (
+                    <div
+                      key={s.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => handleLoadSession(s.id)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleLoadSession(s.id); }}
+                      className={`group relative flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all ${
+                        active
+                          ? 'bg-primary/10 text-foreground ring-1 ring-primary/20'
+                          : 'hover:bg-muted/70 text-foreground/85'
+                      }`}
+                    >
+                      {active && (
+                        <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r bg-[image:var(--gradient-primary)]" />
+                      )}
+                      <MessageSquare className={`h-3.5 w-3.5 shrink-0 ${active ? 'text-primary' : 'text-muted-foreground'}`} />
+                      <span className="flex-1 text-sm truncate">{s.title || 'New Chat'}</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-opacity"
+                        onClick={(e) => { e.stopPropagation(); deleteSession(s.id); }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  );
+                })}
               </div>
-            ))
-          )}
-        </div>
+            </div>
+          ))
+        )}
       </div>
 
+      {/* Profile */}
       {user && (
-        <div className="p-2 border-t border-border flex-shrink-0">
-          <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-muted cursor-pointer">
-            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-primary-foreground text-sm font-semibold flex-shrink-0">
+        <div className="p-2 border-t border-border/60 flex-shrink-0">
+          <div className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-muted/70 cursor-pointer transition-colors">
+            <div className="h-9 w-9 rounded-full bg-[image:var(--gradient-primary)] flex items-center justify-center text-primary-foreground text-sm font-semibold flex-shrink-0 shadow-[var(--shadow-glow)]">
               {user.email?.charAt(0).toUpperCase() || 'U'}
             </div>
             <div className="flex-1 min-w-0">
@@ -719,6 +763,7 @@ export const MeshChat = () => {
       )}
     </div>
   );
+
 
   return (
     <div className="h-full flex overflow-hidden bg-background">
@@ -794,17 +839,50 @@ export const MeshChat = () => {
         <div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
           <div className="max-w-3xl mx-auto px-3 sm:px-6 pt-3 pb-2">
             {messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center min-h-[40vh] sm:min-h-[45vh] text-center px-2 animate-in fade-in duration-500">
-                <div className="relative h-14 w-14 sm:h-16 sm:w-16 rounded-2xl bg-gradient-to-br from-primary via-primary to-primary/60 flex items-center justify-center mb-4 shadow-lg shadow-primary/20">
-                  <Sparkles className="h-7 w-7 sm:h-8 sm:w-8 text-primary-foreground" />
-                  <span className="absolute -bottom-1 -right-1 h-3 w-3 rounded-full bg-emerald-500 ring-2 ring-background" />
+              <div className="flex flex-col items-center justify-center min-h-[50vh] sm:min-h-[60vh] px-2 animate-fade-in">
+                {/* Animated logo */}
+                <div className="relative mb-6">
+                  <div className="absolute inset-0 bg-[image:var(--gradient-primary)] blur-2xl opacity-40 rounded-full" />
+                  <div className="relative h-16 w-16 sm:h-20 sm:w-20 rounded-2xl bg-[image:var(--gradient-primary)] flex items-center justify-center shadow-[var(--shadow-glow)] animate-float">
+                    <Sparkles className="h-8 w-8 sm:h-10 sm:w-10 text-primary-foreground" />
+                  </div>
                 </div>
-                <h1 className="text-xl sm:text-3xl font-semibold mb-1.5 tracking-tight bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-transparent">
-                  Welcome to Mesh Chat
+
+                {/* Personalized greeting (Gemini-style) */}
+                <h1 className="text-3xl sm:text-5xl font-semibold tracking-tight mb-2 text-center">
+                  <span className="text-gradient">Hello, {user?.email?.split('@')[0] || 'there'}</span>
                 </h1>
-                <p className="text-muted-foreground text-xs sm:text-sm max-w-md">
-                  Ask anything from your syllabus — Mesh Chat understands text, images, and PDFs.
+                <p className="text-muted-foreground text-base sm:text-lg max-w-md text-center mb-8 sm:mb-10">
+                  How can I help you study today?
                 </p>
+
+                {/* Suggestion cards (2x2) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-2xl">
+                  {quickActions.slice(0, 4).map((action, i) => (
+                    <button
+                      key={i}
+                      onClick={() => {
+                        setQuestion(action.prompt);
+                        textareaRef.current?.focus();
+                      }}
+                      className="group relative text-left p-4 rounded-2xl bg-card border border-border/70 hover:border-primary/40 hover:shadow-[var(--shadow-elevated)] hover:-translate-y-0.5 transition-all duration-300 animate-fade-in-up"
+                      style={{ animationDelay: `${i * 0.08}s` }}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 ring-1 ring-primary/15 flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:rotate-3 transition-transform">
+                          <action.icon className="h-4.5 w-4.5 text-primary" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-foreground text-sm leading-snug mb-1">{action.label}</p>
+                          <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                            {action.prompt.slice(0, 80)}{action.prompt.length > 80 ? '…' : ''}
+                          </p>
+                        </div>
+                        <ArrowUp className="h-3.5 w-3.5 text-muted-foreground rotate-45 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-1" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
             ) : (
               <div className="space-y-5 sm:space-y-7 pt-2">
@@ -997,24 +1075,8 @@ export const MeshChat = () => {
         {/* Bottom Input Area — ChatGPT-style pill */}
         <div className="px-3 sm:px-6 pb-2 sm:pb-3 pt-0 safe-area-bottom flex-shrink-0">
           <div className="max-w-3xl mx-auto">
-            {/* Quick action chips — only show on empty state */}
-            {messages.length === 0 && !attachedFile && (
-              <div className="flex flex-wrap gap-1.5 justify-center mb-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                {quickActions.slice(0, isMobile ? 3 : 4).map((action, i) => (
-                  <button
-                    key={i}
-                    onClick={() => {
-                      setQuestion(action.prompt);
-                      textareaRef.current?.focus();
-                    }}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-muted/60 hover:bg-muted active:scale-95 transition-all text-xs sm:text-sm border border-border/50"
-                  >
-                    <action.icon className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="font-medium">{action.label}</span>
-                  </button>
-                ))}
-              </div>
-            )}
+            {/* Quick action chips removed — suggestion cards now live in the empty-state above */}
+
 
             {/* Attached file preview — transparent, clean */}
             {attachedFile && (
@@ -1045,8 +1107,8 @@ export const MeshChat = () => {
               </div>
             )}
 
-            {/* Input pill — always white box with dark text for clear visibility */}
-            <div className="relative flex items-end gap-1.5 sm:gap-2 bg-white text-neutral-900 rounded-[28px] border border-neutral-200 shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] focus-within:shadow-[0_4px_20px_rgba(0,0,0,0.1)] transition-all p-1.5 sm:p-2">
+            {/* Composer — modern multi-row pill, ChatGPT/Gemini style */}
+            <div className="relative bg-white rounded-3xl border border-neutral-200 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_6px_28px_rgba(0,0,0,0.09)] focus-within:border-primary/40 focus-within:shadow-[0_6px_32px_hsl(var(--primary)/0.18)] transition-all duration-300">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -1055,62 +1117,93 @@ export const MeshChat = () => {
                 className="hidden"
               />
 
-              {/* Attach button (Plus icon like ChatGPT) */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+              {/* Textarea row */}
+              <div className="px-4 pt-3.5 pb-2">
+                <Textarea
+                  ref={textareaRef}
+                  placeholder={attachedFile ? 'Add a message…' : 'Ask Mesh Chat anything…'}
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey && !isMobile) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                  style={{ height: question ? undefined : (isMobile ? '32px' : '36px') }}
+                  className="w-full !min-h-[32px] sm:!min-h-[36px] max-h-[140px] sm:max-h-[220px] resize-none border-0 bg-transparent text-neutral-900 focus-visible:ring-0 focus-visible:ring-offset-0 p-0 text-[15px] sm:text-base leading-relaxed overflow-y-auto scrollbar-thin placeholder:text-neutral-400"
+                  rows={1}
+                  disabled={isLoading}
+                />
+              </div>
+
+              {/* Tool row */}
+              <div className="flex items-center justify-between gap-2 px-2 pb-2">
+                <div className="flex items-center gap-1">
+                  {/* Attach */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 rounded-full text-neutral-500 hover:text-primary hover:bg-primary/10 transition-colors"
+                        title="Attach file"
+                      >
+                        <Plus className="h-5 w-5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" side="top" className="w-52 mb-2 rounded-xl">
+                      <DropdownMenuItem onClick={() => fileInputRef.current?.click()} className="rounded-lg cursor-pointer">
+                        <ImagePlus className="h-4 w-4 mr-2 text-primary" />
+                        Upload image
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => fileInputRef.current?.click()} className="rounded-lg cursor-pointer">
+                        <FileUp className="h-4 w-4 mr-2 text-primary" />
+                        Upload PDF
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  {/* Decorative tool chips (visual parity with Gemini) */}
                   <Button
                     variant="ghost"
-                    size="icon"
-                    className="h-9 w-9 rounded-full text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 flex-shrink-0"
-                    title="Add"
+                    size="sm"
+                    className="hidden sm:inline-flex h-9 rounded-full px-3 text-xs font-medium text-neutral-600 hover:text-primary hover:bg-primary/10 transition-colors gap-1.5"
+                    onClick={() => textareaRef.current?.focus()}
+                    title="Web context"
+                    type="button"
                   >
-                    <Plus className="h-5 w-5" />
+                    <Globe className="h-3.5 w-3.5" /> Web
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" side="top" className="w-52 mb-2">
-                  <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
-                    <ImagePlus className="h-4 w-4 mr-2" />
-                    Upload image
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
-                    <FileUp className="h-4 w-4 mr-2" />
-                    Upload PDF
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="hidden sm:inline-flex h-9 rounded-full px-3 text-xs font-medium text-neutral-600 hover:text-primary hover:bg-primary/10 transition-colors gap-1.5"
+                    onClick={() => textareaRef.current?.focus()}
+                    title="Study mode"
+                    type="button"
+                  >
+                    <BookOpen className="h-3.5 w-3.5" /> Study
+                  </Button>
+                </div>
 
-              <Textarea
-                ref={textareaRef}
-                placeholder={attachedFile ? "Add a message..." : "Ask anything"}
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey && !isMobile) {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }}
-                style={{ height: question ? undefined : (isMobile ? '36px' : '40px') }}
-                className="flex-1 !min-h-[36px] sm:!min-h-[40px] max-h-[140px] sm:max-h-[200px] resize-none border-0 bg-transparent text-neutral-900 focus-visible:ring-0 focus-visible:ring-offset-0 py-2 sm:py-2.5 px-1 text-[15px] sm:text-base leading-relaxed overflow-y-auto scrollbar-thin placeholder:text-neutral-400"
-                rows={1}
-                disabled={isLoading}
-              />
-
-              {/* Send button */}
-              <Button
-                size="icon"
-                className="h-9 w-9 rounded-full flex-shrink-0 bg-foreground text-background hover:bg-foreground/90 disabled:bg-muted-foreground/40 disabled:text-background transition-all"
-                onClick={() => handleSend()}
-                disabled={isLoading || (!question.trim() && !attachedFile)}
-                title="Send"
-              >
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <ArrowUp className="h-4 w-4" strokeWidth={2.5} />
-                )}
-              </Button>
+                {/* Send */}
+                <Button
+                  size="icon"
+                  className="h-10 w-10 rounded-full flex-shrink-0 btn-gradient text-primary-foreground shadow-[var(--shadow-glow)] hover:opacity-95 hover:scale-105 active:scale-95 disabled:opacity-40 disabled:shadow-none disabled:scale-100 transition-all"
+                  onClick={() => handleSend()}
+                  disabled={isLoading || (!question.trim() && !attachedFile)}
+                  title="Send"
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ArrowUp className="h-4 w-4" strokeWidth={2.75} />
+                  )}
+                </Button>
+              </div>
             </div>
+
 
             <p className="text-[10px] sm:text-[11px] text-center text-muted-foreground mt-1.5">
               Mesh Chat can make mistakes. Verify important information.

@@ -628,11 +628,34 @@ export const MeshChat = () => {
   };
   const quickActions = getQuickActions();
 
+  /* ---------- Sessions grouped by date (Today / Yesterday / Previous 7 days / Older) ---------- */
+  const groupedSessions = (() => {
+    const now = new Date();
+    const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const today = startOfDay(now);
+    const yesterday = today - 86400000;
+    const weekAgo = today - 7 * 86400000;
+    const groups: { key: string; label: string; items: typeof filteredSessions }[] = [
+      { key: 't',  label: 'Today',           items: [] },
+      { key: 'y',  label: 'Yesterday',       items: [] },
+      { key: 'w',  label: 'Previous 7 days', items: [] },
+      { key: 'o',  label: 'Older',           items: [] },
+    ];
+    for (const s of filteredSessions) {
+      const ts = startOfDay(new Date(s.updated_at || s.created_at || Date.now()));
+      if (ts >= today) groups[0].items.push(s);
+      else if (ts >= yesterday) groups[1].items.push(s);
+      else if (ts >= weekAgo) groups[2].items.push(s);
+      else groups[3].items.push(s);
+    }
+    return groups.filter(g => g.items.length > 0);
+  })();
+
   /* ---------- Sidebar content (shared between desktop + mobile drawer) ---------- */
   const SidebarContent = ({ onClose }: { onClose?: () => void }) => (
-    <div className="h-full flex flex-col bg-muted/30">
+    <div className="h-full flex flex-col bg-card/40 backdrop-blur-sm">
+      {/* Header row */}
       <div className="p-3 flex items-center gap-2 flex-shrink-0">
-        {/* Close button — only on mobile drawer (desktop uses the header toggle) */}
         {isMobile && (
           <Button
             variant="ghost"
@@ -645,8 +668,7 @@ export const MeshChat = () => {
           </Button>
         )}
         <Button
-          variant="ghost"
-          className="flex-1 justify-start gap-2 h-9 rounded-full hover:bg-muted font-medium"
+          className="flex-1 justify-start gap-2 h-10 rounded-xl btn-gradient text-primary-foreground shadow-[var(--shadow-glow)] hover:opacity-95 font-medium"
           onClick={handleNewChat}
         >
           <Edit3 className="h-4 w-4" />
@@ -654,6 +676,7 @@ export const MeshChat = () => {
         </Button>
       </div>
 
+      {/* Search */}
       <div className="px-3 pb-2 flex-shrink-0">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -662,52 +685,73 @@ export const MeshChat = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search chats"
-            className="w-full pl-9 pr-3 py-2 text-sm bg-background border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-ring/40"
+            className="w-full pl-9 pr-3 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
           />
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col min-h-0">
-        <div className="px-4 py-2 flex-shrink-0">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Your chats</p>
-        </div>
-        <div className="flex-1 overflow-y-auto px-2 space-y-0.5 pb-2 scrollbar-thin">
-          {historyLoading ? (
-            <div className="p-4 text-center">
-              <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
-            </div>
-          ) : filteredSessions.length === 0 ? (
-            <div className="p-4 text-center text-muted-foreground text-sm">
+      {/* Grouped chat list */}
+      <div className="flex-1 overflow-y-auto px-2 pb-2 scrollbar-thin">
+        {historyLoading ? (
+          <div className="p-6 text-center">
+            <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
+          </div>
+        ) : filteredSessions.length === 0 ? (
+          <div className="p-6 text-center">
+            <MessageSquare className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
+            <p className="text-sm text-muted-foreground">
               {searchQuery ? 'No matches' : 'No chats yet'}
-            </div>
-          ) : (
-            filteredSessions.map((s) => (
-              <div
-                key={s.id}
-                className={`group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-                  currentSessionId === s.id ? 'bg-accent text-accent-foreground' : 'hover:bg-muted'
-                }`}
-                onClick={() => handleLoadSession(s.id)}
-              >
-                <span className="flex-1 text-sm truncate">{s.title || 'New Chat'}</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-background"
-                  onClick={(e) => { e.stopPropagation(); deleteSession(s.id); }}
-                >
-                  <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
-                </Button>
+            </p>
+          </div>
+        ) : (
+          groupedSessions.map((g) => (
+            <div key={g.key} className="mb-3">
+              <p className="px-3 pt-2 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                {g.label}
+              </p>
+              <div className="space-y-0.5">
+                {g.items.map((s) => {
+                  const active = currentSessionId === s.id;
+                  return (
+                    <div
+                      key={s.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => handleLoadSession(s.id)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleLoadSession(s.id); }}
+                      className={`group relative flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all ${
+                        active
+                          ? 'bg-primary/10 text-foreground ring-1 ring-primary/20'
+                          : 'hover:bg-muted/70 text-foreground/85'
+                      }`}
+                    >
+                      {active && (
+                        <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r bg-[image:var(--gradient-primary)]" />
+                      )}
+                      <MessageSquare className={`h-3.5 w-3.5 shrink-0 ${active ? 'text-primary' : 'text-muted-foreground'}`} />
+                      <span className="flex-1 text-sm truncate">{s.title || 'New Chat'}</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-opacity"
+                        onClick={(e) => { e.stopPropagation(); deleteSession(s.id); }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  );
+                })}
               </div>
-            ))
-          )}
-        </div>
+            </div>
+          ))
+        )}
       </div>
 
+      {/* Profile */}
       {user && (
-        <div className="p-2 border-t border-border flex-shrink-0">
-          <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-muted cursor-pointer">
-            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-primary-foreground text-sm font-semibold flex-shrink-0">
+        <div className="p-2 border-t border-border/60 flex-shrink-0">
+          <div className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-muted/70 cursor-pointer transition-colors">
+            <div className="h-9 w-9 rounded-full bg-[image:var(--gradient-primary)] flex items-center justify-center text-primary-foreground text-sm font-semibold flex-shrink-0 shadow-[var(--shadow-glow)]">
               {user.email?.charAt(0).toUpperCase() || 'U'}
             </div>
             <div className="flex-1 min-w-0">
@@ -719,6 +763,7 @@ export const MeshChat = () => {
       )}
     </div>
   );
+
 
   return (
     <div className="h-full flex overflow-hidden bg-background">

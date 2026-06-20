@@ -42,6 +42,25 @@ RULES:
 - Use emojis in section headers, bullet points (-), and bold for key terms.
 - Output ONLY the formatted markdown notes. No preamble, no "Here are your notes:", nothing extra.`;
 
+const GATEWAY = "https://ai.gateway.lovable.dev/v1";
+
+function base64ToBytes(b64: string): Uint8Array {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+function extFromMime(mime: string): string {
+  const m = mime.split(";")[0].trim();
+  if (m === "audio/webm") return "webm";
+  if (m === "audio/mp4") return "mp4";
+  if (m === "audio/mpeg") return "mp3";
+  if (m === "audio/wav") return "wav";
+  if (m === "audio/ogg") return "ogg";
+  return "webm";
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -70,8 +89,8 @@ serve(async (req) => {
       });
     }
 
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-    if (!GEMINI_API_KEY) {
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
       return new Response(JSON.stringify({ error: "Server not configured" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -89,7 +108,6 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      // Cap audio at ~15MB base64 (~11MB raw) to keep latency sane
       if (audio.length > 15_000_000) {
         return new Response(JSON.stringify({ error: "Recording too long. Please keep under ~10 minutes." }), {
           status: 413,
@@ -97,38 +115,30 @@ serve(async (req) => {
         });
       }
 
-      const geminiRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [
-              {
-                role: "user",
-                parts: [
-                  { text: "Transcribe the following audio verbatim. Output ONLY the spoken words as plain text. Do not add commentary, headings, timestamps, or speaker labels unless multiple distinct speakers are clearly present. Preserve technical terms accurately." },
-                  { inlineData: { mimeType, data: audio } },
-                ],
-              },
-            ],
-            generationConfig: { temperature: 0.1, maxOutputTokens: 4096 },
-          }),
-        }
-      );
+      const bytes = base64ToBytes(audio);
+      const ext = extFromMime(mimeType);
+      const fd = new FormData();
+      fd.append("model", "openai/gpt-4o-mini-transcribe");
+      fd.append("file", new Blob([bytes], { type: mimeType.split(";")[0] }), `recording.${ext}`);
 
-      if (!geminiRes.ok) {
-        const errText = await geminiRes.text();
+      const res = await fetch(`${GATEWAY}/audio/transcriptions`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}` },
+        body: fd,
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error("Transcription error:", res.status, errText);
+        const status = res.status === 429 || res.status === 402 ? res.status : 500;
         return new Response(JSON.stringify({ error: "Transcription failed", detail: errText }), {
-          status: geminiRes.status,
+          status,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const data = await geminiRes.json();
-      const transcript = data?.candidates?.[0]?.content?.parts
-        ?.map((p: any) => p?.text || "")
-        .join("")
-        .trim() || "";
+
+      const data = await res.json();
+      const transcript = String(data?.text ?? "").trim();
 
       return new Response(JSON.stringify({ transcript }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -146,43 +156,46 @@ serve(async (req) => {
       const styleKey = (typeof style === "string" && STYLE_PROMPTS[style]) ? style : "detailed";
       const systemPrompt = `${BASE_RULES}\n\n${STYLE_PROMPTS[styleKey]}`;
 
-      const geminiRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            systemInstruction: { role: "system", parts: [{ text: systemPrompt }] },
-            contents: [{ role: "user", parts: [{ text: `Raw transcript:\n\n${transcript}` }] }],
-            generationConfig: { temperature: 0.4, maxOutputTokens: 4096 },
-          }),
-        }
-      );
+      const res = await fetch(`${GATEWAY}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: `Raw transcript:\n\n${transcript}` },
+          ],
+          temperature: 0.4,
+          max_tokens: 4096,
+        }),
+      });
 
-      if (!geminiRes.ok) {
-        const errText = await geminiRes.text();
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error("Enhance error:", res.status, errText);
+        const status = res.status === 429 || res.status === 402 ? res.status : 500;
         return new Response(JSON.stringify({ error: "Enhancement failed", detail: errText }), {
-          status: geminiRes.status,
+          status,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const data = await geminiRes.json();
-      const notes = data?.candidates?.[0]?.content?.parts
-        ?.map((p: any) => p?.text || "")
-        .join("")
-        .trim() || "";
+      const data = await res.json();
+      const notes = String(data?.choices?.[0]?.message?.content ?? "").trim();
 
       return new Response(JSON.stringify({ notes, style: styleKey }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-
     return new Response(JSON.stringify({ error: "Unknown action" }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
+    console.error("voice-notes error:", e);
     return new Response(JSON.stringify({ error: String(e) }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

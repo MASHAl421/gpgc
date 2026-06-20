@@ -1,0 +1,127 @@
+// Regenerate short, easy-to-remember key notes for given topics using Gemini.
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY")!;
+const GEMINI_URL =
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" +
+  GEMINI_API_KEY;
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+function buildPrompt(subject: string, unit: string, topic: string, urdu: boolean) {
+  if (urdu) {
+    return `آپ ایک ماہر استاد ہیں۔ مضمون: "${subject}"، یونٹ: "${unit}"، ٹاپک: "${topic}"۔
+طلباء کے لیے ایک مختصر اور آسان کلیدی نوٹ تیار کریں جو انہیں اس ٹاپک کا بنیادی خیال یاد رکھنے میں مدد دے۔
+
+سخت ہدایات:
+- صرف اردو میں لکھیں۔ (اگر عربی آیات/اصطلاحات ہوں تو استعمال کر سکتے ہیں)
+- زیادہ سے زیادہ 150 الفاظ
+- مارک ڈاؤن ٹیبلز یا --- استعمال نہ کریں
+- ساخت:
+  ### **${topic}**
+  ایک یا دو جملے کا تعارف۔
+  **اہم نکات:**
+  - نکتہ 1
+  - نکتہ 2
+  - نکتہ 3 (3 سے 5 نکات)
+  **یاد رکھنے کا آسان طریقہ:** ایک مختصر یادداشت/مثال
+صرف نوٹ کا متن واپس کریں، کوئی اضافی تبصرہ نہیں۔`;
+  }
+  return `You are an expert teacher. Subject: "${subject}", Unit: "${unit}", Topic: "${topic}".
+Create a SHORT, EASY key note that helps a BS-level student remember the core IDEA of this topic quickly.
+
+Strict rules:
+- Maximum 150 words
+- No markdown tables, no --- separators
+- Use real newlines
+- Structure exactly:
+  ### **${topic}**
+  One-sentence plain-English idea.
+  **Key Points:**
+  - point 1
+  - point 2
+  - point 3 (3 to 5 bullets, each one short line)
+  **Memory Hook:** one mnemonic, analogy, or formula to remember it
+Return ONLY the note text, no preamble.`;
+}
+
+async function generateNote(subject: string, unit: string, topic: string) {
+  const urdu = /islamic|اسلام/i.test(subject);
+  const prompt = buildPrompt(subject, unit, topic, urdu);
+  const res = await fetch(GEMINI_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.6, maxOutputTokens: 600 },
+    }),
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(`Gemini ${res.status}: ${t.slice(0, 200)}`);
+  }
+  const data = await res.json();
+  const text = data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join("") ?? "";
+  if (!text.trim()) throw new Error("Empty Gemini response");
+  return text.trim();
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  try {
+    const { topicIds } = await req.json();
+    if (!Array.isArray(topicIds) || topicIds.length === 0) {
+      return new Response(JSON.stringify({ error: "topicIds required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
+
+    // Fetch topic + unit + subject context
+    const { data: topics, error } = await admin
+      .from("topics")
+      .select("id, name, units:unit_id(name, subjects:subject_id(name))")
+      .in("id", topicIds);
+    if (error) throw error;
+
+    const results: any[] = [];
+    for (const t of topics ?? []) {
+      const subject = (t as any).units?.subjects?.name ?? "";
+      const unit = (t as any).units?.name ?? "";
+      try {
+        const note = await generateNote(subject, unit, t.name);
+        // Replace existing notes for this topic
+        await admin.from("key_notes").delete().eq("topic_id", t.id);
+        const { error: insErr } = await admin.from("key_notes").insert({
+          topic_id: t.id,
+          title: t.name,
+          content: note,
+          order_index: 0,
+        });
+        if (insErr) throw insErr;
+        results.push({ topic_id: t.id, ok: true });
+      } catch (e: any) {
+        results.push({ topic_id: t.id, ok: false, error: String(e?.message ?? e) });
+      }
+    }
+
+    return new Response(JSON.stringify({ results }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (e: any) {
+    return new Response(JSON.stringify({ error: String(e?.message ?? e) }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});

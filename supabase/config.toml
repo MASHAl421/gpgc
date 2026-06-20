@@ -2,3 +2,6 @@ project_id = "mjhcbfrfsshjyxrbfptm"
 
 [functions.generate-competition-questions]
 verify_jwt = false
+
+[functions.regenerate-key-notes]
+verify_jwt = false

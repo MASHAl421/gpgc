@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { MeshChat } from '@/components/ai-workspace/MeshChat';
+import { VTNotes } from '@/components/ai-workspace/VTNotes';
 import { Sparkles, MessageSquare, NotebookPen, FileEdit } from 'lucide-react';
 
 const ComingSoon = ({ icon: Icon, title, description }: { icon: any; title: string; description: string }) => (
@@ -57,12 +58,8 @@ const AIWorkspace = () => {
             <MeshChat />
           </TabsContent>
 
-          <TabsContent value="vt-notes" className="flex-1 min-h-0 m-0 overflow-y-auto">
-            <ComingSoon
-              icon={NotebookPen}
-              title="VT Notes"
-              description="Smart visual & textual notes powered by AI. Capture, organize, and revisit your study notes — all in one place."
-            />
+          <TabsContent value="vt-notes" className="flex-1 min-h-0 m-0 overflow-hidden">
+            <VTNotes />
           </TabsContent>
 
           <TabsContent value="assignment" className="flex-1 min-h-0 m-0 overflow-y-auto">

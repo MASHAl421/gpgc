@@ -25,8 +25,7 @@ export default {
 				},
   			primary: {
   				DEFAULT: 'hsl(var(--primary))',
-  				foreground: 'hsl(var(--primary-foreground))',
-  				glow: 'hsl(var(--primary-glow))'
+  				foreground: 'hsl(var(--primary-foreground))'
   			},
   			secondary: {
   				DEFAULT: 'hsl(var(--secondary))',
@@ -70,32 +69,25 @@ export default {
   		},
   		keyframes: {
   			'accordion-down': {
-  				from: { height: '0' },
-  				to: { height: 'var(--radix-accordion-content-height)' }
+  				from: {
+  					height: '0'
+  				},
+  				to: {
+  					height: 'var(--radix-accordion-content-height)'
+  				}
   			},
   			'accordion-up': {
-  				from: { height: 'var(--radix-accordion-content-height)' },
-  				to: { height: '0' }
-  			},
-  			'fade-in': {
-  				from: { opacity: '0', transform: 'translateY(4px)' },
-  				to: { opacity: '1', transform: 'translateY(0)' }
-  			},
-  			'pulse-glow': {
-  				'0%, 100%': { boxShadow: '0 0 0 0 hsl(var(--primary) / 0.45)' },
-  				'50%': { boxShadow: '0 0 0 14px hsl(var(--primary) / 0)' }
+  				from: {
+  					height: 'var(--radix-accordion-content-height)'
+  				},
+  				to: {
+  					height: '0'
+  				}
   			}
   		},
   		animation: {
   			'accordion-down': 'accordion-down 0.2s ease-out',
-  			'accordion-up': 'accordion-up 0.2s ease-out',
-  			'fade-in': 'fade-in 0.3s ease-out',
-  			'pulse-glow': 'pulse-glow 1.8s ease-out infinite'
-  		},
-  		backgroundImage: {
-  			'gradient-primary': 'var(--gradient-primary)',
-  			'gradient-surface': 'var(--gradient-surface)',
-  			'gradient-glow': 'var(--gradient-glow)'
+  			'accordion-up': 'accordion-up 0.2s ease-out'
   		},
   		fontFamily: {
   			sans: [
@@ -103,13 +95,12 @@ export default {
   				'ui-sans-serif',
   				'system-ui',
   				'-apple-system',
-  				'sans-serif'
-  			],
-  			display: [
-  				'Space Grotesk',
-  				'Inter',
-  				'ui-sans-serif',
-  				'system-ui',
+  				'BlinkMacSystemFont',
+  				'Segoe UI',
+  				'Roboto',
+  				'Helvetica Neue',
+  				'Arial',
+  				'Noto Sans',
   				'sans-serif'
   			],
   			serif: [

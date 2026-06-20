@@ -15,49 +15,38 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
   const { profile, isAdmin } = useAuth();
   const location = useLocation();
 
+  // AI Tutor needs an app-like layout with a single internal scrollbar.
+  // Other pages can keep the default page-level scrolling.
   const isAITutor = location.pathname === '/ai-tutor';
 
   return (
     <SidebarProvider>
-      <div className="min-h-dvh flex w-full bg-background">
+      <div className="min-h-screen flex w-full">
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Header — sticky glass bar */}
-          <header className="sticky top-0 z-30 h-14 sm:h-16 border-b border-border/60 bg-background/80 backdrop-blur-xl flex items-center justify-between px-3 sm:px-5 shrink-0">
+          {/* Header - responsive */}
+          <header className="h-14 sm:h-16 border-b border-border bg-card flex items-center justify-between px-2 sm:px-4 shrink-0">
             <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-              <SidebarTrigger
-                className="shrink-0 hover:bg-accent rounded-lg"
-                aria-label="Toggle navigation sidebar"
-              />
-              <h2 className="font-display font-semibold text-foreground text-sm sm:text-base tracking-tight truncate">
-                GPGC Portal
-              </h2>
+              <SidebarTrigger className="shrink-0" />
+              <h2 className="font-semibold text-foreground text-sm sm:text-base truncate">GPGC Portal</h2>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               {profile && (
                 <>
-                  <div
-                    className="flex items-center gap-1.5 bg-gradient-primary text-primary-foreground px-3 py-1.5 rounded-full shadow-elegant"
-                    aria-label={`${profile.coins_earned || 0} coins earned`}
-                  >
-                    <Coins className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
-                    <span className="text-xs sm:text-sm font-semibold tabular-nums">
+                  <div className="flex items-center gap-1 bg-muted px-2 sm:px-3 py-1 rounded-full">
+                    <Coins className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
+                    <span className="text-xs sm:text-sm font-medium text-foreground">
                       {profile.coins_earned || 0}
                     </span>
                   </div>
                   {isAdmin && (
-                    <Badge
-                      variant="default"
-                      className="hidden sm:inline-flex bg-accent text-accent-foreground border border-primary/30"
-                    >
-                      Admin
-                    </Badge>
+                    <Badge variant="default" className="hidden sm:inline-flex">Admin</Badge>
                   )}
-                  <span className="text-sm font-medium text-foreground hidden lg:block">
+                  <span className="text-sm text-muted-foreground hidden lg:block">
                     {profile.username}
                   </span>
-                  <Avatar className="h-9 w-9 ring-2 ring-primary/30 ring-offset-2 ring-offset-background">
-                    <AvatarFallback className="bg-gradient-primary text-primary-foreground text-xs sm:text-sm font-semibold">
+                  <Avatar className="h-8 w-8 sm:h-9 sm:w-9">
+                    <AvatarFallback className="bg-primary text-primary-foreground text-xs sm:text-sm">
                       {profile.username.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
@@ -65,7 +54,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
               )}
             </div>
           </header>
-
+          
           {/* Main Content */}
           <main
             className={
@@ -76,14 +65,11 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
           >
             {children}
           </main>
-
-          {/* Footer */}
-          <footer className="h-10 border-t border-border/60 bg-background/50 backdrop-blur-sm flex items-center justify-center shrink-0">
-            <p className="text-xs text-muted-foreground">
-              Developed By:{' '}
-              <span className="font-semibold bg-gradient-primary bg-clip-text text-transparent">
-                Mashal Khan
-              </span>
+          
+          {/* Footer - Developed By */}
+          <footer className="h-10 border-t border-border bg-card flex items-center justify-center shrink-0">
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              Developed By: <span className="font-medium text-foreground">MYNT</span>
             </p>
           </footer>
         </div>

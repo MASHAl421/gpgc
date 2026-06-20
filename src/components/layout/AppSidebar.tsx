@@ -5,7 +5,6 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -55,111 +54,80 @@ export function AppSidebar() {
     navigate('/');
   };
 
-  const renderItem = (item: typeof menuItems[number]) => {
-    const active = location.pathname === item.url;
-    return (
-      <SidebarMenuItem key={item.title}>
-        <SidebarMenuButton
-          asChild
-          isActive={active}
-          tooltip={item.title}
-          className="h-10 rounded-lg transition-all data-[active=true]:bg-gradient-primary data-[active=true]:text-primary-foreground data-[active=true]:shadow-elegant hover:bg-accent/60"
-        >
-          <NavLink
-            to={item.url}
-            aria-current={active ? 'page' : undefined}
-            className="flex items-center gap-3 px-3"
-          >
-            <item.icon className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
-            {!collapsed && <span className="font-medium text-sm">{item.title}</span>}
-          </NavLink>
-        </SidebarMenuButton>
-      </SidebarMenuItem>
-    );
-  };
+  const allMenuItems = isAdmin ? [...menuItems, ...adminItems] : menuItems;
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar">
-      <SidebarHeader className="p-4 border-b border-sidebar-border/60">
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
+      <SidebarHeader className="p-4">
         <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-gradient-primary text-primary-foreground shadow-elegant shrink-0">
-            <GraduationCap className="h-5 w-5" aria-hidden="true" />
+          <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-primary text-primary-foreground">
+            <GraduationCap className="h-6 w-6" />
           </div>
           {!collapsed && (
-            <div className="min-w-0">
-              <h1 className="font-display font-bold text-lg text-sidebar-foreground leading-tight tracking-tight">
-                GPGC Portal
-              </h1>
-              <p className="text-[11px] text-muted-foreground font-medium tracking-wide uppercase">
-                BS Preparation
-              </p>
+            <div>
+              <h1 className="font-bold text-lg text-sidebar-foreground">GPGC</h1>
+              <p className="text-xs text-muted-foreground">BSCS Preparation</p>
             </div>
           )}
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="px-2 py-3">
+      <SidebarContent>
         <SidebarGroup>
-          {!collapsed && (
-            <SidebarGroupLabel className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-3">
-              Workspace
-            </SidebarGroupLabel>
-          )}
           <SidebarGroupContent>
-            <SidebarMenu className="gap-1">
-              {menuItems.map(renderItem)}
+            <SidebarMenu>
+              {allMenuItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === item.url}
+                    tooltip={item.title}
+                  >
+                    <NavLink
+                      to={item.url}
+                      className="flex items-center gap-3 px-3 py-2"
+                      activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
+                    >
+                      <item.icon className="h-5 w-5" />
+                      {!collapsed && <span>{item.title}</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-
-        {isAdmin && (
-          <SidebarGroup className="mt-2">
-            {!collapsed && (
-              <SidebarGroupLabel className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-3">
-                Administration
-              </SidebarGroupLabel>
-            )}
-            <SidebarGroupContent>
-              <SidebarMenu className="gap-1">
-                {adminItems.map(renderItem)}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
       </SidebarContent>
 
-      <SidebarFooter className="p-3 border-t border-sidebar-border/60">
+      <SidebarFooter className="p-4">
         {!collapsed && profile && (
-          <div className="mb-3 p-3 rounded-xl bg-accent/40 border border-sidebar-border">
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-sidebar-foreground truncate">
-                  {profile.username}
-                </p>
-                <p className="text-[11px] text-muted-foreground truncate">{profile.email}</p>
+          <div className="mb-4 p-3 rounded-lg bg-card border border-sidebar-border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-sidebar-foreground">{profile.username}</p>
+                <p className="text-xs text-muted-foreground">{profile.email}</p>
               </div>
               <NotificationDropdown />
             </div>
             {isAdmin && (
-              <span className="text-[10px] font-semibold bg-gradient-primary text-primary-foreground px-2 py-0.5 rounded-full mt-2 inline-block uppercase tracking-wide">
+              <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full mt-1 inline-block">
                 Admin
               </span>
             )}
           </div>
         )}
         {collapsed && profile && (
-          <div className="mb-2 flex justify-center">
+          <div className="mb-4 flex justify-center">
             <NotificationDropdown />
           </div>
         )}
         <Button
-          variant="ghost"
-          className={`w-full ${collapsed ? 'justify-center px-0' : 'justify-start gap-3'} text-destructive hover:text-destructive hover:bg-destructive/10 rounded-lg h-10`}
+          variant="outline"
+          className="w-full justify-start gap-3 text-destructive hover:text-destructive hover:bg-destructive/10"
           onClick={handleLogout}
-          aria-label="Sign out"
         >
-          <LogOut className="h-[18px] w-[18px]" aria-hidden="true" />
-          {!collapsed && <span className="font-medium text-sm">Sign Out</span>}
+          <LogOut className="h-5 w-5" />
+          {!collapsed && <span>Sign Out</span>}
         </Button>
       </SidebarFooter>
     </Sidebar>

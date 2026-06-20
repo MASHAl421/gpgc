@@ -109,6 +109,32 @@ const iconMap: Record<string, React.ComponentType<{
   Monitor,
   FlaskConical
 };
+
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const cleanKeyNoteContent = (content: string, topicName: string, noteTitle: string) => {
+  let cleaned = content.replace(/^\uFEFF/, '').trimStart();
+  const titles = [topicName, noteTitle].filter(Boolean).map(escapeRegExp);
+  const duplicateTitlePattern = titles.length
+    ? new RegExp(`^\\s*(?:#{1,6}\\s*)?(?:\\*\\*)?(?:${titles.join('|')})(?:\\*\\*)?\\s*:?\\s*(?:\\r?\\n|$)`, 'i')
+    : null;
+
+  for (let index = 0; index < 4; index += 1) {
+    const previous = cleaned;
+    cleaned = cleaned
+      .replace(/^\s*#{1,6}\s+\*\*([^\n]+)\*\*\s*(?:\r?\n|$)/, '')
+      .replace(/^\s*\*\*([^\n]+)\*\*\s*(?:\r?\n|$)/, '')
+      .replace(/^\s*#{1,6}\s+([^\n]+)\s*(?:\r?\n|$)/, '')
+      .trimStart();
+    if (duplicateTitlePattern) {
+      cleaned = cleaned.replace(duplicateTitlePattern, '').trimStart();
+    }
+    if (cleaned === previous) break;
+  }
+
+  return cleaned;
+};
+
 const Preparation = () => {
   const isMobile = useIsMobile();
   const {
@@ -643,7 +669,7 @@ const Preparation = () => {
                                                     <CardContent className="p-2.5 sm:p-3 md:p-4">
                                                       <div className="prose prose-sm max-w-none text-muted-foreground dark:prose-invert prose-headings:text-foreground prose-headings:font-bold prose-headings:text-base sm:prose-headings:text-lg prose-p:text-muted-foreground prose-strong:text-foreground prose-strong:font-bold prose-li:text-muted-foreground prose-ul:list-disc prose-ul:pl-4 prose-ol:list-decimal prose-ol:pl-4 text-xs sm:text-sm md:text-base [&_h3]:text-sm [&_h3]:sm:text-base [&_h3]:md:text-lg [&_h3]:font-bold [&_h3]:text-foreground [&_h4]:text-sm [&_h4]:font-semibold [&_h4]:text-foreground">
                                                         <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
-                                                          {note.content.replace(/^\s*#{1,6}\s+.*(?:\r?\n)+/, '').replace(/^\s*\*\*[^\n]+\*\*\s*(?:\r?\n)+/, '')}
+                                                          {cleanKeyNoteContent(note.content, topic.name, note.title)}
                                                         </ReactMarkdown>
                                                       </div>
 

@@ -217,7 +217,11 @@ export const MeshChat = () => {
 
   const handleSend = async (overrideText?: string) => {
     const textToSend = overrideText ?? question;
-    if ((!textToSend.trim() && !attachedFile) || isLoading) return;
+    console.log('[MeshChat] handleSend', { textLen: textToSend.trim().length, hasFile: !!attachedFile, isLoading });
+    if ((!textToSend.trim() && !attachedFile) || isLoading) {
+      console.warn('[MeshChat] send blocked', { empty: !textToSend.trim() && !attachedFile, isLoading });
+      return;
+    }
 
     const getValidAccessToken = async (): Promise<string | null> => {
       const { data } = await supabase.auth.getSession();

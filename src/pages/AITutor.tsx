@@ -5,18 +5,28 @@ import { MeshChat } from '@/components/ai-workspace/MeshChat';
 import { VTNotes } from '@/components/ai-workspace/VTNotes';
 import { Sparkles, MessageSquare, NotebookPen, FileEdit } from 'lucide-react';
 
-const ComingSoon = ({ icon: Icon, title, description }: { icon: any; title: string; description: string }) => (
-  <div className="h-full flex flex-col items-center justify-center text-center px-6 py-12">
-    <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-6 border border-primary/20">
-      <Icon className="h-8 w-8 text-primary" />
+const ComingSoon = ({
+  icon: Icon,
+  title,
+  description,
+}: {
+  icon: any;
+  title: string;
+  description: string;
+}) => (
+  <div className="h-full flex flex-col items-center justify-center text-center px-6 py-12 animate-fade-in">
+    <div className="relative mb-6">
+      <div className="absolute inset-0 bg-gradient-primary rounded-2xl blur-2xl opacity-30" aria-hidden="true" />
+      <div className="relative h-20 w-20 rounded-2xl bg-gradient-primary flex items-center justify-center shadow-glow">
+        <Icon className="h-9 w-9 text-primary-foreground" aria-hidden="true" />
+      </div>
     </div>
-    <h2 className="text-2xl font-semibold mb-3 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-      {title}
-    </h2>
-    <p className="text-muted-foreground max-w-md text-sm sm:text-base mb-6">{description}</p>
-    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium">
-      <div className="thinking-shimmer">Thinking...</div>
-      Coming Soon
+    <h2 className="font-display text-2xl sm:text-3xl font-bold mb-3 tracking-tight">{title}</h2>
+    <p className="text-muted-foreground max-w-md text-sm sm:text-base mb-6 leading-relaxed">
+      {description}
+    </p>
+    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent border border-primary/20 text-accent-foreground text-sm font-medium">
+      <div className="thinking-shimmer">Coming Soon</div>
     </div>
   </div>
 );
@@ -26,30 +36,56 @@ const AIWorkspace = () => {
 
   return (
     <MainLayout>
-      <div className="h-full flex flex-col overflow-hidden">
-        <Tabs value={tab} onValueChange={setTab} className="h-full flex flex-col">
-          <div className="border-b border-border bg-background px-2 sm:px-4 py-2 flex-shrink-0">
-            <div className="flex items-center gap-2 mb-2 px-1">
-              <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
-                <Sparkles className="h-4 w-4 text-primary-foreground" />
+      <div className="h-full flex flex-col overflow-hidden relative">
+        {/* Ambient gradient backdrop */}
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-glow"
+          aria-hidden="true"
+        />
+
+        <Tabs value={tab} onValueChange={setTab} className="h-full flex flex-col relative">
+          <div className="border-b border-border/60 bg-background/70 backdrop-blur-xl px-3 sm:px-6 pt-4 pb-3 flex-shrink-0">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-9 w-9 rounded-xl bg-gradient-primary flex items-center justify-center shadow-elegant">
+                <Sparkles className="h-4 w-4 text-primary-foreground" aria-hidden="true" />
               </div>
-              <h1 className="font-semibold text-base sm:text-lg">AI Workspace</h1>
+              <div className="min-w-0">
+                <h1 className="font-display font-bold text-lg sm:text-xl tracking-tight leading-tight">
+                  AI Workspace
+                </h1>
+                <p className="text-xs text-muted-foreground hidden sm:block">
+                  Chat, capture voice notes, and craft assignments — powered by AI
+                </p>
+              </div>
             </div>
-            <TabsList className="grid w-full grid-cols-3 max-w-2xl">
-              <TabsTrigger value="mesh-chat" className="gap-1.5 text-xs sm:text-sm">
-                <MessageSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+
+            <TabsList
+              className="grid w-full grid-cols-3 max-w-2xl h-11 p-1 bg-muted/60 rounded-xl"
+              aria-label="AI Workspace tools"
+            >
+              <TabsTrigger
+                value="mesh-chat"
+                className="gap-1.5 text-xs sm:text-sm rounded-lg font-medium data-[state=active]:bg-gradient-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-elegant transition-all"
+              >
+                <MessageSquare className="h-4 w-4" aria-hidden="true" />
                 <span className="hidden xs:inline">Mesh Chat</span>
                 <span className="xs:hidden">Chat</span>
               </TabsTrigger>
-              <TabsTrigger value="vt-notes" className="gap-1.5 text-xs sm:text-sm">
-                <NotebookPen className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <TabsTrigger
+                value="vt-notes"
+                className="gap-1.5 text-xs sm:text-sm rounded-lg font-medium data-[state=active]:bg-gradient-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-elegant transition-all"
+              >
+                <NotebookPen className="h-4 w-4" aria-hidden="true" />
                 <span className="hidden xs:inline">VT Notes</span>
                 <span className="xs:hidden">Notes</span>
               </TabsTrigger>
-              <TabsTrigger value="assignment" className="gap-1.5 text-xs sm:text-sm">
-                <FileEdit className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                <span className="hidden sm:inline">Unique Assignment Creator</span>
-                <span className="sm:hidden">Assignment</span>
+              <TabsTrigger
+                value="assignment"
+                className="gap-1.5 text-xs sm:text-sm rounded-lg font-medium data-[state=active]:bg-gradient-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-elegant transition-all"
+              >
+                <FileEdit className="h-4 w-4" aria-hidden="true" />
+                <span className="hidden sm:inline">Assignment Creator</span>
+                <span className="sm:hidden">Assign</span>
               </TabsTrigger>
             </TabsList>
           </div>

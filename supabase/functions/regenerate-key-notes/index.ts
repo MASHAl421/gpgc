@@ -7,8 +7,8 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
-const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY")!;
+const AI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -59,19 +59,15 @@ async function generateNote(subject: string, unit: string, topic: string) {
   for (let attempt = 0; attempt < 4; attempt++) {
     const res = await fetch(AI_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.6,
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.6, maxOutputTokens: 600 },
       }),
     });
     if (res.ok) {
       const data = await res.json();
-      const text = data?.choices?.[0]?.message?.content ?? "";
+      const text = data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join("") ?? "";
       if (!text.trim()) throw new Error("Empty AI response");
       return text.trim();
     }
@@ -125,7 +121,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ results }), {
+    const updated = results.filter((r) => r.ok).length;
+    const failed = results.filter((r) => !r.ok);
+    return new Response(JSON.stringify({ results, updated, failed }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e: any) {

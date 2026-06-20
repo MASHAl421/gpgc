@@ -25,28 +25,35 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
           {/* Header - responsive */}
-          <header className="h-14 sm:h-16 border-b border-border bg-card flex items-center justify-between px-2 sm:px-4 shrink-0">
+          <header className="h-14 sm:h-16 border-b border-border bg-card/95 backdrop-blur sticky top-0 z-30 flex items-center justify-between px-3 sm:px-5 shrink-0">
             <div className="flex items-center gap-2 sm:gap-4 min-w-0">
               <SidebarTrigger className="shrink-0" />
-              <h2 className="font-semibold text-foreground text-sm sm:text-base truncate">GPGC Portal</h2>
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
+                  <span className="text-primary-foreground font-bold text-sm">G</span>
+                </div>
+                <h2 className="font-bold text-foreground text-sm sm:text-base truncate tracking-tight">
+                  GPGC <span className="text-primary">Portal</span>
+                </h2>
+              </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               {profile && (
                 <>
-                  <div className="flex items-center gap-1 bg-muted px-2 sm:px-3 py-1 rounded-full">
-                    <Coins className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
-                    <span className="text-xs sm:text-sm font-medium text-foreground">
+                  <div className="flex items-center gap-1.5 bg-primary/10 text-primary px-3 py-1.5 rounded-full">
+                    <Coins className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    <span className="text-xs sm:text-sm font-semibold">
                       {profile.coins_earned || 0}
                     </span>
                   </div>
                   {isAdmin && (
-                    <Badge variant="default" className="hidden sm:inline-flex">Admin</Badge>
+                    <Badge variant="default" className="hidden sm:inline-flex rounded-full">Admin</Badge>
                   )}
-                  <span className="text-sm text-muted-foreground hidden lg:block">
+                  <span className="text-sm font-medium text-foreground hidden lg:block">
                     {profile.username}
                   </span>
-                  <Avatar className="h-8 w-8 sm:h-9 sm:w-9">
-                    <AvatarFallback className="bg-primary text-primary-foreground text-xs sm:text-sm">
+                  <Avatar className="h-8 w-8 sm:h-9 sm:w-9 ring-2 ring-primary/20">
+                    <AvatarFallback className="bg-primary text-primary-foreground text-xs sm:text-sm font-semibold">
                       {profile.username.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>

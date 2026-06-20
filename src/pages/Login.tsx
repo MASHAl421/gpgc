@@ -27,6 +27,10 @@ import {
   Zap,
   Smartphone,
   ArrowRight,
+  Award,
+  Bell,
+  CalendarDays,
+  Building2,
 } from 'lucide-react';
 
 const KEY_FEATURES = [
@@ -45,6 +49,22 @@ const WHY_US = [
   { icon: ShieldCheck, title: 'Curriculum-Aligned',  desc: 'Built around the official BS-level syllabus, unit by unit, topic by topic.' },
   { icon: Zap,         title: 'Smart & Fast',         desc: 'Quick-response interface, instant feedback on quizzes, AI-generated notes in seconds.' },
   { icon: Sparkles,    title: 'Gamified Learning',    desc: 'Earn coins, unlock achievements, climb the forum leaderboard while you study.' },
+];
+
+const COUNTERS = [
+  { icon: Users,     value: '5,000+',  label: 'Active Students' },
+  { icon: Building2, value: '12+',     label: 'Departments' },
+  { icon: Award,     value: '250+',    label: 'Faculty Members' },
+  { icon: BookOpen,  value: '50+',     label: 'Programs' },
+];
+
+const NOTICES = [
+  { tag: 'Admissions', date: 'Jun 18, 2026', title: 'BS Admissions Fall 2026 — applications now open',
+    desc: 'Apply online for BSCS, BSIT and other BS programs. Last date and merit list schedule published.' },
+  { tag: 'Examination', date: 'Jun 12, 2026', title: 'Semester 2 mid-term datesheet released',
+    desc: 'Check the official datesheet for upcoming mid-term examinations across all departments.' },
+  { tag: 'Event', date: 'Jun 05, 2026', title: 'Annual Science & Tech Expo — register your project',
+    desc: 'Showcase your project at the campus expo. Registration window open for two weeks.' },
 ];
 
 const Login = () => {

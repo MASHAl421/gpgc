@@ -6,16 +6,39 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const ENHANCE_PROMPT = `You are a professional academic note-taker. Take the raw lecture transcript below and convert it into clean, structured, professional study notes suitable for a BS-level student.
+const STYLE_PROMPTS: Record<string, string> = {
+  detailed: `Produce DETAILED, professional academic notes with full explanations.
+Structure:
+### **🎯 Title** (infer)
+### **📘 Key Concepts** — bullets with **bold keywords** and 1–2 sentence explanations
+### **🧪 Examples / Formulas** — wrap math in $...$ or $$...$$
+### **💡 Important Points**
+### **📝 Summary** — 3–5 concise bullets`,
+  concise: `Produce CONCISE bullet-point notes. No long paragraphs. Maximum brevity while keeping every key fact.
+Structure:
+### **🎯 Title**
+### **📘 Main Points** — short bullets, **bold keywords**
+### **📝 TL;DR** — 2–3 lines`,
+  flashcards: `Produce STUDY FLASHCARDS as Q&A pairs covering every key concept.
+Format each card EXACTLY as:
+### **Q: <question>**
+**A:** <clear answer, 1–3 sentences>
+
+Generate 6–15 cards depending on content depth. End with:
+### **📝 Quick Review** — 3 bullet recap`,
+  summary: `Produce a tight EXECUTIVE SUMMARY (200–350 words) of the lecture.
+Structure:
+### **🎯 Topic**
+### **📘 Overview** — 1 short paragraph
+### **🔑 Key Takeaways** — 4–6 bullets`,
+};
+
+const BASE_RULES = `You are a professional academic note-taker for a BS-level student in Pakistan.
+Take the raw lecture transcript and convert it into clean, structured, professional study notes.
 
 RULES:
-- Fix grammar, punctuation, and remove filler words ("um", "uh", "you know", repeated words).
+- Fix grammar, punctuation, and remove filler words ("um", "uh", repeated words).
 - Preserve ALL technical content, definitions, formulas, names, and examples — do NOT invent facts.
-- Organize with clear hierarchy:
-  ### **🎯 Topic / Title** (infer from content)
-  ### **📘 Key Concepts** — bullets with **bold keywords**
-  ### **🧪 Examples / Formulas** — wrap math in $...$ or $$...$$
-  ### **📝 Summary** — 2-4 concise bullets
 - Use emojis in section headers, bullet points (-), and bold for key terms.
 - Output ONLY the formatted markdown notes. No preamble, no "Here are your notes:", nothing extra.`;
 

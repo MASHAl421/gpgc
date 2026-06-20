@@ -129,28 +129,29 @@ Return valid JSON only.`;
 }
 
 async function callLovableAI(prompt: string) {
-  const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
-  if (!OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY is not configured");
+  const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+  if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
 
-  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-      "HTTP-Referer": "https://gpgcswabi.lovable.app",
-      "X-Title": "GPGC Portal",
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        systemInstruction: {
+          parts: [{
+            text: "You are an expert academic question generator. Always respond with valid JSON only (no markdown).",
+          }],
+        },
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 8000,
+          responseMimeType: "application/json",
+        },
+      }),
     },
-    body: JSON.stringify({
-      model: "google/gemini-2.0-flash-exp:free",
-      messages: [
-        { role: "system", content: "You are an expert academic question generator. Always respond with valid JSON only (no markdown)." },
-        { role: "user", content: prompt },
-      ],
-      temperature: 0.7,
-      max_tokens: 8000,
-      response_format: { type: "json_object" },
-    }),
-  });
+  );
 
   if (!response.ok) {
     const t = await response.text().catch(() => "");
@@ -161,7 +162,9 @@ async function callLovableAI(prompt: string) {
   }
 
   const data = await response.json();
-  return String(data?.choices?.[0]?.message?.content ?? "");
+  return String(
+    data?.candidates?.[0]?.content?.parts?.map((p: any) => p?.text || "").join("") ?? "",
+  );
 }
 
 function normalizeQuestions(

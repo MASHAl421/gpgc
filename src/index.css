@@ -340,3 +340,15 @@ All colors MUST be HSL.
   text-align: left;
 }
 .pdf-export th { background: #f4f4f5; font-weight: 600; }
+
+/* Hide Lovable badge */
+#lovable-badge,
+a[href*="lovable.dev"][href*="?utm"],
+a[aria-label*="Lovable" i],
+a[aria-label*="Edit with Lovable" i],
+[data-lovable-badge] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}

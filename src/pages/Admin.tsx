@@ -18,7 +18,9 @@ import {
   Plus,
   Loader2,
   Sparkles,
+  Upload,
 } from 'lucide-react';
+import { BulkQuizUpload } from '@/components/admin/BulkQuizUpload';
 
 interface Subject {
   id: string;
@@ -408,8 +410,12 @@ const Admin = () => {
           </p>
         </div>
 
-        <Tabs defaultValue="subjects" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+        <Tabs defaultValue="bulk" className="w-full">
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="bulk" className="flex items-center gap-2">
+              <Upload className="h-4 w-4" />
+              Bulk Upload
+            </TabsTrigger>
             <TabsTrigger value="subjects" className="flex items-center gap-2">
               <BookOpen className="h-4 w-4" />
               Subjects
@@ -431,6 +437,10 @@ const Admin = () => {
               Key Notes
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="bulk">
+            <BulkQuizUpload />
+          </TabsContent>
 
           <TabsContent value="subjects">
             <Card className="bg-card border-border">

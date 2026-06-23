@@ -72,8 +72,6 @@ export async function openRouterStream(opts: {
     temperature: opts.temperature ?? 0.7,
     max_tokens: opts.maxTokens ?? 4096,
     stream: true,
-    provider: PROVIDER_ROUTING,
-    reasoning: { exclude: true },
   };
 
 

@@ -1,11 +1,12 @@
-// Shared AI client for all edge functions. Uses Atomesus API (OpenAI-compatible).
+// Shared AI client for all edge functions.
+// Uses Lovable AI Gateway (OpenAI-compatible) for fast, reliable responses.
 
-export const OPENROUTER_MODEL = "cipher";
-const OPENROUTER_URL = "https://api.atomesus.com/v1/chat/completions";
+export const OPENROUTER_MODEL = "google/gemini-2.5-flash";
+const OPENROUTER_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 function getKey() {
-  const key = Deno.env.get("OPENROUTER_API_KEY");
-  if (!key) throw new Error("OPENROUTER_API_KEY is not configured");
+  const key = Deno.env.get("LOVABLE_API_KEY");
+  if (!key) throw new Error("LOVABLE_API_KEY is not configured");
   return key;
 }
 
@@ -46,7 +47,7 @@ export async function openRouterChat(opts: {
 
   if (!res.ok) {
     const errText = await res.text().catch(() => "");
-    const err: any = new Error(`OpenRouter ${res.status}: ${errText.slice(0, 300)}`);
+    const err: any = new Error(`AI gateway ${res.status}: ${errText.slice(0, 300)}`);
     err.status = res.status;
     throw err;
   }
@@ -74,7 +75,6 @@ export async function openRouterStream(opts: {
     stream: true,
   };
 
-
   const res = await fetch(OPENROUTER_URL, {
     method: "POST",
     headers: baseHeaders(),
@@ -83,7 +83,7 @@ export async function openRouterStream(opts: {
 
   if (!res.ok || !res.body) {
     const errText = await res.text().catch(() => "");
-    console.error("OpenRouter stream error:", res.status, errText);
+    console.error("AI gateway stream error:", res.status, errText);
     if (res.status === 429) {
       return new Response(
         JSON.stringify({ error: "Rate limit exceeded. Try again shortly." }),
@@ -92,7 +92,7 @@ export async function openRouterStream(opts: {
     }
     if (res.status === 402) {
       return new Response(
-        JSON.stringify({ error: "AI credits exhausted. Please try again later." }),
+        JSON.stringify({ error: "AI credits exhausted. Please add credits to your workspace." }),
         { status: 402, headers: { ...opts.corsHeaders, "Content-Type": "application/json" } },
       );
     }
@@ -102,9 +102,6 @@ export async function openRouterStream(opts: {
     );
   }
 
-  // OpenRouter already streams OpenAI-style SSE. Pass through, but normalize
-  // to ensure the client always gets {choices:[{delta:{content}}]} chunks
-  // (some reasoning models also emit `reasoning` deltas we ignore).
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
@@ -136,7 +133,6 @@ export async function openRouterStream(opts: {
               controller.enqueue(encoder.encode(`data: ${JSON.stringify(out)}\n\n`));
             }
           } catch {
-            // partial line; push it back and wait for more
             buffer = line + "\n" + buffer;
             break;
           }

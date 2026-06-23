@@ -14,37 +14,39 @@ const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 function buildPrompt(subject: string, unit: string, topic: string, urdu: boolean) {
   if (urdu) {
     return `آپ ایک ماہر استاد ہیں۔ مضمون: "${subject}"، یونٹ: "${unit}"، ٹاپک: "${topic}"۔
-طلباء کے لیے ایک مختصر اور آسان کلیدی نوٹ تیار کریں جو انہیں اس ٹاپک کا بنیادی خیال یاد رکھنے میں مدد دے۔
+طلباء کے لیے ایک واضح، آسان اور مکمل کلیدی نوٹ تیار کریں۔
 
 سخت ہدایات:
-- صرف اردو میں لکھیں۔ (اگر عربی آیات/اصطلاحات ہوں تو استعمال کر سکتے ہیں)
-- زیادہ سے زیادہ 150 الفاظ
-- مارک ڈاؤن ٹیبلز یا --- استعمال نہ کریں
-- ساخت:
+- صرف اردو میں لکھیں (عربی آیات/اصطلاحات کی اجازت ہے)
+- مارک ڈاؤن ٹیبلز یا --- استعمال نہ کریں، صرف اصلی نئی لائنیں
+- ساخت بالکل یہی ہو:
   ### **${topic}**
-  ایک یا دو جملے کا تعارف۔
+  **بنیادی خیال / تعریف:** ایک یا دو واضح جملے
   **اہم نکات:**
-  - نکتہ 1
-  - نکتہ 2
-  - نکتہ 3 (3 سے 7 نکات)
-  **یاد رکھنے کا آسان طریقہ:** ایک مختصر یادداشت/مثال
+  - نکتہ 1 — مختصر وضاحت
+  - نکتہ 2 — مختصر وضاحت
+  - نکتہ 3 — مختصر وضاحت
+  - نکتہ 4 — مختصر وضاحت (کم از کم 4، زیادہ سے زیادہ 6 نکات، اگر ضروری ہو تو زیادہ)
+  **مثالیں:** ایک یا دو حقیقی مثالیں
+  **یاد رکھنے کا آسان طریقہ:** ایک مختصر یادداشت/مماثلت
 صرف نوٹ کا متن واپس کریں، کوئی اضافی تبصرہ نہیں۔`;
   }
   return `You are an expert teacher. Subject: "${subject}", Unit: "${unit}", Topic: "${topic}".
-Create a SHORT, EASY key note that helps a BS-level student remember the core IDEA of this topic quickly.
+Create a CLEAR, EASY, but COMPLETE key note for a BS-level student.
 
 Strict rules:
-- Maximum 150 words
-- No markdown tables, no --- separators
-- Use real newlines
+- No markdown tables, no --- separators. Use real newlines.
 - Structure exactly:
   ### **${topic}**
-  One-sentence plain-English idea.
+  **Main Idea / Definition:** one or two clear sentences capturing the core concept.
   **Key Points:**
-  - point 1
-  - point 2
-  - point 3 (3 to 7 bullets, each one short line)
+  - Point 1 — short explanation
+  - Point 2 — short explanation
+  - Point 3 — short explanation
+  - Point 4 — short explanation (4 to 6 bullets, add more only if the topic truly needs it)
+  **Examples:** one or two concrete examples (code snippet, real-life case, or worked example as appropriate)
   **Memory Hook:** one mnemonic, analogy, or formula to remember it
+- Keep language simple but the explanation must be complete enough to understand the topic.
 Return ONLY the note text, no preamble.`;
 }
 
@@ -58,7 +60,7 @@ async function generateNote(subject: string, unit: string, topic: string) {
       const text = await openRouterChat({
         messages: [{ role: "user", content: prompt }],
         temperature: 0.6,
-        maxTokens: 600,
+        maxTokens: 1000,
       });
       if (!text.trim()) throw new Error("Empty AI response");
       return text.trim();

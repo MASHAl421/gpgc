@@ -1,16 +1,7 @@
-// Shared OpenRouter client for all edge functions.
-// Uses openai/gpt-oss-120b:free with provider routing to prefer fastest providers
-// (Cerebras / Groq) which serve gpt-oss-120b at 1000+ tokens/sec.
+// Shared AI client for all edge functions. Uses Atomesus API (OpenAI-compatible).
 
-export const OPENROUTER_MODEL = "openai/gpt-oss-120b:free";
-const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-
-// Route to fastest providers first. Cerebras + Groq serve gpt-oss-120b at extreme speed.
-const PROVIDER_ROUTING = {
-  order: ["cerebras", "groq", "fireworks", "together"],
-  allow_fallbacks: true,
-  sort: "throughput" as const,
-};
+export const OPENROUTER_MODEL = "cipher";
+const OPENROUTER_URL = "https://api.atomesus.com/v1/chat/completions";
 
 function getKey() {
   const key = Deno.env.get("OPENROUTER_API_KEY");
@@ -22,8 +13,6 @@ function baseHeaders() {
   return {
     "Authorization": `Bearer ${getKey()}`,
     "Content-Type": "application/json",
-    "HTTP-Referer": "https://gpgcswabi.lovable.app",
-    "X-Title": "GPGC Portal",
   };
 }
 
@@ -44,8 +33,6 @@ export async function openRouterChat(opts: {
     messages: opts.messages,
     temperature: opts.temperature ?? 0.7,
     max_tokens: opts.maxTokens ?? 4096,
-    provider: PROVIDER_ROUTING,
-    reasoning: { exclude: true },
   };
   if (opts.responseFormatJson) {
     body.response_format = { type: "json_object" };
@@ -85,8 +72,6 @@ export async function openRouterStream(opts: {
     temperature: opts.temperature ?? 0.7,
     max_tokens: opts.maxTokens ?? 4096,
     stream: true,
-    provider: PROVIDER_ROUTING,
-    reasoning: { exclude: true },
   };
 
 

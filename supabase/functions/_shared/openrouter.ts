@@ -33,8 +33,6 @@ export async function openRouterChat(opts: {
     messages: opts.messages,
     temperature: opts.temperature ?? 0.7,
     max_tokens: opts.maxTokens ?? 4096,
-    provider: PROVIDER_ROUTING,
-    reasoning: { exclude: true },
   };
   if (opts.responseFormatJson) {
     body.response_format = { type: "json_object" };

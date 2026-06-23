@@ -18,7 +18,9 @@ import {
   Plus,
   Loader2,
   Sparkles,
+  Upload,
 } from 'lucide-react';
+import { BulkQuizUpload } from '@/components/admin/BulkQuizUpload';
 
 interface Subject {
   id: string;
